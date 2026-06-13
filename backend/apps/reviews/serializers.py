@@ -8,7 +8,7 @@ class ReviewSerializer(serializers.ModelSerializer):
     class Meta:
         model = Review
         fields = ['id', 'product', 'user', 'user_name', 'rating', 'comment', 'created_at']
-        read_only_fields = ['id', 'user', 'created_at']
+        read_only_fields = ['id', 'user', 'product', 'created_at']
 
     def validate_rating(self, value):
         if value < 1 or value > 5:

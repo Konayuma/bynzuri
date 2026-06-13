@@ -21,7 +21,14 @@ class OrderListCreateView(views.APIView):
         serializer = OrderCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        cart = get_object_or_404(Cart, user=request.user)
+        try:
+            cart = Cart.objects.get(user=request.user)
+        except Cart.DoesNotExist:
+            return Response(
+                {'detail': 'Cart is empty'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         cart_items = cart.items.select_related('product').all()
 
         if not cart_items:

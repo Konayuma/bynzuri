@@ -10,6 +10,7 @@ class OrderItemSerializer(serializers.ModelSerializer):
 
 class OrderListSerializer(serializers.ModelSerializer):
     items = OrderItemSerializer(many=True, read_only=True)
+    item_count = serializers.SerializerMethodField()
 
     class Meta:
         model = Order

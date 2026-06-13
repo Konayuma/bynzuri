@@ -1,6 +1,16 @@
 import uuid
-from django.contrib.auth.models import AbstractUser
+from django.contrib.auth.models import AbstractUser, UserManager as BaseUserManager
 from django.db import models
+
+
+class UserManager(BaseUserManager):
+    def create_user(self, username=None, email=None, password=None, **extra_fields):
+        extra_fields.setdefault('role', 'customer')
+        return super().create_user(username, email, password, **extra_fields)
+
+    def create_superuser(self, username=None, email=None, password=None, **extra_fields):
+        extra_fields.setdefault('role', 'admin')
+        return super().create_superuser(username, email, password, **extra_fields)
 
 
 class User(AbstractUser):
@@ -14,6 +24,8 @@ class User(AbstractUser):
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    objects = UserManager()
 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['username']
