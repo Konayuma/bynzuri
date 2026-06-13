@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ShoppingBag, User, Search, Menu, X } from '@lucide/vue'
 import { useCartStore } from '@/stores/cart'
@@ -13,6 +13,9 @@ const uiStore = useUIStore()
 
 const searchQuery = ref('')
 const isSearchVisible = ref(false)
+const scrolled = ref(false)
+const hidden = ref(false)
+let lastScroll = 0
 
 function handleSearch() {
   if (searchQuery.value.trim()) {
@@ -21,13 +24,33 @@ function handleSearch() {
     isSearchVisible.value = false
   }
 }
+
+function onScroll() {
+  const y = window.scrollY
+  scrolled.value = y > 20
+  hidden.value = y > lastScroll && y > 200
+  lastScroll = y
+}
+
+onMounted(() => {
+  window.addEventListener('scroll', onScroll, { passive: true })
+})
+onUnmounted(() => {
+  window.removeEventListener('scroll', onScroll)
+})
 </script>
 
 <template>
-  <header class="sticky top-0 z-50 bg-background/95 backdrop-blur-lg border-b border-primary/20">
+  <header
+    :class="[
+      'sticky top-0 z-50 bg-background/95 backdrop-blur-lg border-b border-primary/20 transition-all duration-300',
+      scrolled ? 'shadow-[0_1px_12px_rgba(0,0,0,0.04)]' : '',
+      hidden ? '-translate-y-full' : 'translate-y-0'
+    ]"
+  >
     <div class="max-w-7xl mx-auto px-4 h-[72px] flex items-center justify-between">
       <button
-        class="lg:hidden p-2 -ml-2"
+        class="lg:hidden p-2 -ml-2 hover:bg-primary/30 rounded-lg transition-colors active:scale-95"
         @click="uiStore.toggleMobileMenu"
         aria-label="Toggle menu"
       >
@@ -35,28 +58,28 @@ function handleSearch() {
         <X v-else class="w-6 h-6 text-dark" />
       </button>
 
-      <router-link to="/" class="font-heading text-2xl font-bold text-dark tracking-tight">
+      <router-link to="/" class="font-heading text-2xl font-bold text-dark tracking-tight hover:opacity-80 transition-opacity">
         bynzuri
       </router-link>
 
       <nav class="hidden lg:flex items-center gap-8">
-        <router-link to="/catalog" class="text-sm font-medium text-muted hover:text-dark transition-colors">
+        <router-link to="/catalog" class="text-sm font-medium text-muted hover:text-dark transition-colors relative after:absolute after:bottom-[-22px] after:left-0 after:w-full after:h-[2px] after:bg-dark after:scale-x-0 hover:after:scale-x-100 after:transition-transform after:duration-200">
           Shop All
         </router-link>
-        <router-link to="/catalog?category=hair-care" class="text-sm font-medium text-muted hover:text-dark transition-colors">
+        <router-link to="/catalog?category=hair-care" class="text-sm font-medium text-muted hover:text-dark transition-colors relative after:absolute after:bottom-[-22px] after:left-0 after:w-full after:h-[2px] after:bg-dark after:scale-x-0 hover:after:scale-x-100 after:transition-transform after:duration-200">
           Hair Care
         </router-link>
-        <router-link to="/catalog?category=hair-growth" class="text-sm font-medium text-muted hover:text-dark transition-colors">
+        <router-link to="/catalog?category=hair-growth" class="text-sm font-medium text-muted hover:text-dark transition-colors relative after:absolute after:bottom-[-22px] after:left-0 after:w-full after:h-[2px] after:bg-dark after:scale-x-0 hover:after:scale-x-100 after:transition-transform after:duration-200">
           Hair Growth
         </router-link>
-        <router-link to="/catalog?category=oils" class="text-sm font-medium text-muted hover:text-dark transition-colors">
+        <router-link to="/catalog?category=oils" class="text-sm font-medium text-muted hover:text-dark transition-colors relative after:absolute after:bottom-[-22px] after:left-0 after:w-full after:h-[2px] after:bg-dark after:scale-x-0 hover:after:scale-x-100 after:transition-transform after:duration-200">
           Oils
         </router-link>
       </nav>
 
       <div class="flex items-center gap-2">
         <button
-          class="p-2 hover:bg-primary/30 rounded-lg transition-colors"
+          class="p-2 hover:bg-primary/30 rounded-lg transition-colors active:scale-95"
           @click="isSearchVisible = !isSearchVisible"
           aria-label="Search"
         >
@@ -65,14 +88,14 @@ function handleSearch() {
 
         <router-link
           :to="userStore.isAuthenticated ? '/account' : '/auth/login'"
-          class="p-2 hover:bg-primary/30 rounded-lg transition-colors"
+          class="p-2 hover:bg-primary/30 rounded-lg transition-colors active:scale-95"
           aria-label="Account"
         >
           <User class="w-5 h-5 text-dark" />
         </router-link>
 
         <button
-          class="p-2 hover:bg-primary/30 rounded-lg transition-colors relative"
+          class="p-2 hover:bg-primary/30 rounded-lg transition-colors relative active:scale-95"
           @click="uiStore.openCart"
           aria-label="Open cart"
         >

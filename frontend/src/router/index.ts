@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router'
+import { useUserStore } from '@/stores/user'
 
 const routes: RouteRecordRaw[] = [
   {
@@ -75,6 +76,30 @@ const router = createRouter({
   scrollBehavior() {
     return { top: 0 }
   }
+})
+
+router.beforeEach(async (to, from, next) => {
+  const userStore = useUserStore()
+
+  if (to.meta.requiresAuth) {
+    const token = localStorage.getItem('access_token')
+    if (!token) {
+      return next({ name: 'login', query: { redirect: to.fullPath } })
+    }
+    if (!userStore.user) {
+      try {
+        await userStore.fetchProfile()
+      } catch {
+        return next({ name: 'login', query: { redirect: to.fullPath } })
+      }
+    }
+  }
+
+  if (to.meta.requiresAdmin && !userStore.isAdmin) {
+    return next({ name: 'home' })
+  }
+
+  next()
 })
 
 export default router
