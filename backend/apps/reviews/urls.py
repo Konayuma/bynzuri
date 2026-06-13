@@ -1,0 +1,7 @@
+from django.urls import path
+from . import views
+
+urlpatterns = [
+    path('', views.ReviewViewSet.as_view({'get': 'list', 'post': 'create'}), name='review-list'),
+    path('<uuid:pk>/', views.ReviewViewSet.as_view({'get': 'retrieve', 'put': 'update', 'delete': 'destroy'}), name='review-detail'),
+]

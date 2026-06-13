@@ -1,0 +1,224 @@
+<script setup lang="ts">
+import { onMounted, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { useProductStore } from '@/stores/product'
+import ProductCard from '@/components/product/ProductCard.vue'
+import BaseButton from '@/components/base/BaseButton.vue'
+import { Search, SlidersHorizontal, ChevronLeft, ChevronRight } from '@lucide/vue'
+
+const route = useRoute()
+const router = useRouter()
+const productStore = useProductStore()
+
+const searchQuery = ref((route.query.search as string) || '')
+const selectedCategory = ref((route.query.category as string) || '')
+const sortOrder = ref((route.query.ordering as string) || '-created_at')
+const currentPage = ref(Number(route.query.page) || 1)
+const showFilters = ref(false)
+
+const sortOptions = [
+  { value: '-created_at', label: 'Newest' },
+  { value: 'price', label: 'Price: Low to High' },
+  { value: '-price', label: 'Price: High to Low' },
+  { value: '-rating', label: 'Highest Rated' }
+]
+
+function fetchProducts() {
+  productStore.fetchProducts({
+    page: currentPage.value,
+    search: searchQuery.value || undefined,
+    category: selectedCategory.value || undefined,
+    ordering: sortOrder.value
+  })
+}
+
+function handleSearch() {
+  currentPage.value = 1
+  updateUrl()
+  fetchProducts()
+}
+
+function handleCategoryChange(category: string) {
+  selectedCategory.value = category
+  currentPage.value = 1
+  updateUrl()
+  fetchProducts()
+}
+
+function handleSortChange() {
+  currentPage.value = 1
+  updateUrl()
+  fetchProducts()
+}
+
+function changePage(delta: number) {
+  currentPage.value += delta
+  updateUrl()
+  fetchProducts()
+}
+
+function updateUrl() {
+  const query: Record<string, string> = {}
+  if (searchQuery.value) query.search = searchQuery.value
+  if (selectedCategory.value) query.category = selectedCategory.value
+  if (sortOrder.value !== '-created_at') query.ordering = sortOrder.value
+  if (currentPage.value > 1) query.page = String(currentPage.value)
+  router.replace({ query })
+}
+
+onMounted(() => {
+  productStore.fetchCategories()
+  fetchProducts()
+})
+
+watch(() => route.query, () => {
+  searchQuery.value = (route.query.search as string) || ''
+  selectedCategory.value = (route.query.category as string) || ''
+  sortOrder.value = (route.query.ordering as string) || '-created_at'
+  currentPage.value = Number(route.query.page) || 1
+})
+</script>
+
+<template>
+  <div class="max-w-7xl mx-auto px-4 py-8">
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+      <div>
+        <h1 class="font-heading text-2xl md:text-3xl font-semibold text-dark">Shop All</h1>
+        <p v-if="productStore.pagination.count > 0" class="text-sm text-muted mt-1">
+          {{ productStore.pagination.count }} products
+        </p>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <div class="relative flex-1 md:w-64">
+          <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" />
+          <input
+            v-model="searchQuery"
+            type="text"
+            placeholder="Search..."
+            class="w-full pl-9 pr-3 py-2.5 bg-white border border-primary/40 rounded-[14px] text-sm focus:outline-none focus:border-gold transition-colors"
+            @keyup.enter="handleSearch"
+          />
+        </div>
+
+        <button
+          class="md:hidden p-2.5 border border-primary/40 rounded-[14px] hover:bg-primary/20 transition-colors"
+          @click="showFilters = !showFilters"
+        >
+          <SlidersHorizontal class="w-4 h-4" />
+        </button>
+
+        <select
+          v-model="sortOrder"
+          class="hidden md:block px-3 py-2.5 bg-white border border-primary/40 rounded-[14px] text-sm focus:outline-none focus:border-gold transition-colors"
+          @change="handleSortChange"
+        >
+          <option v-for="opt in sortOptions" :key="opt.value" :value="opt.value">
+            {{ opt.label }}
+          </option>
+        </select>
+      </div>
+    </div>
+
+    <div class="flex gap-8">
+      <aside
+        class="shrink-0 w-56 space-y-6"
+        :class="showFilters ? 'block' : 'hidden md:block'"
+      >
+        <div>
+          <h3 class="text-sm font-semibold text-dark mb-3">Categories</h3>
+          <div class="space-y-1.5">
+            <button
+              class="block w-full text-left px-3 py-2 text-sm rounded-lg transition-colors"
+              :class="!selectedCategory ? 'bg-primary/50 text-dark font-medium' : 'text-muted hover:text-dark hover:bg-primary/20'"
+              @click="handleCategoryChange('')"
+            >
+              All Products
+            </button>
+            <button
+              v-for="cat in productStore.categories"
+              :key="cat.id"
+              class="block w-full text-left px-3 py-2 text-sm rounded-lg transition-colors"
+              :class="selectedCategory === cat.slug ? 'bg-primary/50 text-dark font-medium' : 'text-muted hover:text-dark hover:bg-primary/20'"
+              @click="handleCategoryChange(cat.slug)"
+            >
+              {{ cat.name }}
+              <span v-if="cat.product_count" class="text-xs text-muted ml-1">({{ cat.product_count }})</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="md:hidden">
+          <select
+            v-model="sortOrder"
+            class="w-full px-3 py-2.5 bg-white border border-primary/40 rounded-[14px] text-sm focus:outline-none focus:border-gold transition-colors"
+            @change="handleSortChange"
+          >
+            <option v-for="opt in sortOptions" :key="opt.value" :value="opt.value">
+              {{ opt.label }}
+            </option>
+          </select>
+        </div>
+      </aside>
+
+      <div class="flex-1">
+        <div
+          v-if="productStore.loading"
+          class="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6"
+        >
+          <div v-for="i in 6" :key="i" class="space-y-3">
+            <div class="aspect-[3/4] rounded-[20px] bg-primary/30 animate-pulse" />
+            <div class="h-3 w-16 bg-primary/30 rounded animate-pulse" />
+            <div class="h-4 w-28 bg-primary/30 rounded animate-pulse" />
+            <div class="h-4 w-16 bg-primary/30 rounded animate-pulse" />
+          </div>
+        </div>
+
+        <div
+          v-else-if="productStore.products.length === 0"
+          class="text-center py-16"
+        >
+          <p class="text-muted">No products found</p>
+          <BaseButton variant="outline" class="mt-4" @click="searchQuery = ''; handleSearch()">
+            Clear Filters
+          </BaseButton>
+        </div>
+
+        <div
+          v-else
+          class="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6"
+        >
+          <ProductCard
+            v-for="product in productStore.products"
+            :key="product.id"
+            :product="product"
+          />
+        </div>
+
+        <!-- Pagination -->
+        <div
+          v-if="productStore.pagination.count > 12"
+          class="flex items-center justify-center gap-4 mt-10"
+        >
+          <button
+            :disabled="!productStore.pagination.previous"
+            class="flex items-center gap-1 px-4 py-2 text-sm rounded-[14px] border border-primary/40 hover:bg-primary/20 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            @click="changePage(-1)"
+          >
+            <ChevronLeft class="w-4 h-4" /> Previous
+          </button>
+          <span class="text-sm text-muted">
+            Page {{ currentPage }} of {{ Math.ceil(productStore.pagination.count / 12) }}
+          </span>
+          <button
+            :disabled="!productStore.pagination.next"
+            class="flex items-center gap-1 px-4 py-2 text-sm rounded-[14px] border border-primary/40 hover:bg-primary/20 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            @click="changePage(1)"
+          >
+            Next <ChevronRight class="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
