@@ -3,6 +3,39 @@ from django.db import models
 from django.conf import settings
 
 
+class Conversation(models.Model):
+    STATE_CHOICES = [
+        ('main_menu', 'Main Menu'),
+        ('browsing_categories', 'Browsing Categories'),
+        ('browsing_products', 'Browsing Products'),
+        ('viewing_product', 'Viewing Product'),
+        ('adding_quantity', 'Adding Quantity'),
+        ('viewing_cart', 'Viewing Cart'),
+        ('checkout_province', 'Checkout - Province'),
+        ('checkout_town', 'Checkout - Town'),
+        ('checkout_address', 'Checkout - Address'),
+        ('checkout_phone', 'Checkout - Phone'),
+        ('checkout_delivery', 'Checkout - Delivery Method'),
+        ('checkout_payment', 'Checkout - Payment Method'),
+        ('checkout_confirm', 'Checkout - Confirm'),
+        ('order_status', 'Order Status'),
+        ('viewing_order', 'Viewing Order'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    phone_number = models.CharField(max_length=20, unique=True, db_index=True)
+    state = models.CharField(max_length=30, choices=STATE_CHOICES, default='main_menu')
+    state_data = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'whatsapp_conversations'
+
+    def __str__(self):
+        return f"{self.phone_number} - {self.state}"
+
+
 class WhatsAppMessage(models.Model):
     DIRECTION_CHOICES = [
         ('outbound', 'Outbound'),
@@ -18,6 +51,10 @@ class WhatsAppMessage(models.Model):
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    conversation = models.ForeignKey(
+        Conversation, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='messages'
+    )
     order = models.ForeignKey(
         'orders.Order', on_delete=models.SET_NULL,
         null=True, blank=True, related_name='whatsapp_messages'

@@ -9,6 +9,7 @@ from .serializers import (
     WebhookSerializer,
 )
 from .services import MichoWAPIClient, MichoWAPIError
+from .bot import process_message
 
 logger = logging.getLogger(__name__)
 
@@ -90,14 +91,10 @@ class WebhookView(views.APIView):
         event = serializer.validated_data['event']
         data = serializer.validated_data['data']
 
-        WhatsAppMessage.objects.create(
-            direction='inbound' if event == 'message.received' else 'outbound',
-            status='sent',
-            to_number=data.get('from', ''),
-            from_number=data.get('from', ''),
-            body=data.get('message', ''),
-            message_type=data.get('type', 'text'),
-        )
+        if event == 'message.received':
+            from_number = data.get('from', '')
+            message_text = data.get('message', '')
+            process_message(from_number, message_text)
 
         logger.info('WhatsApp webhook received: event=%s from=%s', event, data.get('from'))
 

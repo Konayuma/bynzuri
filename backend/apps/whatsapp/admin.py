@@ -1,5 +1,12 @@
 from django.contrib import admin
-from .models import WhatsAppMessage
+from .models import WhatsAppMessage, Conversation
+
+
+@admin.register(Conversation)
+class ConversationAdmin(admin.ModelAdmin):
+    list_display = ['phone_number', 'state', 'updated_at', 'created_at']
+    list_filter = ['state']
+    search_fields = ['phone_number']
 
 
 @admin.register(WhatsAppMessage)
