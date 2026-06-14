@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { Product } from '@/types'
 import { useCartStore } from '@/stores/cart'
+import { useWishlistStore } from '@/stores/wishlist'
 import { Heart, ShoppingBag } from '@lucide/vue'
 import { useRouter } from 'vue-router'
 
@@ -9,11 +10,17 @@ const props = defineProps<{
 }>()
 
 const cartStore = useCartStore()
+const wishlistStore = useWishlistStore()
 const router = useRouter()
 
 function handleAddToCart(e: Event) {
   e.stopPropagation()
   cartStore.addToCart(props.product)
+}
+
+function handleToggleWishlist(e: Event) {
+  e.stopPropagation()
+  wishlistStore.toggle(props.product)
 }
 
 function goToProduct() {
@@ -40,7 +47,17 @@ function goToProduct() {
 
       <div class="absolute top-3 right-3 flex flex-col gap-2">
         <button
-          class="w-9 h-9 rounded-full bg-background/90 backdrop-blur-sm flex items-center justify-center hover:bg-background transition-colors shadow-sm"
+          class="w-9 h-9 rounded-full bg-background/90 backdrop-blur-sm flex items-center justify-center hover:bg-background transition-all shadow-sm active:scale-90"
+          @click="handleToggleWishlist"
+          :aria-label="wishlistStore.isWishlisted(product.id) ? 'Remove from wishlist' : 'Add to wishlist'"
+        >
+          <Heart
+            class="w-4 h-4 transition-all"
+            :class="wishlistStore.isWishlisted(product.id) ? 'text-red-500 fill-red-500' : 'text-dark'"
+          />
+        </button>
+        <button
+          class="w-9 h-9 rounded-full bg-background/90 backdrop-blur-sm flex items-center justify-center hover:bg-background transition-colors shadow-sm active:scale-90"
           @click="handleAddToCart"
           aria-label="Add to cart"
         >

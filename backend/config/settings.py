@@ -32,6 +32,7 @@ INSTALLED_APPS = [
     'apps.delivery',
     'apps.reviews',
     'apps.dashboard',
+    'apps.whatsapp',
 ]
 
 MIDDLEWARE = [
@@ -176,3 +177,6 @@ SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = 'DENY'
 CSRF_COOKIE_HTTPONLY = True
 SESSION_COOKIE_HTTPONLY = True
+
+MICHOWAPI_API_KEY = os.environ.get('MICHOWAPI_API_KEY', '')
+MICHOWAPI_WEBHOOK_SECRET = os.environ.get('MICHOWAPI_WEBHOOK_SECRET', '')

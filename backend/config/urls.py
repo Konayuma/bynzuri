@@ -12,4 +12,5 @@ urlpatterns = [
     path('api/delivery/', include('apps.delivery.urls')),
     path('api/reviews/', include('apps.reviews.urls')),
     path('api/dashboard/', include('apps.dashboard.urls')),
+    path('api/whatsapp/', include('apps.whatsapp.urls')),
 ]

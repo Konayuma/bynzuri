@@ -8,6 +8,10 @@ const props = defineProps<{
 }>()
 
 const currentIndex = ref(0)
+const isZooming = ref(false)
+const zoomX = ref(0)
+const zoomY = ref(0)
+const imgRef = ref<HTMLElement | null>(null)
 
 function previous() {
   currentIndex.value = currentIndex.value > 0 ? currentIndex.value - 1 : props.images.length - 1
@@ -16,11 +20,34 @@ function previous() {
 function next() {
   currentIndex.value = currentIndex.value < props.images.length - 1 ? currentIndex.value + 1 : 0
 }
+
+function handleMouseMove(e: MouseEvent) {
+  const rect = imgRef.value?.getBoundingClientRect()
+  if (!rect) return
+  const x = ((e.clientX - rect.left) / rect.width) * 100
+  const y = ((e.clientY - rect.top) / rect.height) * 100
+  zoomX.value = x
+  zoomY.value = y
+}
+
+function handleMouseEnter() {
+  isZooming.value = true
+}
+
+function handleMouseLeave() {
+  isZooming.value = false
+}
 </script>
 
 <template>
   <div class="space-y-3">
-    <div class="relative aspect-[3/4] rounded-[20px] overflow-hidden bg-primary/20">
+    <div
+      ref="imgRef"
+      class="relative aspect-[3/4] rounded-[20px] overflow-hidden bg-primary/20 cursor-crosshair"
+      @mousemove="handleMouseMove"
+      @mouseenter="handleMouseEnter"
+      @mouseleave="handleMouseLeave"
+    >
       <img
         v-for="(img, index) in images"
         :key="img.id"
@@ -30,9 +57,20 @@ function next() {
         :class="index === currentIndex ? 'opacity-100' : 'opacity-0'"
       />
 
+      <div
+        v-if="isZooming && images[currentIndex]"
+        class="absolute inset-0 hidden md:block"
+        :style="{
+          backgroundImage: `url(${images[currentIndex]?.image})`,
+          backgroundPosition: `${zoomX}% ${zoomY}%`,
+          backgroundSize: '200%',
+          backgroundRepeat: 'no-repeat'
+        }"
+      />
+
       <button
         v-if="images.length > 1"
-        class="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-background/90 backdrop-blur-sm flex items-center justify-center hover:bg-background transition-colors shadow-sm"
+        class="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-background/90 backdrop-blur-sm flex items-center justify-center hover:bg-background transition-colors shadow-sm active:scale-90"
         @click="previous"
         aria-label="Previous image"
       >
@@ -40,7 +78,7 @@ function next() {
       </button>
       <button
         v-if="images.length > 1"
-        class="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-background/90 backdrop-blur-sm flex items-center justify-center hover:bg-background transition-colors shadow-sm"
+        class="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-background/90 backdrop-blur-sm flex items-center justify-center hover:bg-background transition-colors shadow-sm active:scale-90"
         @click="next"
         aria-label="Next image"
       >

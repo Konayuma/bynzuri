@@ -1,22 +1,27 @@
 <script setup lang="ts">
-import { onMounted, ref, computed } from 'vue'
+import { onMounted, ref, computed, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useProductStore } from '@/stores/product'
 import { useCartStore } from '@/stores/cart'
+import { useWishlistStore } from '@/stores/wishlist'
 import ProductGallery from '@/components/product/ProductGallery.vue'
 import ProductCard from '@/components/product/ProductCard.vue'
 import BaseButton from '@/components/base/BaseButton.vue'
 import { Heart, Minus, Plus, Star, Truck, ShieldCheck } from '@lucide/vue'
+import type { Product } from '@/types'
 
 const route = useRoute()
 const productStore = useProductStore()
 const cartStore = useCartStore()
+const wishlistStore = useWishlistStore()
 
 const quantity = ref(1)
 const addedToCart = ref(false)
+const recentlyViewed = ref<Product[]>([])
 
 const product = computed(() => productStore.currentProduct)
 const inStock = computed(() => product.value?.is_in_stock ?? false)
+const inWishlist = computed(() => product.value ? wishlistStore.isWishlisted(product.value.id) : false)
 const stockLabel = computed(() => {
   if (!product.value) return ''
   if (product.value.stock === 0) return 'Out of Stock'
@@ -47,14 +52,43 @@ function handleAddToCart() {
   }
 }
 
+function handleToggleWishlist() {
+  if (product.value) {
+    wishlistStore.toggle(product.value)
+  }
+}
+
+function trackRecentlyViewed(p: Product) {
+  const key = 'bynzuri_recently_viewed'
+  const stored = localStorage.getItem(key)
+  let items: Product[] = stored ? JSON.parse(stored) : []
+  items = items.filter(i => i.id !== p.id)
+  items.unshift(p)
+  if (items.length > 6) items = items.slice(0, 6)
+  localStorage.setItem(key, JSON.stringify(items))
+  recentlyViewed.value = items
+}
+
+function loadRecentlyViewed() {
+  const key = 'bynzuri_recently_viewed'
+  const stored = localStorage.getItem(key)
+  if (stored) {
+    recentlyViewed.value = JSON.parse(stored).slice(0, 4)
+  }
+}
+
 onMounted(() => {
   const slug = route.params.slug as string
   productStore.fetchProduct(slug)
+  loadRecentlyViewed()
 })
 
-onMounted(() => {
-  if (product.value?.category) {
-    productStore.fetchRelatedProducts(product.value.category)
+watch(product, (p) => {
+  if (p) {
+    trackRecentlyViewed(p)
+  }
+  if (p?.category) {
+    productStore.fetchRelatedProducts(p.category)
   }
 })
 </script>
@@ -146,8 +180,15 @@ onMounted(() => {
           </div>
 
           <div class="flex items-center gap-2 text-xs text-muted py-4 border-t border-primary/20">
-            <button class="flex items-center gap-1.5 hover:text-dark transition-colors">
-              <Heart class="w-3.5 h-3.5" /> Add to Wishlist
+            <button
+              class="flex items-center gap-1.5 hover:text-dark transition-colors active:scale-95"
+              @click="handleToggleWishlist"
+            >
+              <Heart
+                class="w-3.5 h-3.5 transition-all"
+                :class="inWishlist ? 'text-red-500 fill-red-500' : ''"
+              />
+              {{ inWishlist ? 'Remove from Wishlist' : 'Add to Wishlist' }}
             </button>
           </div>
 
@@ -183,9 +224,21 @@ onMounted(() => {
         <h2 class="font-heading text-xl font-semibold text-dark mb-6">You May Also Like</h2>
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
           <ProductCard
-            v-for="product in productStore.relatedProducts"
-            :key="product.id"
-            :product="product"
+            v-for="p in productStore.relatedProducts"
+            :key="p.id"
+            :product="p"
+          />
+        </div>
+      </section>
+
+      <!-- Recently Viewed -->
+      <section v-if="recentlyViewed.length > 0" class="mt-16 mb-8">
+        <h2 class="font-heading text-xl font-semibold text-dark mb-6">Recently Viewed</h2>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+          <ProductCard
+            v-for="p in recentlyViewed"
+            :key="p.id"
+            :product="p"
           />
         </div>
       </section>

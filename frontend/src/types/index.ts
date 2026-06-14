@@ -137,6 +137,12 @@ export interface PaginatedResponse<T> {
   results: T[]
 }
 
+export interface WishlistItem {
+  id: string
+  product: Product
+  added_at: string
+}
+
 export interface ApiError {
   detail: string
   [key: string]: string | string[] | undefined
