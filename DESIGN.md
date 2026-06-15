@@ -75,7 +75,7 @@ Primary action color.
 #3B2F2A
 ```
 
-Primary typography color.
+Primary typography color (headings).
 
 ### Soft Taupe
 
@@ -100,6 +100,42 @@ Premium accents.
 ```
 
 Order confirmations and success states.
+
+---
+
+## Extended Palette
+
+### Background Gradient Accent (Soft Fluid Pink)
+
+```css
+#FFD1E6
+```
+
+A very soft, bright pastel millennial pink. Used for gradient overlays, hero section accents, promotional banners, and soft background washes.
+
+### Core Text & Cursive Stroke
+
+```css
+#212529
+```
+
+A soft off-black / deep charcoal. Used for body copy, cursive stroke text, product descriptions, and dense reading content where maximum legibility is required.
+
+### Review Container Accents
+
+```css
+#FBE7EE
+```
+
+The ultra-light pink backdrop of review cards and chat-bubble-style containers. Adds warmth to customer testimonial sections.
+
+### Star Rating Accent
+
+```css
+#FFE600
+```
+
+Vibrant pure yellow. Used exclusively for star ratings, review scores, and rating-related visual indicators.
 
 ---
 
@@ -677,9 +713,13 @@ colors: {
   primary: "#E9D8C9",
   background: "#FAF8F6",
   dark: "#3B2F2A",
+  text: "#212529",
   muted: "#A58C7C",
   gold: "#C7A46A",
-  success: "#4F8A63"
+  success: "#4F8A63",
+  pink: "#FFD1E6",
+  "pink-light": "#FBE7EE",
+  star: "#FFE600"
 }
 ```
 
