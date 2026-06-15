@@ -1,19 +1,146 @@
 <script setup lang="ts">
+import { ref, onMounted } from 'vue'
 import AdminLayout from '@/layouts/AdminLayout.vue'
 import BaseButton from '@/components/base/BaseButton.vue'
-import { Plus } from '@lucide/vue'
+import BaseInput from '@/components/base/BaseInput.vue'
+import BaseSelect from '@/components/base/BaseSelect.vue'
+import BaseModal from '@/components/base/BaseModal.vue'
+import { productService } from '@/services/product.service'
+import type { Product, Category, ProductCreateData, PaginatedResponse } from '@/types'
+import { Plus, Pencil, Trash2 } from '@lucide/vue'
+
+const products = ref<Product[]>([])
+const categories = ref<Category[]>([])
+const loading = ref(true)
+const showModal = ref(false)
+const editingProduct = ref<Product | null>(null)
+const saving = ref(false)
+const page = ref(1)
+const totalCount = ref(0)
+
+const form = ref<ProductCreateData>({
+  category: '',
+  title: '',
+  slug: '',
+  description: '',
+  price: '',
+  stock: 0,
+  is_active: true,
+  is_featured: false,
+})
+
+const stockStr = ref('0')
+
+const formError = ref('')
+
+async function loadProducts() {
+  loading.value = true
+  try {
+    const data = await productService.getProducts({ page: page.value })
+    products.value = data.results
+    totalCount.value = data.count
+  } catch {
+    products.value = []
+  } finally {
+    loading.value = false
+  }
+}
+
+async function loadCategories() {
+  try {
+    categories.value = await productService.getCategories()
+  } catch {
+    categories.value = []
+  }
+}
+
+function openCreateModal() {
+  editingProduct.value = null
+  form.value = {
+    category: categories.value[0]?.id || '',
+    title: '',
+    slug: '',
+    description: '',
+    price: '',
+    stock: 0,
+    is_active: true,
+    is_featured: false,
+  }
+  stockStr.value = '0'
+  formError.value = ''
+  showModal.value = true
+}
+
+function openEditModal(product: Product) {
+  editingProduct.value = product
+  form.value = {
+    category: product.category,
+    title: product.title,
+    slug: product.slug,
+    description: product.description,
+    price: product.price,
+    stock: product.stock,
+    is_active: true,
+    is_featured: false,
+  }
+  stockStr.value = String(product.stock)
+  formError.value = ''
+  showModal.value = true
+}
+
+async function saveProduct() {
+  if (!form.value.title || !form.value.price) {
+    formError.value = 'Title and price are required'
+    return
+  }
+  saving.value = true
+  formError.value = ''
+  form.value.stock = parseInt(stockStr.value, 10) || 0
+  try {
+    if (editingProduct.value) {
+      await productService.updateProduct(editingProduct.value.slug, form.value)
+    } else {
+      await productService.createProduct(form.value)
+    }
+    showModal.value = false
+    await loadProducts()
+  } catch (e: any) {
+    formError.value = e.response?.data?.detail || e.response?.data?.title?.[0] || 'Failed to save product'
+  } finally {
+    saving.value = false
+  }
+}
+
+async function deleteProduct(product: Product) {
+  if (!confirm(`Delete "${product.title}"?`)) return
+  try {
+    await productService.deleteProduct(product.slug)
+    await loadProducts()
+  } catch {
+    /* ignore */
+  }
+}
+
+onMounted(async () => {
+  await Promise.all([loadProducts(), loadCategories()])
+})
 </script>
 
 <template>
   <AdminLayout>
     <div>
       <div class="flex items-center justify-between mb-6">
-        <h1 class="font-heading text-xl font-semibold">Products</h1>
-        <BaseButton size="sm">
+        <h1 class="font-heading text-xl font-semibold">Products ({{ totalCount }})</h1>
+        <BaseButton size="sm" @click="openCreateModal">
           <Plus class="w-4 h-4 mr-1" /> Add Product
         </BaseButton>
       </div>
-      <div class="bg-white rounded-[16px] border border-gray-100 overflow-hidden">
+
+      <div v-if="loading" class="bg-white rounded-[16px] border border-gray-100 overflow-hidden">
+        <div class="p-8 text-center text-gray-400">Loading...</div>
+      </div>
+
+      <div v-else class="bg-white rounded-[16px] border border-gray-100 overflow-hidden">
         <table class="w-full text-sm">
           <thead>
             <tr class="border-b border-gray-100">
@@ -25,7 +152,25 @@ import { Plus } from '@lucide/vue'
             </tr>
           </thead>
           <tbody>
-            <tr class="border-b border-gray-50">
+            <tr v-for="product in products" :key="product.id" class="border-b border-gray-50 hover:bg-gray-50">
+              <td class="px-4 py-3">{{ product.title }}</td>
+              <td class="px-4 py-3 hidden md:table-cell text-gray-500">{{ product.category_name }}</td>
+              <td class="px-4 py-3">K{{ product.price }}</td>
+              <td class="px-4 py-3 hidden md:table-cell">
+                <span :class="product.stock <= 5 ? 'text-red-500 font-medium' : ''">
+                  {{ product.stock }}
+                </span>
+              </td>
+              <td class="px-4 py-3 text-right">
+                <button class="p-1.5 hover:bg-gray-100 rounded-lg transition-colors" title="Edit" @click="openEditModal(product)">
+                  <Pencil class="w-4 h-4 text-gray-400" />
+                </button>
+                <button class="p-1.5 hover:bg-red-50 rounded-lg transition-colors ml-1" title="Delete" @click="deleteProduct(product)">
+                  <Trash2 class="w-4 h-4 text-red-400" />
+                </button>
+              </td>
+            </tr>
+            <tr v-if="products.length === 0">
               <td colspan="5" class="px-4 py-8 text-center text-gray-400">
                 No products yet. Add your first product.
               </td>
@@ -33,6 +178,41 @@ import { Plus } from '@lucide/vue'
           </tbody>
         </table>
       </div>
+
+      <BaseModal :open="showModal" :title="editingProduct ? 'Edit Product' : 'Add Product'" @close="showModal = false">
+        <div class="space-y-4">
+          <BaseInput v-model="form.title" label="Title" required />
+          <BaseInput v-model="form.slug" label="Slug" placeholder="leave blank to auto-generate" />
+          <BaseSelect
+            v-model="form.category"
+            label="Category"
+            :options="categories.map(c => ({ value: c.id, label: c.name }))"
+          />
+          <div class="grid grid-cols-2 gap-4">
+            <BaseInput v-model="form.price" label="Price (ZMW)" type="number" required />
+            <BaseInput v-model="stockStr" label="Stock" type="number" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-dark mb-1.5">Description</label>
+            <textarea
+              v-model="form.description"
+              class="w-full px-4 py-3 bg-white border border-primary/40 rounded-[14px] text-sm text-dark placeholder:text-muted/60 focus:outline-none focus:border-gold transition-colors"
+              rows="3"
+            />
+          </div>
+          <div class="flex items-center gap-2">
+            <input id="is_active" v-model="form.is_active" type="checkbox" class="rounded" />
+            <label for="is_active" class="text-sm text-gray-600">Active</label>
+          </div>
+          <p v-if="formError" class="text-sm text-red-500">{{ formError }}</p>
+          <div class="flex justify-end gap-3 pt-2">
+            <BaseButton variant="ghost" @click="showModal = false">Cancel</BaseButton>
+            <BaseButton :loading="saving" @click="saveProduct">
+              {{ editingProduct ? 'Update' : 'Create' }}
+            </BaseButton>
+          </div>
+        </div>
+      </BaseModal>
     </div>
   </AdminLayout>
 </template>

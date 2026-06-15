@@ -109,3 +109,44 @@ class OrderDetailView(views.APIView):
         order = get_object_or_404(Order, id=pk, user=request.user)
         serializer = OrderListSerializer(order)
         return Response(serializer.data)
+
+
+class AdminOrderListView(views.APIView):
+    permission_classes = [permissions.IsAdminUser]
+
+    def get(self, request):
+        orders = Order.objects.select_related('user').prefetch_related('items').order_by('-created_at')
+
+        status_filter = request.query_params.get('status')
+        if status_filter:
+            orders = orders.filter(status=status_filter)
+
+        page = int(request.query_params.get('page', 1))
+        page_size = 20
+        start = (page - 1) * page_size
+        end = start + page_size
+
+        total = orders.count()
+        page_orders = orders[start:end]
+        serializer = AdminOrderSerializer(page_orders, many=True)
+
+        return Response({
+            'count': total,
+            'next': f'?page={page + 1}' if end < total else None,
+            'previous': f'?page={page - 1}' if page > 1 else None,
+            'results': serializer.data,
+        })
+
+
+class AdminOrderStatusUpdateView(views.APIView):
+    permission_classes = [permissions.IsAdminUser]
+
+    def patch(self, request, pk):
+        order = get_object_or_404(Order, id=pk)
+        serializer = OrderStatusUpdateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        order.status = serializer.validated_data['status']
+        order.save(update_fields=['status'])
+
+        return Response(AdminOrderSerializer(order).data)

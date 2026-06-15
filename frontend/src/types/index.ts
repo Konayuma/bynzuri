@@ -147,3 +147,33 @@ export interface ApiError {
   detail: string
   [key: string]: string | string[] | undefined
 }
+
+export interface DashboardStats {
+  revenue: string
+  orders: number
+  products: number
+  customers: number
+  orders_by_status: { status: string; count: number }[]
+  recent_orders: Order[]
+  low_stock: { id: string; title: string; stock: number }[]
+}
+
+export interface AdminOrder extends Order {
+  user_email: string
+  user_name: string
+  street_address: string
+  phone: string
+  notes: string
+  updated_at: string
+}
+
+export interface ProductCreateData {
+  category: string
+  title: string
+  slug: string
+  description: string
+  price: string
+  stock: number
+  is_active: boolean
+  is_featured: boolean
+}

@@ -1,5 +1,5 @@
 import api from './api'
-import type { Product, Category, PaginatedResponse } from '@/types'
+import type { Product, Category, PaginatedResponse, ProductCreateData } from '@/types'
 
 export const productService = {
   async getProducts(params?: {
@@ -30,5 +30,19 @@ export const productService = {
   async getNewArrivals(): Promise<Product[]> {
     const response = await api.get('/products/new-arrivals/')
     return response.data
+  },
+
+  async createProduct(data: ProductCreateData): Promise<Product> {
+    const response = await api.post('/products/', data)
+    return response.data
+  },
+
+  async updateProduct(slug: string, data: Partial<ProductCreateData>): Promise<Product> {
+    const response = await api.patch(`/products/${slug}/`, data)
+    return response.data
+  },
+
+  async deleteProduct(slug: string): Promise<void> {
+    await api.delete(`/products/${slug}/`)
   }
 }

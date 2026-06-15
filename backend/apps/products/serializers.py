@@ -32,3 +32,22 @@ class ProductDetailSerializer(serializers.ModelSerializer):
             'description', 'price', 'stock', 'is_in_stock', 'images',
             'rating', 'review_count', 'created_at', 'updated_at'
         ]
+
+
+class ProductCreateSerializer(serializers.ModelSerializer):
+    images = ProductImageSerializer(many=True, read_only=True, required=False)
+
+    class Meta:
+        model = Product
+        fields = [
+            'category', 'title', 'slug', 'description', 'price', 'stock',
+            'is_active', 'is_featured', 'images',
+        ]
+
+    def validate_slug(self, value):
+        qs = Product.objects.filter(slug=value)
+        if self.instance:
+            qs = qs.exclude(id=self.instance.id)
+        if qs.exists():
+            raise serializers.ValidationError('A product with this slug already exists.')
+        return value
