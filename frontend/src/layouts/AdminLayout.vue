@@ -2,7 +2,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
-import { LayoutDashboard, Package, ShoppingCart, LogOut, Menu, X } from '@lucide/vue'
+import { LayoutDashboard, Package, ShoppingCart, Truck, LogOut, Menu, X } from '@lucide/vue'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -11,7 +11,8 @@ const sidebarOpen = ref(false)
 const navItems = [
   { label: 'Dashboard', icon: LayoutDashboard, to: '/admin' },
   { label: 'Products', icon: Package, to: '/admin/products' },
-  { label: 'Orders', icon: ShoppingCart, to: '/admin/orders' }
+  { label: 'Orders', icon: ShoppingCart, to: '/admin/orders' },
+  { label: 'Delivery', icon: Truck, to: '/admin/delivery' }
 ]
 
 function handleLogout() {

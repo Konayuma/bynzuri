@@ -158,6 +158,31 @@ export interface DashboardStats {
   low_stock: { id: string; title: string; stock: number }[]
 }
 
+export interface AdminProvince {
+  id: string
+  name: string
+  slug: string
+  sort_order: number
+}
+
+export interface AdminTown {
+  id: string
+  province: string
+  province_name: string
+  name: string
+  slug: string
+}
+
+export interface AdminDeliveryMethod {
+  id: string
+  name: string
+  description: string
+  price: string
+  estimated_days: string
+  is_active: boolean
+  sort_order: number
+}
+
 export interface AdminOrder extends Order {
   user_email: string
   user_name: string
