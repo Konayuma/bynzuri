@@ -2,25 +2,56 @@
 
 @import "tailwindcss";
 
+@font-face {
+  font-family: 'BrittanySignature';
+  src: url('../assets/fonts/BrittanySignature.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
 @theme {
-  --color-primary: #E9D8C9;
-  --color-background: #FAF8F6;
-  --color-dark: #3B2F2A;
+  --color-primary: #F3E1E5;
+  --color-background: #FAF6F6;
+  --color-dark: #212121;
   --color-text: #212529;
-  --color-muted: #A58C7C;
-  --color-gold: #C7A46A;
-  --color-success: #4F8A63;
-  --color-pink: #FFD1E6;
-  --color-pink-light: #FBE7EE;
-  --color-star: #FFE600;
+  --color-muted: #6B6B6B;
+  --color-gold: #E74C8C;
+  --color-success: #A3B899;
+
+  --color-nzuri-blush: #F3E1E5;
+  --color-nzuri-accent: #E74C8C;
+  --color-nzuri-cream: #FAF6F6;
+  --color-nzuri-charcoal: #212121;
+  --color-nzuri-slate: #6B6B6B;
+  --color-nzuri-sage: #A3B899;
+  --color-nzuri-pastel-pink: #FFD1E6;
+  --color-nzuri-bubble-pink: #FBE7EE;
+  --color-nzuri-star-yellow: #FFE600;
+  --color-nzuri-dark-text: #212529;
 
   --font-heading: 'Playfair Display', serif;
   --font-body: 'Inter', sans-serif;
+  --font-signature: 'BrittanySignature', cursive;
 
   --radius-sm: 14px;
   --radius-md: 16px;
   --radius-lg: 20px;
   --radius-xl: 24px;
+}
+
+@layer utilities {
+  .font-nzuri-signature {
+    font-family: 'BrittanySignature', 'Herr Von Muellerhoff', cursive;
+    font-weight: 300;
+    letter-spacing: 0.05em;
+    transform: rotate(-1deg);
+  }
+
+  .font-nzuri-interface {
+    font-family: 'Inter', sans-serif;
+    letter-spacing: -0.01em;
+  }
 }
 
 html {
