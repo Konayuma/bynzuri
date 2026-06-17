@@ -29,7 +29,7 @@ function handleCheckout() {
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="text-muted"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
       </div>
       <p class="text-dark font-medium mb-1">Your cart is empty</p>
-      <p class="text-sm text-muted mb-6">Add some products to get started</p>
+      <p class="text-sm text-muted mb-6">Find something you love in our collection.</p>
       <BaseButton variant="outline" @click="emit('close')">
         Continue Shopping
       </BaseButton>
@@ -87,7 +87,7 @@ function handleCheckout() {
           <span class="text-muted">Subtotal</span>
           <span class="font-semibold text-dark">K{{ cartStore.subtotal }}</span>
         </div>
-        <p class="text-xs text-muted">Delivery calculated at checkout</p>
+        <p class="text-xs text-muted">Delivery fee calculated at checkout based on your location</p>
         <BaseButton fullWidth @click="handleCheckout">
           Checkout
         </BaseButton>

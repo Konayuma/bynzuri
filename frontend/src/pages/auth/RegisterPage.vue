@@ -20,7 +20,7 @@ const error = ref('')
 
 async function handleRegister() {
   if (form.value.password !== form.value.confirm_password) {
-    error.value = 'Passwords do not match'
+    error.value = 'Those passwords don\'t match. Please re-type them.'
     return
   }
 
@@ -38,7 +38,7 @@ async function handleRegister() {
     await userStore.login(form.value.email, form.value.password)
     router.push('/')
   } catch {
-    error.value = 'Registration failed. Please try again.'
+    error.value = 'Could not create your account. The email may already be in use.'
   } finally {
     loading.value = false
   }
@@ -50,7 +50,7 @@ async function handleRegister() {
     <div class="w-full max-w-sm">
       <div class="text-center mb-8">
         <h1 class="font-heading text-2xl font-semibold text-dark">Create Account</h1>
-        <p class="text-sm text-muted mt-1">Join the By Nzuri beauty circle</p>
+        <p class="text-sm text-muted mt-1">Track your orders, save addresses, and shop faster next time</p>
       </div>
 
       <form @submit.prevent="handleRegister" class="space-y-4">
@@ -77,11 +77,13 @@ async function handleRegister() {
         />
         <BaseInput
           v-model="form.phone"
-          label="Phone"
+          label="Phone Number"
           type="tel"
           required
           id="reg-phone"
+          placeholder="260xxxxxxxxx"
         />
+        <p class="text-xs text-muted -mt-2">Zambian mobile number for delivery updates</p>
         <BaseInput
           v-model="form.password"
           label="Password"
@@ -89,6 +91,7 @@ async function handleRegister() {
           required
           id="reg-password"
         />
+        <p class="text-xs text-muted -mt-2">At least 8 characters</p>
         <BaseInput
           v-model="form.confirm_password"
           label="Confirm Password"

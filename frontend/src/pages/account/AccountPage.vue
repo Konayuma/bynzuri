@@ -92,7 +92,7 @@ async function openEditModal(address: Address) {
 
 async function saveAddress() {
   if (!form.value.province || !form.value.town || !form.value.street_address || !form.value.phone) {
-    formError.value = 'All fields are required'
+    formError.value = 'Please fill in all address fields'
     return
   }
   saving.value = true
@@ -106,14 +106,14 @@ async function saveAddress() {
     showModal.value = false
     await loadAddresses()
   } catch (e: any) {
-    formError.value = e.response?.data?.detail || 'Failed to save address'
+    formError.value = e.response?.data?.detail || 'Could not save this address. Please try again.'
   } finally {
     saving.value = false
   }
 }
 
 async function deleteAddress(address: Address) {
-  if (!confirm('Delete this address?')) return
+  if (!confirm('Delete this address? It will be removed from your saved addresses.')) return
   try {
     await addressService.deleteAddress(address.id)
     await loadAddresses()
@@ -187,7 +187,7 @@ onMounted(async () => {
       <div v-if="loadingAddresses" class="text-center py-6 text-muted text-sm">Loading...</div>
 
       <div v-else-if="addresses.length === 0" class="text-center py-6 text-muted text-sm">
-        No saved addresses yet. Add one for faster checkout.
+        No saved addresses yet. Add one to speed up your next checkout.
       </div>
 
       <div v-else class="space-y-3">
@@ -259,6 +259,7 @@ onMounted(async () => {
         />
         <BaseInput v-model="form.street_address" label="Street Address" required placeholder="Street, building, landmark" />
         <BaseInput v-model="form.phone" label="Phone Number" type="tel" required placeholder="260xxxxxxxxx" />
+        <p class="text-xs text-muted -mt-2">For delivery updates via SMS</p>
         <div class="flex items-center gap-2">
           <input id="is_default" v-model="form.is_default" type="checkbox" class="rounded" />
           <label for="is_default" class="text-sm text-gray-600">Set as default address</label>

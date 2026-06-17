@@ -17,6 +17,15 @@ const statusColors: Record<string, string> = {
   cancelled: 'text-red-500 bg-red-50'
 }
 
+const statusLabels: Record<string, string> = {
+  awaiting_payment: 'Awaiting Payment',
+  paid: 'Paid',
+  processing: 'Processing',
+  dispatched: 'Dispatched',
+  delivered: 'Delivered',
+  cancelled: 'Cancelled'
+}
+
 onMounted(async () => {
   try {
     orders.value = await orderService.getOrders()
@@ -43,9 +52,10 @@ onMounted(async () => {
       <div class="w-16 h-16 rounded-full bg-primary/40 flex items-center justify-center mx-auto mb-4">
         <Package class="w-8 h-8 text-muted" />
       </div>
-      <p class="text-muted mb-4">No orders yet</p>
+      <p class="text-dark font-medium mb-1">No orders yet</p>
+      <p class="text-sm text-muted mb-4">Once you place an order, it'll show up here.</p>
       <router-link to="/catalog">
-        <BaseButton variant="outline">Start Shopping</BaseButton>
+        <BaseButton variant="outline">Browse Products</BaseButton>
       </router-link>
     </div>
 
@@ -63,7 +73,7 @@ onMounted(async () => {
             class="text-xs font-medium px-2.5 py-1 rounded-full capitalize"
             :class="statusColors[order.status] || 'text-muted bg-primary/20'"
           >
-            {{ order.status.replace('_', ' ') }}
+            {{ statusLabels[order.status] || order.status.replace('_', ' ') }}
           </span>
         </div>
         <div class="flex items-center justify-between text-sm">

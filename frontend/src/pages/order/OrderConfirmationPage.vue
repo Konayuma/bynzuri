@@ -35,8 +35,12 @@ onMounted(async () => {
         <CheckCircle class="w-8 h-8 text-success" />
       </div>
       <h1 class="font-heading text-2xl font-semibold text-dark mb-2">Order Confirmed!</h1>
+      <p class="text-sm text-muted mb-2">
+        Thank you for your order. Your order reference is
+        <span class="font-medium text-dark">#{{ order.id.slice(0, 8).toUpperCase() }}</span>.
+      </p>
       <p class="text-sm text-muted mb-6">
-        Thank you for your order. We&apos;ll send you a confirmation shortly.
+        We'll send a confirmation to your email and phone shortly. You can track your order status in your account.
       </p>
 
       <div class="bg-white rounded-[20px] p-6 shadow-[0_8px_30px_rgba(0,0,0,0.06)] text-left mb-6">
@@ -57,6 +61,19 @@ onMounted(async () => {
             <span class="text-muted">Status</span>
             <span class="text-gold font-medium capitalize">{{ order.status.replace('_', ' ') }}</span>
           </div>
+          <p v-if="order.status === 'awaiting_payment'" class="text-xs text-muted mt-1">
+            Complete your payment to confirm this order.
+          </p>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-[20px] p-6 shadow-[0_8px_30px_rgba(0,0,0,0.06)] text-left mb-6">
+        <h3 class="text-sm font-semibold text-dark mb-3">What happens next?</h3>
+        <div class="space-y-2 text-sm text-muted">
+          <p v-if="order.status === 'awaiting_payment'">1. Complete your payment to confirm the order</p>
+          <p v-else>1. Your payment has been received</p>
+          <p>2. We'll prepare and package your items</p>
+          <p>3. Your order will be dispatched for delivery</p>
         </div>
       </div>
 
@@ -66,8 +83,9 @@ onMounted(async () => {
     </template>
 
     <div v-else>
-      <p class="text-muted">Order not found</p>
-      <BaseButton class="mt-4" @click="router.push('/')">
+      <p class="text-muted mb-2">We couldn't find this order.</p>
+      <p class="text-sm text-muted mb-4">It may take a moment to appear. Try refreshing, or check your order history.</p>
+      <BaseButton class="mt-2" @click="router.push('/')">
         Go Home
       </BaseButton>
     </div>

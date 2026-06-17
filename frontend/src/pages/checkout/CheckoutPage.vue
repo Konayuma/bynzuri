@@ -40,7 +40,7 @@ const form = ref({
 const totalSteps = 4
 
 const stepTitle = computed(() => {
-  const titles = ['', 'Your Details', 'Delivery Location', 'Delivery Method', 'Payment']
+  const titles = ['', 'Your Details', 'Delivery Location', 'Delivery Method', 'Review & Pay']
   return titles[currentStep.value]
 })
 
@@ -94,7 +94,7 @@ function useCustomAddress() {
 
 async function handleSubmit() {
   if (!form.value.payment_method) {
-    error.value = 'Please select a payment method'
+    error.value = 'Please select a payment method to continue'
     return
   }
 
@@ -114,7 +114,7 @@ async function handleSubmit() {
     cartStore.clearCart()
     router.push(`/order/confirmation/${order.id}`)
   } catch (e: unknown) {
-    error.value = (e as { response?: { data?: { detail?: string } } })?.response?.data?.detail || 'Something went wrong. Please try again.'
+    error.value = (e as { response?: { data?: { detail?: string } } })?.response?.data?.detail || 'We couldn\'t place your order. Please check your details and try again.'
   } finally {
     loading.value = false
   }
@@ -195,6 +195,7 @@ onMounted(async () => {
           id="phone"
           placeholder="260xxxxxxxxx"
         />
+        <p class="text-xs text-muted -mt-2">We'll send delivery updates via SMS</p>
       </div>
 
       <!-- Step 2: Delivery Location -->
@@ -202,7 +203,7 @@ onMounted(async () => {
         <h2 class="font-heading text-xl font-semibold text-dark mb-4">Delivery Location</h2>
 
         <div v-if="savedAddresses.length > 0" class="space-y-2 mb-4">
-          <p class="text-sm font-medium text-dark">Use a saved address</p>
+          <p class="text-sm font-medium text-dark">Deliver to a saved address</p>
           <div class="space-y-2">
             <button
               v-for="address in savedAddresses"
@@ -231,7 +232,7 @@ onMounted(async () => {
             class="text-sm text-gold hover:underline"
             @click="useCustomAddress"
           >
-            + Use a different address
+            + Enter a new address
           </button>
           <div class="border-t border-primary/20 pt-4" />
         </div>
@@ -281,7 +282,7 @@ onMounted(async () => {
                 </div>
                 <div>
                   <p class="text-sm font-medium text-dark">{{ method.name }}</p>
-                  <p class="text-xs text-muted">{{ method.description }} ({{ method.estimated_days }})</p>
+                  <p class="text-xs text-muted">{{ method.description }} &middot; {{ method.estimated_days }}</p>
                 </div>
               </div>
               <p class="text-sm font-semibold text-dark">K{{ method.price }}</p>
@@ -299,7 +300,7 @@ onMounted(async () => {
       <!-- Step 4: Payment -->
       <div v-if="currentStep === 4" class="space-y-4">
         <h2 class="font-heading text-xl font-semibold text-dark mb-4">Payment</h2>
-        <p class="text-sm text-muted mb-4">Select your preferred payment method</p>
+        <p class="text-sm text-muted mb-4">Choose how you'd like to pay. You'll be prompted to complete payment after placing your order.</p>
         <div class="space-y-3">
           <label
             v-for="method in paymentMethods"
@@ -314,7 +315,10 @@ onMounted(async () => {
               >
                 <div v-if="form.payment_method === method.value" class="w-2 h-2 rounded-full bg-gold" />
               </div>
-              <span class="text-sm font-medium text-dark">{{ method.label }}</span>
+              <div>
+                <span class="text-sm font-medium text-dark">{{ method.label }}</span>
+                <p class="text-xs text-muted">{{ method.description }}</p>
+              </div>
             </div>
             <input
               type="radio"
@@ -362,7 +366,7 @@ onMounted(async () => {
           :loading="loading"
           @click="currentStep < totalSteps ? nextStep() : undefined"
         >
-          {{ currentStep === totalSteps ? 'Place Order' : 'Continue' }}
+          {{ currentStep === totalSteps ? 'Place Order & Pay' : 'Continue' }}
           <ChevronRight class="w-4 h-4 ml-1" />
         </BaseButton>
       </div>
@@ -372,9 +376,9 @@ onMounted(async () => {
 
 <script lang="ts">
 const paymentMethods = [
-  { value: 'mtn_momo', label: 'MTN MoMo' },
-  { value: 'airtel_money', label: 'Airtel Money' },
-  { value: 'visa', label: 'Visa' },
-  { value: 'mastercard', label: 'Mastercard' }
+  { value: 'mtn_momo', label: 'MTN Mobile Money', description: 'Pay with your MTN MoMo account' },
+  { value: 'airtel_money', label: 'Airtel Money', description: 'Pay with your Airtel Money account' },
+  { value: 'visa', label: 'Visa Card', description: 'Debit or credit card' },
+  { value: 'mastercard', label: 'Mastercard', description: 'Debit or credit card' }
 ]
 </script>

@@ -16,7 +16,7 @@ const error = ref('')
 
 async function handleLogin() {
   if (!email.value || !password.value) {
-    error.value = 'Please fill in all fields'
+    error.value = 'Enter both your email and password to continue'
     return
   }
 
@@ -29,7 +29,7 @@ async function handleLogin() {
     await cartStore.fetchCart()
     router.push('/')
   } catch {
-    error.value = 'Invalid email or password'
+    error.value = 'Email or password is incorrect. Please try again.'
   } finally {
     loading.value = false
   }
@@ -41,7 +41,7 @@ async function handleLogin() {
     <div class="w-full max-w-sm">
       <div class="text-center mb-8">
         <h1 class="font-heading text-2xl font-semibold text-dark">Welcome Back</h1>
-        <p class="text-sm text-muted mt-1">Sign in to your By Nzuri account</p>
+        <p class="text-sm text-muted mt-1">Sign in to track orders, save addresses, and check out faster</p>
       </div>
 
       <form @submit.prevent="handleLogin" class="space-y-4">

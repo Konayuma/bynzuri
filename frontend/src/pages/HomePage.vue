@@ -287,7 +287,7 @@ onUnmounted(() => {
           Subscribe
         </BaseButton>
       </div>
-      <p v-else class="section-animate text-sm text-success">Thanks for subscribing!</p>
+      <p v-else class="section-animate text-sm text-success">You're in! Watch your inbox for updates from By Nzuri.</p>
     </section>
   </div>
 </template>

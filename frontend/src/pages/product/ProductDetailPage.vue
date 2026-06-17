@@ -87,7 +87,7 @@ function loadRecentlyViewed() {
 
 async function submitReview() {
   if (!reviewComment.value.trim()) {
-    reviewError.value = 'Please write a comment'
+    reviewError.value = 'Write a few words about your experience'
     return
   }
   reviewSubmitting.value = true
@@ -106,7 +106,7 @@ async function submitReview() {
       product.value.review_count++
     }
   } catch (e: any) {
-    reviewError.value = e.response?.data?.detail || 'Failed to submit review'
+    reviewError.value = e.response?.data?.detail || 'Could not submit your review. Please try again.'
   } finally {
     reviewSubmitting.value = false
   }
@@ -216,7 +216,7 @@ watch(product, (p) => {
               :fullWidth="true"
               @click="handleAddToCart"
             >
-              <template v-if="addedToCart">Added!</template>
+              <template v-if="addedToCart">Added to Cart!</template>
               <template v-else>Add to Cart</template>
             </BaseButton>
           </div>
@@ -282,7 +282,7 @@ watch(product, (p) => {
           />
           <div class="flex items-center justify-between mt-3">
             <p v-if="reviewError" class="text-xs text-red-500">{{ reviewError }}</p>
-            <p v-if="reviewSuccess" class="text-xs text-success">Review submitted!</p>
+            <p v-if="reviewSuccess" class="text-xs text-success">Thanks! Your review has been submitted.</p>
             <div />
             <BaseButton size="sm" :loading="reviewSubmitting" @click="submitReview">
               <Send class="w-3.5 h-3.5 mr-1.5" /> Submit
@@ -323,7 +323,7 @@ watch(product, (p) => {
           </div>
         </div>
         <div v-else class="text-center py-8 text-muted text-sm">
-          No reviews yet. Be the first to review this product.
+          No reviews yet. Share your experience to help others.
         </div>
       </section>
 

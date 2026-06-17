@@ -187,9 +187,10 @@ watch(() => route.query, () => {
           v-else-if="productStore.products.length === 0"
           class="text-center py-16"
         >
-          <p class="text-muted">No products found</p>
+          <p class="text-dark font-medium mb-1">No products found</p>
+          <p class="text-sm text-muted mb-4">Try adjusting your search or filters.</p>
           <BaseButton variant="outline" class="mt-4" @click="clearSearch">
-            Clear Filters
+            Clear Search &amp; Filters
           </BaseButton>
         </div>
 
