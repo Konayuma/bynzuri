@@ -1,12 +1,19 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
+import { createRouter, createWebHistory } from 'vue-router'
 import AppNavbar from '@/layouts/AppNavbar.vue'
+
+const router = createRouter({
+  history: createWebHistory(),
+  routes: [{ path: '/', component: { template: '<div />' } }],
+})
 
 function createWrapper() {
   setActivePinia(createPinia())
   return mount(AppNavbar, {
     global: {
+      plugins: [router],
       stubs: {
         'router-link': {
           template: '<a :href="$props.to"><slot /></a>',
@@ -44,8 +51,13 @@ describe('AppNavbar', () => {
     )
     if (menuButton) {
       await menuButton.trigger('click')
-      // Mobile menu should be visible after toggle
       expect(wrapper.text()).toContain('Shop All')
     }
+  })
+
+  it('has persistent search input on desktop', () => {
+    const wrapper = createWrapper()
+    const input = wrapper.find('input[placeholder="Search products..."]')
+    expect(input.exists()).toBe(true)
   })
 })

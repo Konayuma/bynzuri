@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue'
+import { onMounted, ref, watch, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useProductStore } from '@/stores/product'
 import ProductCard from '@/components/product/ProductCard.vue'
 import BaseButton from '@/components/base/BaseButton.vue'
-import { Search, SlidersHorizontal, ChevronLeft, ChevronRight } from '@lucide/vue'
+import { Search, SlidersHorizontal, ChevronLeft, ChevronRight, X } from '@lucide/vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -15,6 +15,8 @@ const selectedCategory = ref((route.query.category as string) || '')
 const sortOrder = ref((route.query.ordering as string) || '-created_at')
 const currentPage = ref(Number(route.query.page) || 1)
 const showFilters = ref(false)
+
+const activeSearch = computed(() => (route.query.search as string) || '')
 
 const sortOptions = [
   { value: '-created_at', label: 'Newest' },
@@ -33,6 +35,13 @@ function fetchProducts() {
 }
 
 function handleSearch() {
+  currentPage.value = 1
+  updateUrl()
+  fetchProducts()
+}
+
+function clearSearch() {
+  searchQuery.value = ''
   currentPage.value = 1
   updateUrl()
   fetchProducts()
@@ -83,24 +92,24 @@ watch(() => route.query, () => {
   <div class="max-w-7xl mx-auto px-4 py-8">
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
       <div>
-        <h1 class="font-heading text-2xl md:text-3xl font-semibold text-dark">Shop All</h1>
-        <p v-if="productStore.pagination.count > 0" class="text-sm text-muted mt-1">
-          {{ productStore.pagination.count }} products
-        </p>
+        <h1 class="font-heading text-2xl md:text-3xl font-semibold text-dark">
+          {{ selectedCategory ? productStore.categories.find(c => c.slug === selectedCategory)?.name || 'Shop' : 'Shop All' }}
+        </h1>
+        <div class="flex items-center gap-2 mt-1">
+          <p v-if="productStore.pagination.count > 0" class="text-sm text-muted">
+            {{ productStore.pagination.count }} products
+          </p>
+          <span v-if="activeSearch" class="inline-flex items-center gap-1.5 text-sm text-gold bg-gold/10 px-2.5 py-0.5 rounded-full">
+            <Search class="w-3 h-3" />
+            "{{ activeSearch }}"
+            <button class="hover:text-dark transition-colors" @click="clearSearch">
+              <X class="w-3 h-3" />
+            </button>
+          </span>
+        </div>
       </div>
 
       <div class="flex items-center gap-3">
-        <div class="relative flex-1 md:w-64">
-          <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" />
-          <input
-            v-model="searchQuery"
-            type="text"
-            placeholder="Search..."
-            class="w-full pl-9 pr-3 py-2.5 bg-white border border-primary/40 rounded-[14px] text-sm focus:outline-none focus:border-gold transition-colors"
-            @keyup.enter="handleSearch"
-          />
-        </div>
-
         <button
           class="md:hidden p-2.5 border border-primary/40 rounded-[14px] hover:bg-primary/20 transition-colors"
           @click="showFilters = !showFilters"
@@ -110,7 +119,7 @@ watch(() => route.query, () => {
 
         <select
           v-model="sortOrder"
-          class="hidden md:block px-3 py-2.5 bg-white border border-primary/40 rounded-[14px] text-sm focus:outline-none focus:border-gold transition-colors"
+          class="px-3 py-2.5 bg-white border border-primary/40 rounded-[14px] text-sm focus:outline-none focus:border-gold transition-colors"
           @change="handleSortChange"
         >
           <option v-for="opt in sortOptions" :key="opt.value" :value="opt.value">
@@ -179,7 +188,7 @@ watch(() => route.query, () => {
           class="text-center py-16"
         >
           <p class="text-muted">No products found</p>
-          <BaseButton variant="outline" class="mt-4" @click="searchQuery = ''; handleSearch()">
+          <BaseButton variant="outline" class="mt-4" @click="clearSearch">
             Clear Filters
           </BaseButton>
         </div>

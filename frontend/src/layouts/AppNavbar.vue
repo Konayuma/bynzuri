@@ -1,27 +1,37 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, onMounted, onUnmounted, watch } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { ShoppingBag, User, Search, Menu, X, Heart } from '@lucide/vue'
 import { useCartStore } from '@/stores/cart'
 import { useUserStore } from '@/stores/user'
 import { useUIStore } from '@/stores/ui'
 
 const router = useRouter()
+const route = useRoute()
 const cartStore = useCartStore()
 const userStore = useUserStore()
 const uiStore = useUIStore()
 
 const searchQuery = ref('')
-const isSearchVisible = ref(false)
+const searchInputRef = ref<HTMLInputElement | null>(null)
+const mobileSearchOpen = ref(false)
 const scrolled = ref(false)
 const hidden = ref(false)
 let lastScroll = 0
 
 function handleSearch() {
-  if (searchQuery.value.trim()) {
-    router.push({ name: 'catalog', query: { search: searchQuery.value.trim() } })
-    searchQuery.value = ''
-    isSearchVisible.value = false
+  const q = searchQuery.value.trim()
+  if (q) {
+    router.push({ name: 'catalog', query: { search: q } })
+  } else if (route.name === 'catalog') {
+    router.push({ name: 'catalog' })
+  }
+}
+
+function clearSearch() {
+  searchQuery.value = ''
+  if (route.name === 'catalog') {
+    router.push({ name: 'catalog' })
   }
 }
 
@@ -31,6 +41,10 @@ function onScroll() {
   hidden.value = y > lastScroll && y > 200
   lastScroll = y
 }
+
+watch(() => route.query.search, (val) => {
+  searchQuery.value = (val as string) || ''
+}, { immediate: true })
 
 onMounted(() => {
   window.addEventListener('scroll', onScroll, { passive: true })
@@ -48,9 +62,11 @@ onUnmounted(() => {
       hidden ? '-translate-y-full' : 'translate-y-0'
     ]"
   >
-    <div class="max-w-7xl mx-auto px-4 h-[72px] flex items-center justify-between">
+    <!-- Main nav row -->
+    <div class="max-w-7xl mx-auto px-4 h-[72px] flex items-center gap-4">
+      <!-- Mobile menu toggle -->
       <button
-        class="lg:hidden p-2 -ml-2 hover:bg-primary/30 rounded-lg transition-colors active:scale-95"
+        class="lg:hidden p-2 -ml-2 hover:bg-primary/30 rounded-lg transition-colors active:scale-95 shrink-0"
         @click="uiStore.toggleMobileMenu"
         aria-label="Toggle menu"
       >
@@ -58,11 +74,13 @@ onUnmounted(() => {
         <X v-else class="w-6 h-6 text-dark" />
       </button>
 
-      <router-link to="/" class="font-heading text-2xl font-bold text-dark tracking-tight hover:opacity-80 transition-opacity">
+      <!-- Logo -->
+      <router-link to="/" class="font-heading text-2xl font-bold text-dark tracking-tight hover:opacity-80 transition-opacity shrink-0">
         bynzuri
       </router-link>
 
-      <nav class="hidden lg:flex items-center gap-8">
+      <!-- Desktop nav links -->
+      <nav class="hidden lg:flex items-center gap-8 shrink-0">
         <router-link to="/catalog" class="text-sm font-medium text-muted hover:text-dark transition-colors relative after:absolute after:bottom-[-22px] after:left-0 after:w-full after:h-[2px] after:bg-dark after:scale-x-0 hover:after:scale-x-100 after:transition-transform after:duration-200">
           Shop All
         </router-link>
@@ -77,10 +95,34 @@ onUnmounted(() => {
         </router-link>
       </nav>
 
-      <div class="flex items-center gap-2">
+      <!-- Desktop persistent search bar -->
+      <div class="hidden lg:flex flex-1 max-w-md ml-auto mr-4">
+        <div class="relative w-full group">
+          <Search class="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted group-focus-within:text-dark transition-colors" />
+          <input
+            ref="searchInputRef"
+            v-model="searchQuery"
+            type="text"
+            placeholder="Search products..."
+            class="w-full pl-10 pr-9 py-2.5 bg-primary/20 border border-transparent rounded-full text-sm text-dark placeholder:text-muted/60 focus:outline-none focus:bg-white focus:border-primary/40 transition-all duration-200"
+            @keyup.enter="handleSearch"
+          />
+          <button
+            v-if="searchQuery"
+            class="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 hover:bg-primary/30 rounded-full transition-colors"
+            @click="clearSearch"
+          >
+            <X class="w-3.5 h-3.5 text-muted" />
+          </button>
+        </div>
+      </div>
+
+      <!-- Right icons -->
+      <div class="flex items-center gap-1.5 shrink-0">
+        <!-- Mobile search toggle -->
         <button
-          class="p-2 hover:bg-primary/30 rounded-lg transition-colors active:scale-95"
-          @click="isSearchVisible = !isSearchVisible"
+          class="lg:hidden p-2 hover:bg-primary/30 rounded-lg transition-colors active:scale-95"
+          @click="mobileSearchOpen = !mobileSearchOpen"
           aria-label="Search"
         >
           <Search class="w-5 h-5 text-dark" />
@@ -118,22 +160,33 @@ onUnmounted(() => {
       </div>
     </div>
 
+    <!-- Mobile search bar (slide down) -->
     <div
-      v-if="isSearchVisible"
-      class="border-t border-primary/20 px-4 py-3"
+      class="lg:hidden overflow-hidden transition-all duration-300"
+      :class="mobileSearchOpen ? 'max-h-20 opacity-100' : 'max-h-0 opacity-0'"
     >
-      <div class="max-w-2xl mx-auto relative">
-        <Search class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" />
-        <input
-          v-model="searchQuery"
-          type="text"
-          placeholder="Search products..."
-          class="w-full pl-11 pr-4 py-3 bg-white border border-primary/40 rounded-lg text-sm focus:outline-none focus:border-gold transition-colors"
-          @keyup.enter="handleSearch"
-        />
+      <div class="px-4 pb-3">
+        <div class="relative">
+          <Search class="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" />
+          <input
+            v-model="searchQuery"
+            type="text"
+            placeholder="Search products..."
+            class="w-full pl-10 pr-9 py-2.5 bg-primary/20 border border-transparent rounded-full text-sm text-dark placeholder:text-muted/60 focus:outline-none focus:bg-white focus:border-primary/40 transition-all duration-200"
+            @keyup.enter="handleSearch"
+          />
+          <button
+            v-if="searchQuery"
+            class="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 hover:bg-primary/30 rounded-full transition-colors"
+            @click="clearSearch"
+          >
+            <X class="w-3.5 h-3.5 text-muted" />
+          </button>
+        </div>
       </div>
     </div>
 
+    <!-- Mobile menu -->
     <div
       v-if="uiStore.isMobileMenuOpen"
       class="lg:hidden border-t border-primary/20 bg-background"
