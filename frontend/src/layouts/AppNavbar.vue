@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { ShoppingBag, User, Search, Menu, X } from '@lucide/vue'
+import { ShoppingBag, User, Search, Menu, X, Heart } from '@lucide/vue'
 import { useCartStore } from '@/stores/cart'
 import { useUserStore } from '@/stores/user'
 import { useUIStore } from '@/stores/ui'
@@ -85,6 +85,14 @@ onUnmounted(() => {
         >
           <Search class="w-5 h-5 text-dark" />
         </button>
+
+        <router-link
+          to="/wishlist"
+          class="p-2 hover:bg-primary/30 rounded-lg transition-colors active:scale-95"
+          aria-label="Wishlist"
+        >
+          <Heart class="w-5 h-5 text-dark" />
+        </router-link>
 
         <router-link
           :to="userStore.isAuthenticated ? '/account' : '/auth/login'"

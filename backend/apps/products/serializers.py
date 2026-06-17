@@ -51,3 +51,10 @@ class ProductCreateSerializer(serializers.ModelSerializer):
         if qs.exists():
             raise serializers.ValidationError('A product with this slug already exists.')
         return value
+
+
+class ProductImageCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProductImage
+        fields = ['id', 'image', 'alt_text', 'is_primary', 'sort_order']
+        read_only_fields = ['id']

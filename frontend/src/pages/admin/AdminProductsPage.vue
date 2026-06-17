@@ -6,8 +6,8 @@ import BaseInput from '@/components/base/BaseInput.vue'
 import BaseSelect from '@/components/base/BaseSelect.vue'
 import BaseModal from '@/components/base/BaseModal.vue'
 import { productService } from '@/services/product.service'
-import type { Product, Category, ProductCreateData, PaginatedResponse } from '@/types'
-import { Plus, Pencil, Trash2 } from '@lucide/vue'
+import type { Product, Category, ProductCreateData, PaginatedResponse, ProductImage } from '@/types'
+import { Plus, Pencil, Trash2, Upload, X, ImageIcon } from '@lucide/vue'
 
 const products = ref<Product[]>([])
 const categories = ref<Category[]>([])
@@ -30,8 +30,11 @@ const form = ref<ProductCreateData>({
 })
 
 const stockStr = ref('0')
-
 const formError = ref('')
+const imageFiles = ref<File[]>([])
+const imagePreviews = ref<string[]>([])
+const uploadingImages = ref(false)
+const currentImages = ref<ProductImage[]>([])
 
 async function loadProducts() {
   loading.value = true
@@ -68,6 +71,9 @@ function openCreateModal() {
   }
   stockStr.value = '0'
   formError.value = ''
+  imageFiles.value = []
+  imagePreviews.value = []
+  currentImages.value = []
   showModal.value = true
 }
 
@@ -85,7 +91,53 @@ function openEditModal(product: Product) {
   }
   stockStr.value = String(product.stock)
   formError.value = ''
+  imageFiles.value = []
+  imagePreviews.value = []
+  currentImages.value = [...product.images]
   showModal.value = true
+}
+
+function handleImageSelect(event: Event) {
+  const input = event.target as HTMLInputElement
+  if (!input.files) return
+  for (const file of Array.from(input.files)) {
+    imageFiles.value.push(file)
+    imagePreviews.value.push(URL.createObjectURL(file))
+  }
+  input.value = ''
+}
+
+function removeNewImage(index: number) {
+  URL.revokeObjectURL(imagePreviews.value[index])
+  imageFiles.value.splice(index, 1)
+  imagePreviews.value.splice(index, 1)
+}
+
+async function removeExistingImage(image: ProductImage) {
+  if (!editingProduct.value) return
+  try {
+    await productService.deleteProductImage(editingProduct.value.slug, image.id)
+    currentImages.value = currentImages.value.filter(i => i.id !== image.id)
+  } catch {
+    /* ignore */
+  }
+}
+
+async function uploadImages(slug: string) {
+  if (imageFiles.value.length === 0) return
+  uploadingImages.value = true
+  try {
+    for (let i = 0; i < imageFiles.value.length; i++) {
+      const formData = new FormData()
+      formData.append('image', imageFiles.value[i])
+      formData.append('alt_text', form.value.title)
+      formData.append('is_primary', i === 0 && currentImages.value.length === 0 ? 'true' : 'false')
+      formData.append('sort_order', String(currentImages.value.length + i))
+      await productService.uploadProductImage(slug, formData)
+    }
+  } finally {
+    uploadingImages.value = false
+  }
 }
 
 async function saveProduct() {
@@ -97,11 +149,15 @@ async function saveProduct() {
   formError.value = ''
   form.value.stock = parseInt(stockStr.value, 10) || 0
   try {
+    let slug: string
     if (editingProduct.value) {
-      await productService.updateProduct(editingProduct.value.slug, form.value)
+      const updated = await productService.updateProduct(editingProduct.value.slug, form.value)
+      slug = updated.slug
     } else {
-      await productService.createProduct(form.value)
+      const created = await productService.createProduct(form.value)
+      slug = created.slug
     }
+    await uploadImages(slug)
     showModal.value = false
     await loadProducts()
   } catch (e: any) {
@@ -204,10 +260,52 @@ onMounted(async () => {
             <input id="is_active" v-model="form.is_active" type="checkbox" class="rounded" />
             <label for="is_active" class="text-sm text-gray-600">Active</label>
           </div>
+
+          <div>
+            <label class="block text-sm font-medium text-dark mb-1.5">Product Images</label>
+            <div v-if="currentImages.length > 0" class="flex flex-wrap gap-3 mb-3">
+              <div
+                v-for="img in currentImages"
+                :key="img.id"
+                class="relative group w-20 h-20 rounded-lg overflow-hidden border border-primary/40"
+              >
+                <img :src="img.image" :alt="img.alt_text" class="w-full h-full object-cover" />
+                <button
+                  type="button"
+                  class="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                  @click="removeExistingImage(img)"
+                >
+                  <X class="w-4 h-4 text-white" />
+                </button>
+              </div>
+            </div>
+            <div v-if="imagePreviews.length > 0" class="flex flex-wrap gap-3 mb-3">
+              <div
+                v-for="(preview, i) in imagePreviews"
+                :key="i"
+                class="relative group w-20 h-20 rounded-lg overflow-hidden border border-primary/40"
+              >
+                <img :src="preview" class="w-full h-full object-cover" />
+                <button
+                  type="button"
+                  class="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                  @click="removeNewImage(i)"
+                >
+                  <X class="w-4 h-4 text-white" />
+                </button>
+              </div>
+            </div>
+            <label class="flex items-center gap-2 px-4 py-3 border border-dashed border-primary/40 rounded-[14px] cursor-pointer hover:bg-primary/10 transition-colors">
+              <Upload class="w-4 h-4 text-muted" />
+              <span class="text-sm text-muted">Add images</span>
+              <input type="file" multiple accept="image/*" class="hidden" @change="handleImageSelect" />
+            </label>
+          </div>
+
           <p v-if="formError" class="text-sm text-red-500">{{ formError }}</p>
           <div class="flex justify-end gap-3 pt-2">
             <BaseButton variant="ghost" @click="showModal = false">Cancel</BaseButton>
-            <BaseButton :loading="saving" @click="saveProduct">
+            <BaseButton :loading="saving || uploadingImages" @click="saveProduct">
               {{ editingProduct ? 'Update' : 'Create' }}
             </BaseButton>
           </div>

@@ -73,6 +73,11 @@ const routes: RouteRecordRaw[] = [
     name: 'admin-delivery',
     component: () => import('@/pages/admin/AdminDeliveryPage.vue'),
     meta: { requiresAuth: true, requiresAdmin: true }
+  },
+  {
+    path: '/wishlist',
+    name: 'wishlist',
+    component: () => import('@/pages/WishlistPage.vue')
   }
 ]
 

@@ -2,15 +2,18 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useCartStore } from '@/stores/cart'
+import { useUserStore } from '@/stores/user'
 import { orderService } from '@/services/order.service'
+import { addressService } from '@/services/address.service'
 import BaseButton from '@/components/base/BaseButton.vue'
 import BaseInput from '@/components/base/BaseInput.vue'
 import BaseSelect from '@/components/base/BaseSelect.vue'
-import { ChevronLeft, ChevronRight, Check } from '@lucide/vue'
-import type { Province, Town, DeliveryMethod } from '@/types'
+import { ChevronLeft, ChevronRight, Check, MapPin } from '@lucide/vue'
+import type { Province, Town, DeliveryMethod, Address } from '@/types'
 
 const router = useRouter()
 const cartStore = useCartStore()
+const userStore = useUserStore()
 const loading = ref(false)
 const currentStep = ref(1)
 const error = ref('')
@@ -18,6 +21,8 @@ const error = ref('')
 const provinces = ref<Province[]>([])
 const towns = ref<Town[]>([])
 const deliveryMethods = ref<DeliveryMethod[]>([])
+const savedAddresses = ref<Address[]>([])
+const selectedAddressId = ref<string | null>(null)
 
 const form = ref({
   first_name: '',
@@ -67,6 +72,26 @@ async function handleProvinceChange(provinceId: string) {
   }
 }
 
+async function selectSavedAddress(address: Address) {
+  selectedAddressId.value = address.id
+  form.value.province = address.province
+  form.value.town = address.town
+  form.value.street_address = address.street_address
+  form.value.phone = address.phone
+  if (address.province) {
+    towns.value = await orderService.getTowns(address.province)
+  }
+}
+
+function useCustomAddress() {
+  selectedAddressId.value = null
+  form.value.province = ''
+  form.value.town = ''
+  form.value.street_address = ''
+  form.value.phone = '260'
+  towns.value = []
+}
+
 async function handleSubmit() {
   if (!form.value.payment_method) {
     error.value = 'Please select a payment method'
@@ -96,8 +121,26 @@ async function handleSubmit() {
 }
 
 onMounted(async () => {
-  provinces.value = await orderService.getProvinces()
-  deliveryMethods.value = await orderService.getDeliveryMethods()
+  const [provincesData, methodsData] = await Promise.all([
+    orderService.getProvinces(),
+    orderService.getDeliveryMethods(),
+  ])
+  provinces.value = provincesData
+  deliveryMethods.value = methodsData
+
+  if (userStore.isAuthenticated) {
+    try {
+      savedAddresses.value = await addressService.getAddresses()
+    } catch {
+      savedAddresses.value = []
+    }
+    if (userStore.user) {
+      form.value.first_name = userStore.user.first_name || ''
+      form.value.last_name = userStore.user.last_name || ''
+      form.value.email = userStore.user.email || ''
+      form.value.phone = userStore.user.phone || '260'
+    }
+  }
 })
 </script>
 
@@ -157,6 +200,42 @@ onMounted(async () => {
       <!-- Step 2: Delivery Location -->
       <div v-if="currentStep === 2" class="space-y-4">
         <h2 class="font-heading text-xl font-semibold text-dark mb-4">Delivery Location</h2>
+
+        <div v-if="savedAddresses.length > 0" class="space-y-2 mb-4">
+          <p class="text-sm font-medium text-dark">Use a saved address</p>
+          <div class="space-y-2">
+            <button
+              v-for="address in savedAddresses"
+              :key="address.id"
+              type="button"
+              class="w-full p-3 border rounded-[14px] text-left transition-all"
+              :class="selectedAddressId === address.id ? 'border-gold bg-gold/5' : 'border-primary/40 hover:border-primary'"
+              @click="selectSavedAddress(address)"
+            >
+              <div class="flex items-start gap-2">
+                <MapPin class="w-4 h-4 text-muted mt-0.5 shrink-0" />
+                <div>
+                  <p class="text-sm text-dark">{{ address.street_address }}</p>
+                  <p class="text-xs text-muted">{{ address.town_name || address.town }}, {{ address.province_name || address.province }}</p>
+                  <p class="text-xs text-muted">Phone: {{ address.phone }}</p>
+                </div>
+                <span
+                  v-if="address.is_default"
+                  class="ml-auto text-[10px] font-medium text-gold bg-gold/10 px-2 py-0.5 rounded-full shrink-0"
+                >Default</span>
+              </div>
+            </button>
+          </div>
+          <button
+            type="button"
+            class="text-sm text-gold hover:underline"
+            @click="useCustomAddress"
+          >
+            + Use a different address
+          </button>
+          <div class="border-t border-primary/20 pt-4" />
+        </div>
+
         <BaseSelect
           v-model="form.province"
           label="Province"

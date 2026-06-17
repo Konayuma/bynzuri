@@ -1,7 +1,8 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import type { Product, Category, PaginatedResponse } from '@/types'
+import type { Product, Category, Review, PaginatedResponse } from '@/types'
 import { productService } from '@/services/product.service'
+import { reviewService } from '@/services/review.service'
 
 export const useProductStore = defineStore('product', () => {
   const products = ref<Product[]>([])
@@ -10,6 +11,7 @@ export const useProductStore = defineStore('product', () => {
   const newArrivals = ref<Product[]>([])
   const currentProduct = ref<Product | null>(null)
   const relatedProducts = ref<Product[]>([])
+  const reviews = ref<Review[]>([])
   const loading = ref(false)
   const pagination = ref<Pick<PaginatedResponse<Product>, 'count' | 'next' | 'previous'>>({
     count: 0,
@@ -76,6 +78,20 @@ export const useProductStore = defineStore('product', () => {
     }
   }
 
+  async function fetchReviews(productSlug: string) {
+    try {
+      reviews.value = await reviewService.getReviews(productSlug)
+    } catch {
+      reviews.value = []
+    }
+  }
+
+  async function createReview(data: { product_slug: string; rating: number; comment: string }) {
+    const review = await reviewService.createReview(data)
+    reviews.value.unshift(review)
+    return review
+  }
+
   return {
     products,
     categories,
@@ -83,6 +99,7 @@ export const useProductStore = defineStore('product', () => {
     newArrivals,
     currentProduct,
     relatedProducts,
+    reviews,
     loading,
     pagination,
     fetchProducts,
@@ -90,6 +107,8 @@ export const useProductStore = defineStore('product', () => {
     fetchRelatedProducts,
     fetchCategories,
     fetchBestSellers,
-    fetchNewArrivals
+    fetchNewArrivals,
+    fetchReviews,
+    createReview
   }
 })

@@ -8,4 +8,6 @@ urlpatterns = [
     path('<slug:slug>/', views.ProductViewSet.as_view({
         'get': 'retrieve', 'put': 'update', 'patch': 'partial_update', 'delete': 'destroy',
     }), name='product-detail'),
+    path('<slug:slug>/images/', views.ProductImageUploadView.as_view(), name='product-image-upload'),
+    path('<slug:slug>/images/<uuid:image_id>/', views.ProductImageDeleteView.as_view(), name='product-image-delete'),
 ]

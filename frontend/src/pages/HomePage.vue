@@ -18,6 +18,17 @@ const newArrivalsRef = ref<HTMLElement | null>(null)
 const testimonialsRef = ref<HTMLElement | null>(null)
 const newsletterRef = ref<HTMLElement | null>(null)
 
+const newsletterEmail = ref('')
+const newsletterSubscribed = ref(false)
+
+function handleNewsletter() {
+  if (newsletterEmail.value.trim()) {
+    localStorage.setItem('bynzuri_newsletter', newsletterEmail.value.trim())
+    newsletterSubscribed.value = true
+    newsletterEmail.value = ''
+  }
+}
+
 let ctx: gsap.Context | null = null
 
 onMounted(() => {
@@ -264,16 +275,19 @@ onUnmounted(() => {
       <p class="section-animate text-xs text-gold uppercase tracking-[0.2em] font-medium mb-2">Stay Connected</p>
       <h2 class="section-animate font-heading text-2xl md:text-3xl font-semibold text-dark mb-3">Join the Beauty Circle</h2>
       <p class="section-animate text-muted text-sm mb-6">Be the first to know about new arrivals, exclusive offers, and beauty tips.</p>
-      <form class="section-animate flex flex-col sm:flex-row gap-3 max-w-md mx-auto" @submit.prevent>
+      <div v-if="!newsletterSubscribed" class="section-animate flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
         <input
+          v-model="newsletterEmail"
           type="email"
           placeholder="Enter your email"
+          required
           class="flex-1 px-4 py-3 bg-white border border-primary/40 rounded-[14px] text-sm focus:outline-none focus:border-gold transition-colors"
         />
-        <BaseButton type="submit" variant="secondary">
+        <BaseButton variant="secondary" @click="handleNewsletter">
           Subscribe
         </BaseButton>
-      </form>
+      </div>
+      <p v-else class="section-animate text-sm text-success">Thanks for subscribing!</p>
     </section>
   </div>
 </template>

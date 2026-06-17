@@ -1,8 +1,12 @@
-from rest_framework import viewsets, filters, decorators, permissions
+from rest_framework import viewsets, filters, decorators, permissions, views, status
 from rest_framework.response import Response
+from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
-from .models import Product
-from .serializers import ProductListSerializer, ProductDetailSerializer, ProductCreateSerializer
+from .models import Product, ProductImage
+from .serializers import (
+    ProductListSerializer, ProductDetailSerializer, ProductCreateSerializer,
+    ProductImageSerializer, ProductImageCreateSerializer,
+)
 
 
 class ProductViewSet(viewsets.ModelViewSet):
@@ -42,3 +46,28 @@ class ProductViewSet(viewsets.ModelViewSet):
         products = self.get_queryset()[:8]
         serializer = self.get_serializer(products, many=True)
         return Response(serializer.data)
+
+
+class ProductImageUploadView(views.APIView):
+    permission_classes = [permissions.IsAdminUser]
+
+    def post(self, request, slug):
+        product = get_object_or_404(Product, slug=slug)
+        serializer = ProductImageCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        image = serializer.save(product=product)
+        return Response(
+            ProductImageSerializer(image).data,
+            status=status.HTTP_201_CREATED
+        )
+
+
+class ProductImageDeleteView(views.APIView):
+    permission_classes = [permissions.IsAdminUser]
+
+    def delete(self, request, slug, image_id):
+        product = get_object_or_404(Product, slug=slug)
+        image = get_object_or_404(ProductImage, id=image_id, product=product)
+        image.image.delete(save=False)
+        image.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)

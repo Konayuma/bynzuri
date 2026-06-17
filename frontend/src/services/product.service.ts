@@ -1,5 +1,5 @@
 import api from './api'
-import type { Product, Category, PaginatedResponse, ProductCreateData } from '@/types'
+import type { Product, Category, PaginatedResponse, ProductCreateData, ProductImage } from '@/types'
 
 export const productService = {
   async getProducts(params?: {
@@ -44,5 +44,17 @@ export const productService = {
 
   async deleteProduct(slug: string): Promise<void> {
     await api.delete(`/products/${slug}/`)
-  }
+  },
+
+  async uploadProductImage(slug: string, formData: FormData): Promise<ProductImage> {
+    const response = await api.post(`/products/${slug}/images/`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+    return response.data
+  },
+
+  async deleteProductImage(slug: string, imageId: string): Promise<void> {
+    await api.delete(`/products/${slug}/images/${imageId}/`)
+  },
+}
 }
