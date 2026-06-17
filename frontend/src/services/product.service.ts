@@ -57,4 +57,3 @@ export const productService = {
     await api.delete(`/products/${slug}/images/${imageId}/`)
   },
 }
-}
