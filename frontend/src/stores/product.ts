@@ -19,6 +19,8 @@ export const useProductStore = defineStore('product', () => {
     previous: null
   })
 
+  let categoriesFetched = false
+
   async function fetchProducts(params?: {
     page?: number
     search?: string
@@ -47,7 +49,7 @@ export const useProductStore = defineStore('product', () => {
   async function fetchRelatedProducts(categorySlug?: string) {
     if (!categorySlug) return
     try {
-      const data = await productService.getProducts({ category: categorySlug })
+      const data = await productService.getProducts({ category: categorySlug, page_size: 4 } as Parameters<typeof productService.getProducts>[0])
       relatedProducts.value = data.results.slice(0, 4)
     } catch {
       // silently fail
@@ -55,14 +57,17 @@ export const useProductStore = defineStore('product', () => {
   }
 
   async function fetchCategories() {
+    if (categoriesFetched && categories.value.length > 0) return
     try {
       categories.value = await productService.getCategories()
+      categoriesFetched = true
     } catch {
       // silently fail
     }
   }
 
   async function fetchBestSellers() {
+    if (bestSellers.value.length > 0) return
     try {
       bestSellers.value = await productService.getBestSellers()
     } catch {
@@ -71,6 +76,7 @@ export const useProductStore = defineStore('product', () => {
   }
 
   async function fetchNewArrivals() {
+    if (newArrivals.value.length > 0) return
     try {
       newArrivals.value = await productService.getNewArrivals()
     } catch {

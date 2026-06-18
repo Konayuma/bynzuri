@@ -20,6 +20,10 @@ function handleCheckout() {
   emit('close')
   router.push('/checkout')
 }
+
+function formatPrice(price: string | number, quantity: number): string {
+  return (parseFloat(String(price)) * quantity).toFixed(2)
+}
 </script>
 
 <template>
@@ -70,7 +74,7 @@ function handleCheckout() {
             </div>
           </div>
           <div class="flex flex-col items-end justify-between">
-            <p class="text-sm font-semibold text-dark">K{{ (parseFloat(item.product.price) * item.quantity).toFixed(2) }}</p>
+            <p class="text-sm font-semibold text-dark">K{{ formatPrice(item.product.price, item.quantity) }}</p>
             <button
               class="p-1 hover:text-red-500 transition-colors"
               @click="cartStore.removeItem(item.id)"

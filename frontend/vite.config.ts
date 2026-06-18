@@ -23,6 +23,7 @@ export default defineConfig({
         }
       }
     },
-    chunkSizeWarningLimit: 300
+    chunkSizeWarningLimit: 200,
+    target: 'es2020'
   }
 })

@@ -1,13 +1,13 @@
 <script setup lang="ts">
-import { ref, watch, onMounted } from 'vue'
+import { ref, watch, onMounted, defineAsyncComponent } from 'vue'
 import { useRouter } from 'vue-router'
-import { gsap } from 'gsap'
 import AppNavbar from '@/layouts/AppNavbar.vue'
 import AppFooter from '@/layouts/AppFooter.vue'
-import CartDrawer from '@/components/cart/CartDrawer.vue'
 import { useUserStore } from '@/stores/user'
 import { useCartStore } from '@/stores/cart'
 import { useUIStore } from '@/stores/ui'
+
+const CartDrawer = defineAsyncComponent(() => import('@/components/cart/CartDrawer.vue'))
 
 const userStore = useUserStore()
 const cartStore = useCartStore()
@@ -15,20 +15,24 @@ const uiStore = useUIStore()
 const router = useRouter()
 
 const routeContainer = ref<HTMLElement | null>(null)
+const isRouteAnimating = ref(false)
 
 onMounted(async () => {
   cartStore.initGuestCart()
   if (localStorage.getItem('access_token')) {
-    await userStore.fetchProfile()
-    await cartStore.mergeGuestCart()
-    await cartStore.fetchCart()
+    const profilePromise = userStore.fetchProfile()
+    await profilePromise
+    await Promise.all([cartStore.mergeGuestCart(), cartStore.fetchCart()])
   }
 })
 
 watch(() => router.currentRoute.value, () => {
   const el = routeContainer.value
   if (!el) return
-  gsap.fromTo(el, { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.5, ease: 'power2.out' })
+  isRouteAnimating.value = false
+  requestAnimationFrame(() => {
+    isRouteAnimating.value = true
+  })
 })
 </script>
 
@@ -36,14 +40,39 @@ watch(() => router.currentRoute.value, () => {
   <div class="min-h-screen flex flex-col bg-background">
     <AppNavbar />
     <main class="flex-1">
-      <div ref="routeContainer" class="contents">
+      <div
+        ref="routeContainer"
+        class="route-transition"
+        :class="{ 'route-enter': isRouteAnimating }"
+      >
         <router-view />
       </div>
     </main>
     <AppFooter />
     <CartDrawer
+      v-if="uiStore.isCartOpen"
       :open="uiStore.isCartOpen"
       @close="uiStore.closeCart"
     />
   </div>
 </template>
+
+<style>
+.route-transition {
+  opacity: 1;
+  transform: translateY(0);
+}
+.route-enter {
+  animation: routeFadeIn 0.4s ease-out;
+}
+@keyframes routeFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+</style>

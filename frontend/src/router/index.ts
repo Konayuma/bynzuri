@@ -2,6 +2,15 @@ import { createRouter, createWebHistory } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 
+let userStore: ReturnType<typeof useUserStore> | null = null
+
+function getUserStore() {
+  if (!userStore) {
+    userStore = useUserStore()
+  }
+  return userStore
+}
+
 const routes: RouteRecordRaw[] = [
   {
     path: '/',
@@ -90,23 +99,23 @@ const router = createRouter({
 })
 
 router.beforeEach(async (to, from, next) => {
-  const userStore = useUserStore()
+  const store = getUserStore()
 
   if (to.meta.requiresAuth) {
     const token = localStorage.getItem('access_token')
     if (!token) {
       return next({ name: 'login', query: { redirect: to.fullPath } })
     }
-    if (!userStore.user) {
+    if (!store.user) {
       try {
-        await userStore.fetchProfile()
+        await store.fetchProfile()
       } catch {
         return next({ name: 'login', query: { redirect: to.fullPath } })
       }
     }
   }
 
-  if (to.meta.requiresAdmin && !userStore.isAdmin) {
+  if (to.meta.requiresAdmin && !store.isAdmin) {
     return next({ name: 'home' })
   }
 

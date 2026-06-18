@@ -6,11 +6,14 @@ const STORAGE_KEY = 'bynzuri_wishlist'
 
 export const useWishlistStore = defineStore('wishlist', () => {
   const items = ref<WishlistItem[]>([])
+  let loaded = false
 
   const itemIds = computed(() => new Set(items.value.map(i => i.product.id)))
   const count = computed(() => items.value.length)
 
-  function load() {
+  function ensureLoaded() {
+    if (loaded) return
+    loaded = true
     const stored = localStorage.getItem(STORAGE_KEY)
     if (stored) {
       try {
@@ -26,10 +29,12 @@ export const useWishlistStore = defineStore('wishlist', () => {
   }
 
   function isWishlisted(productId: string): boolean {
+    ensureLoaded()
     return itemIds.value.has(productId)
   }
 
   function toggle(product: Product) {
+    ensureLoaded()
     const existing = items.value.find(i => i.product.id === product.id)
     if (existing) {
       items.value = items.value.filter(i => i.id !== existing.id)
@@ -44,6 +49,7 @@ export const useWishlistStore = defineStore('wishlist', () => {
   }
 
   function add(product: Product) {
+    ensureLoaded()
     if (!isWishlisted(product.id)) {
       items.value.push({
         id: `wl_${Date.now()}`,
@@ -55,11 +61,10 @@ export const useWishlistStore = defineStore('wishlist', () => {
   }
 
   function remove(productId: string) {
+    ensureLoaded()
     items.value = items.value.filter(i => i.product.id !== productId)
     save()
   }
-
-  load()
 
   return {
     items,

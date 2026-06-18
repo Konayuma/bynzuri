@@ -2,12 +2,8 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useProductStore } from '@/stores/product'
 import { ArrowRight } from '@lucide/vue'
-import { gsap } from 'gsap'
-import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import ProductCard from '@/components/product/ProductCard.vue'
 import BaseButton from '@/components/base/BaseButton.vue'
-
-gsap.registerPlugin(ScrollTrigger)
 
 const productStore = useProductStore()
 
@@ -29,50 +25,60 @@ function handleNewsletter() {
   }
 }
 
-let ctx: gsap.Context | null = null
+let observer: IntersectionObserver | null = null
 
 onMounted(() => {
   productStore.fetchBestSellers()
   productStore.fetchNewArrivals()
   productStore.fetchCategories()
 
-  ctx = gsap.context(() => {
-    if (heroRef.value) {
-      gsap.fromTo(
-        heroRef.value.querySelectorAll('.hero-animate'),
-        { opacity: 0, y: 40 },
-        { opacity: 1, y: 0, duration: 0.8, stagger: 0.15, ease: 'power2.out' }
-      )
-    }
-
-    const sections = [
-      { ref: categoriesRef, from: { y: 50 } },
-      { ref: bestSellersRef, from: { y: 50 } },
-      { ref: newArrivalsRef, from: { y: 50 } },
-      { ref: testimonialsRef, from: { y: 40 } },
-      { ref: newsletterRef, from: { y: 30 } }
-    ]
-
-    sections.forEach(({ ref: sectionRef, from }) => {
-      if (!sectionRef.value) return
-      ScrollTrigger.create({
-        trigger: sectionRef.value,
-        start: 'top 85%',
-        onEnter: () => {
-          gsap.fromTo(
-            sectionRef.value!.querySelectorAll('.section-animate'),
-            { opacity: 0, y: from.y },
-            { opacity: 1, y: 0, duration: 0.7, stagger: 0.1, ease: 'power2.out' }
-          )
-        },
-        once: true
+  if (heroRef.value) {
+    const heroElements = heroRef.value.querySelectorAll('.hero-animate')
+    heroElements.forEach((el, i) => {
+      (el as HTMLElement).style.opacity = '0'
+      ;(el as HTMLElement).style.transform = 'translateY(40px)'
+      ;(el as HTMLElement).style.transition = `opacity 0.8s ease ${i * 0.15}s, transform 0.8s ease ${i * 0.15}s`
+    })
+    requestAnimationFrame(() => {
+      heroElements.forEach((el) => {
+        ;(el as HTMLElement).style.opacity = '1'
+        ;(el as HTMLElement).style.transform = 'translateY(0)'
       })
     })
+  }
+
+  observer = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          const elements = entry.target.querySelectorAll('.section-animate')
+          elements.forEach((el, i) => {
+            ;(el as HTMLElement).style.transition = `opacity 0.7s ease ${i * 0.1}s, transform 0.7s ease ${i * 0.1}s`
+            ;(el as HTMLElement).style.opacity = '1'
+            ;(el as HTMLElement).style.transform = 'translateY(0)'
+          })
+          observer?.unobserve(entry.target)
+        }
+      })
+    },
+    { threshold: 0.15 }
+  )
+
+  const sections = [categoriesRef, bestSellersRef, newArrivalsRef, testimonialsRef, newsletterRef]
+  sections.forEach((sectionRef) => {
+    if (sectionRef.value) {
+      const elements = sectionRef.value.querySelectorAll('.section-animate')
+      elements.forEach((el) => {
+        ;(el as HTMLElement).style.opacity = '0'
+        ;(el as HTMLElement).style.transform = 'translateY(40px)'
+      })
+      observer!.observe(sectionRef.value)
+    }
   })
 })
 
 onUnmounted(() => {
-  ctx?.revert()
+  observer?.disconnect()
 })
 </script>
 
@@ -80,7 +86,7 @@ onUnmounted(() => {
   <div>
     <!-- Hero Banner -->
     <section ref="heroRef" class="relative min-h-[85vh] flex items-center bg-gradient-to-b from-primary/30 to-background overflow-hidden">
-      <div class="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=1200')] bg-cover bg-center opacity-10" />
+      <div class="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=600&q=75&auto=format')] bg-cover bg-center opacity-10" />
       <div class="max-w-7xl mx-auto px-4 py-20 w-full">
         <div class="max-w-xl">
           <p class="hero-animate text-sm text-gold uppercase tracking-[0.2em] font-medium mb-4">Premium Beauty &amp; Haircare</p>

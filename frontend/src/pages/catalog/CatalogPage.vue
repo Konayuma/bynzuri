@@ -18,6 +18,11 @@ const showFilters = ref(false)
 
 const activeSearch = computed(() => (route.query.search as string) || '')
 
+const selectedCategoryName = computed(() => {
+  if (!selectedCategory.value) return 'Shop All'
+  return productStore.categories.find(c => c.slug === selectedCategory.value)?.name || 'Shop'
+})
+
 const sortOptions = [
   { value: '-created_at', label: 'Newest' },
   { value: 'price', label: 'Price: Low to High' },
@@ -93,7 +98,7 @@ watch(() => route.query, () => {
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
       <div>
         <h1 class="font-heading text-2xl md:text-3xl font-semibold text-dark">
-          {{ selectedCategory ? productStore.categories.find(c => c.slug === selectedCategory)?.name || 'Shop' : 'Shop All' }}
+          {{ selectedCategoryName }}
         </h1>
         <div class="flex items-center gap-2 mt-1">
           <p v-if="productStore.pagination.count > 0" class="text-sm text-muted">

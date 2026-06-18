@@ -55,6 +55,8 @@ function handleMouseLeave() {
         :alt="img.alt_text"
         class="absolute inset-0 w-full h-full object-cover transition-opacity duration-300"
         :class="index === currentIndex ? 'opacity-100' : 'opacity-0'"
+        :loading="index === currentIndex ? 'eager' : 'lazy'"
+        :fetchpriority="index === currentIndex ? 'high' : 'low'"
       />
 
       <div
@@ -105,7 +107,7 @@ function handleMouseLeave() {
         :class="index === currentIndex ? 'border-gold opacity-100' : 'border-transparent opacity-60 hover:opacity-100'"
         @click="currentIndex = index"
       >
-        <img :src="img.image" :alt="img.alt_text" class="w-full h-full object-cover" />
+        <img :src="img.image" :alt="img.alt_text" class="w-full h-full object-cover" loading="lazy" />
       </button>
     </div>
   </div>
