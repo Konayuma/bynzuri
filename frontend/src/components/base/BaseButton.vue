@@ -18,7 +18,7 @@ defineEmits<{
     :type="type || 'button'"
     :disabled="disabled || loading"
     :class="[
-      'inline-flex items-center justify-center font-medium transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-gold/50',
+      'inline-flex items-center justify-center font-medium transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-gold/50 active:scale-[0.97]',
       {
         'bg-primary text-dark hover:bg-primary/80': variant === 'primary' || !variant,
         'bg-dark text-background hover:bg-dark/90': variant === 'secondary',

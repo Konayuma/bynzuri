@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { watch } from 'vue'
+import { X } from '@lucide/vue'
 
 const props = defineProps<{
   open: boolean
@@ -22,6 +23,9 @@ watch(() => props.open, (val) => {
       <div
         v-if="open"
         class="fixed inset-0 z-50"
+        role="dialog"
+        aria-modal="true"
+        :aria-label="title || 'Drawer'"
       >
         <div
           class="absolute inset-0 bg-black/30"
@@ -37,11 +41,11 @@ watch(() => props.open, (val) => {
             <h2 v-if="title" class="font-heading text-lg font-semibold text-dark">{{ title }}</h2>
             <div v-else />
             <button
-              class="p-2 hover:bg-primary/30 rounded-lg transition-colors"
+              class="p-2 hover:bg-primary/30 rounded-lg transition-colors active:scale-95"
               @click="emit('close')"
-              aria-label="Close drawer"
+              aria-label="Close"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+              <X class="w-5 h-5 text-dark" />
             </button>
           </div>
           <div class="flex-1 overflow-y-auto">

@@ -14,7 +14,7 @@ function handleSubscribe() {
 </script>
 
 <template>
-  <footer class="bg-dark text-background mt-16">
+  <footer class="bg-dark text-background">
     <div class="max-w-7xl mx-auto px-4 py-12">
       <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
         <div>
@@ -65,7 +65,7 @@ function handleSubscribe() {
               </button>
             </form>
           </div>
-          <p v-else class="text-sm text-success">Thanks for subscribing!</p>
+          <p v-else class="text-sm text-success">You're in! Watch your inbox for updates.</p>
         </div>
       </div>
 

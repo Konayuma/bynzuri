@@ -37,7 +37,7 @@ function handleInput(e: Event) {
       :placeholder="placeholder"
       :required="required"
       :disabled="disabled"
-      class="w-full px-4 py-3 bg-white border rounded-[14px] text-sm text-dark placeholder:text-muted/60 focus:outline-none focus:border-gold transition-colors"
+      class="w-full px-4 py-3 bg-white border rounded-[14px] text-sm text-dark placeholder:text-muted/60 focus:outline-none focus:border-gold transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-primary/10"
       :class="[
         error ? 'border-red-400' : 'border-primary/40'
       ]"

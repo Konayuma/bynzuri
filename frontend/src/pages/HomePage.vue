@@ -245,11 +245,13 @@ onUnmounted(() => {
           class="section-animate bg-white p-6 rounded-[20px] shadow-[0_8px_30px_rgba(0,0,0,0.06)] hover:shadow-[0_12px_40px_rgba(0,0,0,0.1)] transition-shadow duration-300"
         >
           <div class="flex items-center gap-1 mb-3">
-            <svg v-for="s in 5" :key="s" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="#C7A46A" stroke="#C7A46A" stroke-width="1"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            <svg v-for="s in 5" :key="s" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1" class="text-gold"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
           </div>
           <p class="text-sm text-muted leading-relaxed mb-4">&ldquo;{{ testimonial.text }}&rdquo;</p>
           <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-full bg-primary/40 flex-shrink-0" />
+            <div class="w-10 h-10 rounded-full bg-primary/40 flex items-center justify-center flex-shrink-0">
+              <span class="text-sm font-medium text-dark">{{ testimonial.name.charAt(0) }}</span>
+            </div>
             <div>
               <p class="text-sm font-medium text-dark">{{ testimonial.name }}</p>
               <p class="text-xs text-muted">{{ testimonial.location }}</p>
@@ -285,7 +287,7 @@ onUnmounted(() => {
         <input
           v-model="newsletterEmail"
           type="email"
-          placeholder="Enter your email"
+          placeholder="Your email address"
           required
           class="flex-1 px-4 py-3 bg-white border border-primary/40 rounded-[14px] text-sm focus:outline-none focus:border-gold transition-colors"
         />

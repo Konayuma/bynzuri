@@ -8,7 +8,7 @@ import { addressService } from '@/services/address.service'
 import BaseButton from '@/components/base/BaseButton.vue'
 import BaseInput from '@/components/base/BaseInput.vue'
 import BaseSelect from '@/components/base/BaseSelect.vue'
-import { ChevronLeft, ChevronRight, Check, MapPin } from '@lucide/vue'
+import { ChevronLeft, ChevronRight, MapPin } from '@lucide/vue'
 import type { Province, Town, DeliveryMethod, Address } from '@/types'
 
 const router = useRouter()
