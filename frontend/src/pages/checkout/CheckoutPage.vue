@@ -1,14 +1,15 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useCartStore } from '@/stores/cart'
 import { useUserStore } from '@/stores/user'
 import { orderService } from '@/services/order.service'
 import { addressService } from '@/services/address.service'
+import { paymentService } from '@/services/payment.service'
 import BaseButton from '@/components/base/BaseButton.vue'
 import BaseInput from '@/components/base/BaseInput.vue'
 import BaseSelect from '@/components/base/BaseSelect.vue'
-import { ChevronLeft, ChevronRight, MapPin } from '@lucide/vue'
+import { ChevronLeft, ChevronRight, MapPin, Loader2, CheckCircle2, XCircle, Smartphone } from '@lucide/vue'
 import type { Province, Town, DeliveryMethod, Address } from '@/types'
 
 const router = useRouter()
@@ -17,6 +18,9 @@ const userStore = useUserStore()
 const loading = ref(false)
 const currentStep = ref(1)
 const error = ref('')
+
+const paymentStatus = ref<'idle' | 'processing' | 'success' | 'failed'>('idle')
+const paymentMessage = ref('')
 
 const provinces = ref<Province[]>([])
 const towns = ref<Town[]>([])
@@ -34,6 +38,7 @@ const form = ref({
   street_address: '',
   delivery_method: '',
   payment_method: '',
+  payment_phone: '260',
   notes: ''
 })
 
@@ -52,6 +57,19 @@ const grandTotal = computed(() => {
   const subtotal = parseFloat(cartStore.subtotal) || 0
   const delivery = parseFloat(selectedDeliveryMethod.value?.price || '0')
   return (subtotal + delivery).toFixed(2)
+})
+
+const isMobileMoney = computed(() =>
+  ['mtn_momo', 'airtel_money', 'zamtel_money'].includes(form.value.payment_method)
+)
+
+const operatorLabel = computed(() => {
+  const labels: Record<string, string> = {
+    mtn_momo: 'MTN',
+    airtel_money: 'Airtel',
+    zamtel_money: 'Zamtel',
+  }
+  return labels[form.value.payment_method] || ''
 })
 
 function nextStep() {
@@ -98,6 +116,11 @@ async function handleSubmit() {
     return
   }
 
+  if (isMobileMoney.value && !form.value.payment_phone) {
+    error.value = 'Please enter your mobile money phone number'
+    return
+  }
+
   loading.value = true
   error.value = ''
 
@@ -111,14 +134,62 @@ async function handleSubmit() {
       phone: form.value.phone,
       notes: form.value.notes || undefined
     })
-    cartStore.clearCart()
-    router.push(`/order/confirmation/${order.id}`)
+
+    if (isMobileMoney.value) {
+      paymentStatus.value = 'processing'
+      paymentMessage.value = `A payment prompt has been sent to ${form.value.payment_phone}. Please check your phone and enter your PIN to authorize the payment.`
+
+      try {
+        const payment = await paymentService.initiatePayment(
+          order.id,
+          form.value.payment_method,
+          form.value.payment_phone
+        )
+
+        if (payment.status === 'failed') {
+          paymentStatus.value = 'failed'
+          paymentMessage.value = 'Payment initiation failed. Please try again.'
+          return
+        }
+
+        const finalPayment = await paymentService.pollPaymentStatus(order.id)
+
+        if (finalPayment.status === 'success') {
+          paymentStatus.value = 'success'
+          paymentMessage.value = 'Payment successful! Redirecting...'
+          cartStore.clearCart()
+          setTimeout(() => {
+            router.push(`/order/confirmation/${order.id}`)
+          }, 2000)
+        } else {
+          paymentStatus.value = 'failed'
+          paymentMessage.value = 'Payment was not completed. Please try again.'
+        }
+      } catch {
+        paymentStatus.value = 'failed'
+        paymentMessage.value = 'Payment timed out. Please check your order history.'
+        cartStore.clearCart()
+        setTimeout(() => {
+          router.push('/account/orders')
+        }, 3000)
+      }
+    } else {
+      cartStore.clearCart()
+      router.push(`/order/confirmation/${order.id}`)
+    }
   } catch (e: unknown) {
     error.value = (e as { response?: { data?: { detail?: string } } })?.response?.data?.detail || 'We couldn\'t place your order. Please check your details and try again.'
+    paymentStatus.value = 'idle'
   } finally {
     loading.value = false
   }
 }
+
+watch(() => form.value.payment_method, (val) => {
+  if (isMobileMoney.value) {
+    form.value.payment_phone = form.value.phone || '260'
+  }
+})
 
 onMounted(async () => {
   const [provincesData, methodsData] = await Promise.all([
@@ -146,6 +217,36 @@ onMounted(async () => {
 
 <template>
   <div class="max-w-2xl mx-auto px-4 py-8">
+    <!-- Payment Processing Overlay -->
+    <div v-if="paymentStatus !== 'idle'" class="fixed inset-0 bg-white/90 backdrop-blur-sm z-50 flex items-center justify-center">
+      <div class="text-center max-w-sm px-4">
+        <div v-if="paymentStatus === 'processing'" class="space-y-4">
+          <Loader2 class="w-12 h-12 text-gold animate-spin mx-auto" />
+          <h2 class="font-heading text-xl font-semibold text-dark">Processing Payment</h2>
+          <p class="text-sm text-muted">{{ paymentMessage }}</p>
+          <div class="flex items-center justify-center gap-2 text-xs text-muted">
+            <Smartphone class="w-4 h-4" />
+            <span>Check your phone for the payment prompt</span>
+          </div>
+        </div>
+
+        <div v-else-if="paymentStatus === 'success'" class="space-y-4">
+          <CheckCircle2 class="w-12 h-12 text-green-500 mx-auto" />
+          <h2 class="font-heading text-xl font-semibold text-dark">Payment Confirmed</h2>
+          <p class="text-sm text-muted">{{ paymentMessage }}</p>
+        </div>
+
+        <div v-else-if="paymentStatus === 'failed'" class="space-y-4">
+          <XCircle class="w-12 h-12 text-red-500 mx-auto" />
+          <h2 class="font-heading text-xl font-semibold text-dark">Payment Failed</h2>
+          <p class="text-sm text-muted">{{ paymentMessage }}</p>
+          <BaseButton variant="secondary" @click="paymentStatus = 'idle'; currentStep = 4">
+            Try Again
+          </BaseButton>
+        </div>
+      </div>
+    </div>
+
     <!-- Progress -->
     <div class="mb-8">
       <div class="flex items-center justify-between mb-2">
@@ -329,6 +430,23 @@ onMounted(async () => {
           </label>
         </div>
 
+        <!-- Mobile Money Phone Input -->
+        <div v-if="isMobileMoney" class="mt-4 p-4 bg-gold/5 border border-gold/20 rounded-[16px] space-y-3">
+          <div class="flex items-center gap-2">
+            <Smartphone class="w-4 h-4 text-gold" />
+            <p class="text-sm font-medium text-dark">{{ operatorLabel }} Mobile Money</p>
+          </div>
+          <BaseInput
+            v-model="form.payment_phone"
+            :label="`${operatorLabel} Phone Number`"
+            type="tel"
+            required
+            id="payment_phone"
+            placeholder="260xxxxxxxxx"
+          />
+          <p class="text-xs text-muted">Enter the phone number registered with your {{ operatorLabel }} Money account</p>
+        </div>
+
         <!-- Order Summary -->
         <div class="bg-white p-4 rounded-[16px] mt-6 space-y-2">
           <div class="flex justify-between text-sm">
@@ -378,7 +496,6 @@ onMounted(async () => {
 const paymentMethods = [
   { value: 'mtn_momo', label: 'MTN Mobile Money', description: 'Pay with your MTN MoMo account' },
   { value: 'airtel_money', label: 'Airtel Money', description: 'Pay with your Airtel Money account' },
-  { value: 'visa', label: 'Visa Card', description: 'Debit or credit card' },
-  { value: 'mastercard', label: 'Mastercard', description: 'Debit or credit card' }
+  { value: 'zamtel_money', label: 'Zamtel Kwacha', description: 'Pay with your Zamtel Kwacha account' },
 ]
 </script>

@@ -62,7 +62,8 @@ python manage.py test  # Run tests
 | `R2_SECRET_ACCESS_KEY` | Cloudflare R2 secret | - |
 | `R2_BUCKET_NAME` | R2 bucket name | `bynzuri` |
 | `R2_ENDPOINT_URL` | R2 endpoint | - |
-| `PAYMENT_WEBHOOK_SECRET` | Webhook signature secret | - |
+| `LENCO_API_KEY` | Lenco API secret key | - |
+| `LENCO_WEBHOOK_SECRET` | Lenco webhook hash key | - |
 
 ### Frontend (`frontend/.env`)
 
@@ -143,9 +144,11 @@ bynzuri/
 
 ## Payment Methods
 
-- **MTN Mobile Money** - Primary method for Zambian customers
-- **Airtel Money** - Alternative mobile money
-- **Visa / Mastercard** - International payments via Stripe (scaffolded)
+- **MTN Mobile Money** - Primary method for Zambian customers (via Lenco API)
+- **Airtel Money** - Alternative mobile money (via Lenco API)
+- **Zamtel Kwacha** - Zamtel mobile money (via Lenco API)
+
+All payments are processed server-side via the Lenco API. The frontend never touches API keys.
 
 ## License
 
