@@ -1,5 +1,6 @@
 import hashlib
 import hmac
+import os
 from django.db import transaction
 from django.shortcuts import get_object_or_404
 from rest_framework import views, status, permissions
@@ -7,6 +8,15 @@ from rest_framework.response import Response
 from .models import Payment
 from apps.orders.models import Order
 from .serializers import PaymentSerializer, PaymentInitiateSerializer, PaymentWebhookSerializer
+
+
+def verify_webhook_signature(payload: bytes, signature: str, secret: str) -> bool:
+    expected = hmac.new(
+        secret.encode(),
+        payload,
+        hashlib.sha256
+    ).hexdigest()
+    return hmac.compare_digest(expected, signature)
 
 
 class PaymentInitiateView(views.APIView):
@@ -52,6 +62,20 @@ class PaymentWebhookView(views.APIView):
     permission_classes = [permissions.AllowAny]
 
     def post(self, request):
+        webhook_secret = os.environ.get('PAYMENT_WEBHOOK_SECRET', '')
+        if webhook_secret:
+            signature = request.headers.get('X-Webhook-Signature', '')
+            if not signature:
+                return Response(
+                    {'detail': 'Missing webhook signature'},
+                    status=status.HTTP_401_UNAUTHORIZED
+                )
+            if not verify_webhook_signature(request.content, signature, webhook_secret):
+                return Response(
+                    {'detail': 'Invalid webhook signature'},
+                    status=status.HTTP_401_UNAUTHORIZED
+                )
+
         serializer = PaymentWebhookSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 

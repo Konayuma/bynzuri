@@ -26,5 +26,21 @@ export const authService = {
   async updateProfile(data: Partial<User>): Promise<User> {
     const response = await api.patch('/auth/profile/', data)
     return response.data
+  },
+
+  async forgotPassword(email: string, redirectUrl: string): Promise<void> {
+    await api.post('/auth/forgot-password/', { email, redirect_url: redirectUrl })
+  },
+
+  async resetPassword(uid: string, token: string, newPassword: string): Promise<void> {
+    await api.post('/auth/reset-password/', { uid, token, new_password: newPassword })
+  },
+
+  async verifyEmail(token: string): Promise<void> {
+    await api.get('/auth/verify-email/', { params: { token } })
+  },
+
+  async resendVerificationEmail(email: string): Promise<void> {
+    await api.post('/auth/resend-verification/', { email })
   }
 }

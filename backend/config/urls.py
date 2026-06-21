@@ -1,8 +1,21 @@
 from django.contrib import admin
+from django.db import connection
+from django.http import JsonResponse
 from django.urls import path, include
+
+
+def health_check(request):
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute('SELECT 1')
+        return JsonResponse({'status': 'healthy', 'database': 'connected'})
+    except Exception as e:
+        return JsonResponse({'status': 'unhealthy', 'database': str(e)}, status=503)
+
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('api/health/', health_check, name='health-check'),
     path('api/auth/', include('apps.users.urls')),
     path('api/products/', include('apps.products.urls')),
     path('api/categories/', include('apps.categories.urls')),

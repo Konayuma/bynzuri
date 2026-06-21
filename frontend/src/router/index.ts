@@ -60,6 +60,21 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/pages/auth/RegisterPage.vue')
   },
   {
+    path: '/auth/forgot-password',
+    name: 'forgot-password',
+    component: () => import('@/pages/auth/ForgotPasswordPage.vue')
+  },
+  {
+    path: '/auth/reset-password',
+    name: 'reset-password',
+    component: () => import('@/pages/auth/ResetPasswordPage.vue')
+  },
+  {
+    path: '/auth/verify-email',
+    name: 'verify-email',
+    component: () => import('@/pages/auth/VerifyEmailPage.vue')
+  },
+  {
     path: '/admin',
     name: 'admin-dashboard',
     component: () => import('@/pages/admin/AdminDashboardPage.vue'),

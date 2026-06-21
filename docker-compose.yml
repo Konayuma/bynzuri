@@ -89,6 +89,7 @@ services:
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf
       - ./nginx/api.conf:/etc/nginx/sites-enabled/api.conf
+      - ./nginx/frontend.conf:/etc/nginx/sites-enabled/frontend.conf
       - static_volume:/static
       - media_volume:/media
     ports:

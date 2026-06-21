@@ -60,6 +60,12 @@ async function handleLogin() {
           id="login-password"
         />
 
+        <div class="flex justify-end">
+          <router-link to="/auth/forgot-password" class="text-xs text-muted hover:text-dark">
+            Forgot password?
+          </router-link>
+        </div>
+
         <p v-if="error" class="text-xs text-red-500">{{ error }}</p>
 
         <BaseButton type="submit" variant="secondary" fullWidth :loading="loading">

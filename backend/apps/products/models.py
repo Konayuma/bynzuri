@@ -1,5 +1,7 @@
 import uuid
 from django.db import models
+from django.db.models.signals import pre_save
+from django.dispatch import receiver
 from apps.categories.models import Category
 
 
@@ -51,3 +53,15 @@ class ProductImage(models.Model):
 
     def __str__(self):
         return f"Image for {self.product.title}"
+
+
+@receiver(pre_save, sender=ProductImage)
+def optimize_product_image(sender, instance, **kwargs):
+    if not instance.image:
+        return
+    from apps.products.signals import optimize_image
+    try:
+        optimized, filename = optimize_image(instance.image)
+        instance.image.save(filename, optimized, save=False)
+    except Exception:
+        pass
