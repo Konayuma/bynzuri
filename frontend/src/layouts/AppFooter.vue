@@ -38,6 +38,7 @@ function handleSubscribe() {
         <div>
           <h4 class="font-body text-sm font-semibold uppercase tracking-wider mb-4">Support</h4>
           <ul class="space-y-2">
+            <li><router-link to="/help" class="text-sm text-muted hover:text-background transition-colors">Help & Support</router-link></li>
             <li><span class="text-sm text-muted">Delivery: 1-5 business days</span></li>
             <li><span class="text-sm text-muted">Returns within 7 days</span></li>
             <li><a href="mailto:hello@bynzuri.zm" class="text-sm text-muted hover:text-background transition-colors">hello@bynzuri.zm</a></li>
