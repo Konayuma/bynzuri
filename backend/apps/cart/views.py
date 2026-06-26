@@ -21,6 +21,10 @@ class CartDetailView(views.APIView):
 
     def get(self, request):
         cart = get_or_create_cart(request.user)
+        # Prefetch products to prevent N+1 in CartSerializer computed fields.
+        cart_items_qs = cart.items.select_related('product').all()
+        cart._prefetched_objects_cache = getattr(cart, '_prefetched_objects_cache', {})
+        cart._prefetched_objects_cache['items'] = cart_items_qs
         serializer = CartSerializer(cart)
         return Response(serializer.data)
 
@@ -44,6 +48,11 @@ class CartAddItemView(views.APIView):
         if not created:
             item.quantity += serializer.validated_data['quantity']
             item.save()
+
+        # Ensure subtotal/total calculation won't N+1 (Cart items -> product)
+        cart_items_qs = cart.items.select_related('product').all()
+        cart._prefetched_objects_cache = getattr(cart, '_prefetched_objects_cache', {})
+        cart._prefetched_objects_cache['items'] = cart_items_qs
 
         cart_serializer = CartSerializer(cart)
         return Response(cart_serializer.data, status=status.HTTP_201_CREATED)
