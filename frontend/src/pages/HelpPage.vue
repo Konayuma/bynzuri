@@ -13,38 +13,37 @@ const faqs = [
     id: 'delivery',
     icon: Truck,
     question: 'How long does delivery take?',
-    answer: 'Delivery takes 1–5 business days depending on your location. Lusaka orders typically arrive within 1–2 days, while other provinces may take 3–5 business days. You\'ll receive tracking updates via WhatsApp once your order is dispatched.',
+    answer: 'We deliver across Zambia in 1–5 business days. Lusaka orders usually arrive within 1–2 days — other provinces take 3–5 days. We\'ll send you tracking updates via WhatsApp once your order ships.',
   },
   {
     id: 'returns',
     icon: RotateCcw,
     question: 'What is your return policy?',
-    answer: 'We accept returns within 7 days of delivery. Items must be unused, unopened, and in their original packaging. To initiate a return, contact us via WhatsApp or email with your order number and reason for return.',
+    answer: 'We accept returns within 7 days of delivery. Items must be unused, unopened, and in their original packaging. To start a return, message us on WhatsApp or email your order number and reason.',
   },
   {
     id: 'payments',
     icon: CreditCard,
     question: 'What payment methods do you accept?',
-    answer: 'We accept MTN Mobile Money, Airtel Money, and Zamtel Kwacha. All payments are processed securely through the Lenco payment gateway. You\'ll receive a payment prompt on your phone after placing your order.',
+    answer: 'We accept MTN Mobile Money, Airtel Money, and Zamtel Kwacha. After placing your order, you\'ll receive a payment request via mobile money (SMS or USSD prompt).',
   },
   {
     id: 'account',
     icon: UserCircle,
     question: 'Do I need an account to order?',
-    answer: 'You can browse products without an account, but you\'ll need to create one to place an order. Creating an account is free — just provide your name, email, and a password. Your order history and saved addresses will be stored for future purchases.',
+    answer: 'You can browse products without signing up, but you\'ll need an account to place an order. Just provide your name, email, and a password — your order history and addresses will be saved for next time.',
   },
   {
     id: 'track-order',
     icon: Package,
     question: 'How do I track my order?',
-    order: 'track',
-    answer: 'Once your order is dispatched, you\'ll receive a WhatsApp notification with delivery updates. You can also check your order status anytime by visiting your Account page and selecting Order History.',
+    answer: 'Once your order ships, we\'ll send you a WhatsApp notification with delivery updates. You can also check your order status anytime from your account\'s Order History page.',
   },
   {
     id: 'products',
     icon: HelpCircle,
     question: 'Are your products safe for all hair types?',
-    answer: 'Yes! All By Nzuri products are sulphate-free, silicone-free, and paraben-free. They are safe for natural hair, relaxed hair, locs, and children above 1 year. Our formulations use 100% natural ingredients designed for healthy hair care.',
+    answer: 'Yes — all By Nzuri products are sulfate-free, silicone-free, and paraben-free. They\'re safe for natural hair, relaxed hair, locs, and children above 1 year. Our ingredients are 100% natural.',
   },
 ]
 </script>
@@ -56,7 +55,7 @@ const faqs = [
       <div class="max-w-3xl mx-auto text-center">
         <h1 class="font-heading text-3xl md:text-4xl font-semibold text-dark mb-3">How can we help?</h1>
         <p class="text-muted text-sm md:text-base max-w-lg mx-auto">
-          Find answers to common questions or get in touch with our team.
+          Find answers or reach out to us directly.
         </p>
       </div>
     </section>
@@ -64,7 +63,7 @@ const faqs = [
     <div class="max-w-3xl mx-auto px-4 py-10 space-y-10">
       <!-- Quick Links -->
       <section>
-        <h2 class="font-heading text-lg font-semibold text-dark mb-4">Quick Links</h2>
+        <h2 class="font-heading text-lg font-semibold text-dark mb-4">Common Tasks</h2>
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <router-link
             to="/catalog"
@@ -74,8 +73,8 @@ const faqs = [
               <Search class="w-5 h-5 text-dark" />
             </div>
             <div>
-              <p class="text-sm font-medium text-dark">Browse Products</p>
-              <p class="text-xs text-muted">View our full catalogue</p>
+              <p class="text-sm font-medium text-dark">Shop All Products</p>
+              <p class="text-xs text-muted">Browse our full catalog</p>
             </div>
           </router-link>
 
@@ -88,7 +87,7 @@ const faqs = [
             </div>
             <div>
               <p class="text-sm font-medium text-dark">Order History</p>
-              <p class="text-xs text-muted">Track your orders</p>
+              <p class="text-xs text-muted">View past orders and delivery status</p>
             </div>
           </router-link>
 
@@ -100,8 +99,8 @@ const faqs = [
               <UserCircle class="w-5 h-5 text-dark" />
             </div>
             <div>
-              <p class="text-sm font-medium text-dark">Reset Password</p>
-              <p class="text-xs text-muted">Recover your account</p>
+              <p class="text-sm font-medium text-dark">Forgot Password</p>
+              <p class="text-xs text-muted">Reset your password</p>
             </div>
           </router-link>
         </div>
@@ -109,7 +108,7 @@ const faqs = [
 
       <!-- FAQ -->
       <section>
-        <h2 class="font-heading text-lg font-semibold text-dark mb-4">Frequently Asked Questions</h2>
+        <h2 class="font-heading text-lg font-semibold text-dark mb-4">Common Questions</h2>
         <div class="space-y-3">
           <div
             v-for="faq in faqs"
@@ -156,7 +155,7 @@ const faqs = [
             </div>
             <div>
               <p class="text-sm font-medium text-dark">WhatsApp</p>
-              <p class="text-xs text-muted">Chat with us instantly</p>
+              <p class="text-xs text-muted">We reply within a few hours</p>
             </div>
           </a>
 
@@ -169,7 +168,7 @@ const faqs = [
             </div>
             <div>
               <p class="text-sm font-medium text-dark">Email</p>
-              <p class="text-xs text-muted">hello@bynzuri.zm</p>
+              <p class="text-xs text-muted">We respond within 24 hours</p>
             </div>
           </a>
         </div>
