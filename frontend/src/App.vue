@@ -22,7 +22,14 @@ onMounted(async () => {
   if (localStorage.getItem('access_token')) {
     const profilePromise = userStore.fetchProfile()
     await profilePromise
-    await Promise.all([cartStore.mergeGuestCart(), cartStore.fetchCart()])
+    if (userStore.isAuthenticated) {
+      try {
+        await cartStore.mergeGuestCart()
+        await cartStore.fetchCart()
+      } catch {
+        cartStore.initGuestCart()
+      }
+    }
   }
 })
 

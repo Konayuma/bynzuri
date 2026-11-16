@@ -137,13 +137,9 @@ export const useCartStore = defineStore('cart', () => {
         product: item.product.id,
         quantity: item.quantity
       }))
-      try {
-        const data = await cartService.mergeCart(items)
-        cart.value = data
-        localStorage.removeItem('guest_cart')
-      } catch {
-        // silently fail
-      }
+      const data = await cartService.mergeCart(items)
+      cart.value = data
+      localStorage.removeItem('guest_cart')
     }
   }
 

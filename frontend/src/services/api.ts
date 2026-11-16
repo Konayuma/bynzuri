@@ -3,6 +3,9 @@ import type { AxiosInstance, InternalAxiosRequestConfig } from 'axios'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api'
 
+// Public storefront reads must not inherit an expired or unrelated login token.
+export const publicApi: AxiosInstance = axios.create({ baseURL: API_BASE_URL })
+
 const api: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
   headers: {
@@ -47,7 +50,10 @@ api.interceptors.response.use(
       } catch {
         localStorage.removeItem('access_token')
         localStorage.removeItem('refresh_token')
-        window.location.href = '/auth/login'
+        const path = window.location.pathname
+        if (path === '/checkout' || path.startsWith('/account') || path.startsWith('/admin') || path.startsWith('/order/')) {
+          window.location.href = `/auth/login?redirect=${encodeURIComponent(path + window.location.search)}`
+        }
         return Promise.reject(error)
       }
     }

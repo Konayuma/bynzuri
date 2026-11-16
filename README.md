@@ -41,7 +41,7 @@ npm run format       # Format with Prettier
 cd backend
 pip install -r requirements.txt
 python manage.py migrate
-python manage.py runserver
+python manage.py runserver 127.0.0.1:8001
 python manage.py test  # Run tests
 ```
 
@@ -69,7 +69,9 @@ python manage.py test  # Run tests
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `VITE_API_BASE_URL` | Backend API URL | `http://localhost:8000/api` |
+| `VITE_API_BASE_URL` | Backend API URL | `http://localhost:8001/api` for local development |
+
+For local development, set `VITE_API_BASE_URL=http://localhost:8001/api` in `frontend/.env` and restart Vite. Start the configured PostgreSQL database before starting the backend. Port 8001 keeps the Bynzuri API separate from other local services; the Docker configuration retains its existing port mapping.
 
 ## API Endpoints
 

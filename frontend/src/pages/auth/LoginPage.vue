@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { useCartStore } from '@/stores/cart'
 import BaseButton from '@/components/base/BaseButton.vue'
 import BaseInput from '@/components/base/BaseInput.vue'
 
 const router = useRouter()
+const route = useRoute()
 const userStore = useUserStore()
 const cartStore = useCartStore()
 const email = ref('')
@@ -25,11 +26,19 @@ async function handleLogin() {
 
   try {
     await userStore.login(email.value, password.value)
-    await cartStore.mergeGuestCart()
-    await cartStore.fetchCart()
-    router.push('/')
   } catch {
     error.value = 'Email or password is incorrect. Please try again.'
+    loading.value = false
+    return
+  }
+
+  try {
+    await cartStore.mergeGuestCart()
+    await cartStore.fetchCart()
+    const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : ''
+    router.push(redirect.startsWith('/') && !redirect.startsWith('//') ? redirect : '/')
+  } catch {
+    error.value = 'Signed in, but your cart could not be restored. Please try again.'
   } finally {
     loading.value = false
   }
@@ -41,7 +50,7 @@ async function handleLogin() {
     <div class="w-full max-w-sm">
       <div class="text-center mb-8">
         <h1 class="font-heading text-2xl font-semibold text-dark">Welcome Back</h1>
-        <p class="text-sm text-muted mt-1">Sign in to track orders, save addresses, and check out faster</p>
+        <p class="text-sm text-muted mt-1">{{ route.query.redirect === '/checkout' ? 'Sign in to continue to checkout. Your cart will be kept.' : 'Sign in to track orders, save addresses, and check out faster' }}</p>
       </div>
 
       <form @submit.prevent="handleLogin" class="space-y-4">
@@ -75,7 +84,7 @@ async function handleLogin() {
 
       <p class="text-sm text-center text-muted mt-6">
         Don&apos;t have an account?
-        <router-link to="/auth/register" class="text-dark font-medium hover:underline">
+          <router-link :to="{ path: '/auth/register', query: route.query.redirect ? { redirect: route.query.redirect } : {} }" class="text-dark font-medium hover:underline">
           Create one
         </router-link>
       </p>

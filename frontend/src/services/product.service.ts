@@ -1,4 +1,4 @@
-import api from './api'
+import api, { publicApi } from './api'
 import type { Product, Category, PaginatedResponse, ProductCreateData, ProductImage } from '@/types'
 
 export const productService = {
@@ -8,27 +8,27 @@ export const productService = {
     category?: string
     ordering?: string
   }): Promise<PaginatedResponse<Product>> {
-    const response = await api.get('/products/', { params })
+    const response = await publicApi.get('/products/', { params: { ...params, category__slug: params?.category, category: undefined } })
     return response.data
   },
 
   async getProduct(slug: string): Promise<Product> {
-    const response = await api.get(`/products/${slug}/`)
+    const response = await publicApi.get(`/products/${slug}/`)
     return response.data
   },
 
   async getCategories(): Promise<Category[]> {
-    const response = await api.get('/categories/')
+    const response = await publicApi.get('/categories/')
     return response.data
   },
 
   async getBestSellers(): Promise<Product[]> {
-    const response = await api.get('/products/best-sellers/')
+    const response = await publicApi.get('/products/best-sellers/')
     return response.data
   },
 
   async getNewArrivals(): Promise<Product[]> {
-    const response = await api.get('/products/new-arrivals/')
+    const response = await publicApi.get('/products/new-arrivals/')
     return response.data
   },
 

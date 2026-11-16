@@ -1,12 +1,15 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
+import { useCartStore } from '@/stores/cart'
 import BaseButton from '@/components/base/BaseButton.vue'
 import BaseInput from '@/components/base/BaseInput.vue'
 
 const router = useRouter()
+const route = useRoute()
 const userStore = useUserStore()
+const cartStore = useCartStore()
 const form = ref({
   first_name: '',
   last_name: '',
@@ -36,7 +39,10 @@ async function handleRegister() {
       phone: form.value.phone
     })
     await userStore.login(form.value.email, form.value.password)
-    router.push('/')
+    await cartStore.mergeGuestCart()
+    await cartStore.fetchCart()
+    const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : ''
+    router.push(redirect.startsWith('/') && !redirect.startsWith('//') ? redirect : '/')
   } catch {
     error.value = 'Could not create your account. The email may already be in use.'
   } finally {
@@ -109,7 +115,7 @@ async function handleRegister() {
 
       <p class="text-sm text-center text-muted mt-6">
         Already have an account?
-        <router-link to="/auth/login" class="text-dark font-medium hover:underline">
+        <router-link :to="{ path: '/auth/login', query: route.query.redirect ? { redirect: route.query.redirect } : {} }" class="text-dark font-medium hover:underline">
           Sign in
         </router-link>
       </p>

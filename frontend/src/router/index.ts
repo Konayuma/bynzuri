@@ -31,7 +31,8 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/checkout',
     name: 'checkout',
-    component: () => import('@/pages/checkout/CheckoutPage.vue')
+    component: () => import('@/pages/checkout/CheckoutPage.vue'),
+    meta: { requiresAuth: true }
   },
   {
     path: '/order/confirmation/:id',
@@ -133,6 +134,9 @@ router.beforeEach(async (to, from, next) => {
       } catch {
         return next({ name: 'login', query: { redirect: to.fullPath } })
       }
+    }
+    if (!store.user) {
+      return next({ name: 'login', query: { redirect: to.fullPath } })
     }
   }
 
