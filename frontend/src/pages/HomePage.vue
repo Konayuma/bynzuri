@@ -1,321 +1,129 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
-import { useProductStore } from '@/stores/product'
-import { ArrowRight } from '@lucide/vue'
-import ProductCard from '@/components/product/ProductCard.vue'
-import BaseButton from '@/components/base/BaseButton.vue'
-
-const productStore = useProductStore()
-
-const heroRef = ref<HTMLElement | null>(null)
-const categoriesRef = ref<HTMLElement | null>(null)
-const bestSellersRef = ref<HTMLElement | null>(null)
-const newArrivalsRef = ref<HTMLElement | null>(null)
-const testimonialsRef = ref<HTMLElement | null>(null)
-const newsletterRef = ref<HTMLElement | null>(null)
-
-const newsletterEmail = ref('')
-const newsletterSubscribed = ref(false)
-
-function handleNewsletter() {
-  if (newsletterEmail.value.trim()) {
-    localStorage.setItem('bynzuri_newsletter', newsletterEmail.value.trim())
-    newsletterSubscribed.value = true
-    newsletterEmail.value = ''
-  }
-}
-
-let observer: IntersectionObserver | null = null
-
-onMounted(() => {
-  productStore.fetchBestSellers()
-  productStore.fetchNewArrivals()
-  productStore.fetchCategories()
-
-  if (heroRef.value) {
-    const heroElements = heroRef.value.querySelectorAll('.hero-animate')
-    heroElements.forEach((el, i) => {
-      (el as HTMLElement).style.opacity = '0'
-      ;(el as HTMLElement).style.transform = 'translateY(40px)'
-      ;(el as HTMLElement).style.transition = `opacity 0.8s ease ${i * 0.15}s, transform 0.8s ease ${i * 0.15}s`
-    })
-    requestAnimationFrame(() => {
-      heroElements.forEach((el) => {
-        ;(el as HTMLElement).style.opacity = '1'
-        ;(el as HTMLElement).style.transform = 'translateY(0)'
-      })
-    })
-  }
-
-  observer = new IntersectionObserver(
-    (entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          const elements = entry.target.querySelectorAll('.section-animate')
-          elements.forEach((el, i) => {
-            ;(el as HTMLElement).style.transition = `opacity 0.7s ease ${i * 0.1}s, transform 0.7s ease ${i * 0.1}s`
-            ;(el as HTMLElement).style.opacity = '1'
-            ;(el as HTMLElement).style.transform = 'translateY(0)'
-          })
-          observer?.unobserve(entry.target)
-        }
-      })
-    },
-    { threshold: 0.15 }
-  )
-
-  const sections = [categoriesRef, bestSellersRef, newArrivalsRef, testimonialsRef, newsletterRef]
-  sections.forEach((sectionRef) => {
-    if (sectionRef.value) {
-      const elements = sectionRef.value.querySelectorAll('.section-animate')
-      elements.forEach((el) => {
-        ;(el as HTMLElement).style.opacity = '0'
-        ;(el as HTMLElement).style.transform = 'translateY(40px)'
-      })
-      observer!.observe(sectionRef.value)
-    }
-  })
-})
-
-onUnmounted(() => {
-  observer?.disconnect()
-})
+import { useRouter } from 'vue-router'
+import { useUIStore } from '@/stores/ui'
+const router = useRouter()
+const uiStore = useUIStore()
 </script>
 
 <template>
-  <div>
-    <!-- Hero Banner -->
-    <section ref="heroRef" class="relative min-h-[85vh] flex items-center bg-gradient-to-b from-primary/30 to-background overflow-hidden">
-      <div class="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=600&q=75&auto=format')] bg-cover bg-center opacity-10" />
-      <div class="max-w-7xl mx-auto px-4 py-20 w-full">
-        <div class="max-w-xl">
-          <p class="hero-animate text-sm text-gold uppercase tracking-[0.2em] font-medium mb-4">Premium Beauty &amp; Haircare</p>
-          <h1 class="hero-animate font-heading text-4xl md:text-5xl lg:text-6xl font-bold text-dark leading-tight mb-6">
-            Healthy Hair.<br />
-            <span class="text-gold">Beautiful Confidence.</span><br />
-            Delivered Across Zambia.
-          </h1>
-          <p class="hero-animate text-muted text-base md:text-lg mb-8 max-w-md leading-relaxed">
-            Discover premium beauty essentials crafted for African hair. Quality products, trusted by women across Zambia.
-          </p>
-          <div class="hero-animate flex flex-col sm:flex-row gap-3">
-            <router-link to="/catalog">
-              <BaseButton variant="secondary" size="md">
-                Shop Now
-                <ArrowRight class="w-4 h-4 ml-2" />
-              </BaseButton>
-            </router-link>
-            <router-link to="/catalog">
-              <BaseButton variant="outline" size="md">
-                Browse Collections
-              </BaseButton>
-            </router-link>
-          </div>
-        </div>
-      </div>
-    </section>
+<div class="stitch-landing">
 
-    <!-- Trust Bar -->
-    <section class="border-y border-primary/20">
-      <div class="max-w-7xl mx-auto px-4 py-4">
-        <div class="flex flex-wrap items-center justify-center gap-6 md:gap-12 text-xs text-muted font-medium">
-          <span class="flex items-center gap-2">
-            <span class="w-1.5 h-1.5 rounded-full bg-success" />
-            Secure Payments
-          </span>
-          <span class="flex items-center gap-2">
-            <span class="w-1.5 h-1.5 rounded-full bg-gold" />
-            Nationwide Delivery
-          </span>
-          <span class="flex items-center gap-2">
-            <span class="w-1.5 h-1.5 rounded-full bg-primary" />
-            Verified Products
-          </span>
-          <span class="flex items-center gap-2">
-            <span class="w-1.5 h-1.5 rounded-full bg-dark" />
-            Loved by Thousands
-          </span>
-        </div>
-      </div>
-    </section>
 
-    <!-- Featured Categories -->
-    <section ref="categoriesRef" class="max-w-7xl mx-auto px-4 py-16 md:py-20">
-      <div class="flex items-end justify-between mb-8">
-        <div>
-          <p class="section-animate text-xs text-gold uppercase tracking-[0.2em] font-medium mb-2">Categories</p>
-          <h2 class="section-animate font-heading text-2xl md:text-3xl font-semibold text-dark">Shop by Category</h2>
-        </div>
-        <router-link to="/catalog" class="section-animate hidden sm:flex items-center gap-1 text-sm text-muted hover:text-dark transition-colors">
-          View All <ArrowRight class="w-3.5 h-3.5" />
-        </router-link>
-      </div>
-      <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 md:gap-4">
-        <router-link
-          v-for="(cat, i) in productStore.categories.slice(0, 6)"
-          :key="cat.id"
-          :to="`/catalog?category=${cat.slug}`"
-          :style="{ transitionDelay: `${i * 0.05}s` }"
-          class="section-animate group relative aspect-square rounded-[20px] overflow-hidden bg-primary/20"
-        >
-          <img
-            v-if="cat.image"
-            :src="cat.image"
-            :alt="cat.name"
-            class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-            loading="lazy"
-          />
-          <div class="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
-          <div class="absolute bottom-0 left-0 right-0 p-3">
-            <h3 class="text-white text-sm font-medium">{{ cat.name }}</h3>
-          </div>
-        </router-link>
+<!-- 1. HERO SECTION WITH MINIMALIST HEADER & WARM AMBIENT GLOW -->
+<!-- ============================================== -->
+<header class="absolute top-0 left-0 right-0 z-50"><div class="max-w-7xl mx-auto px-6 sm:px-12 h-24 flex items-center justify-between text-stone-900"><a class="flex items-center gap-3.5 group" href="/catalog"><div class="w-11 h-11 rounded-full border border-stone-900 flex items-center justify-center text-[8px] font-felix tracking-widest text-center uppercase p-1 leading-none shadow-sm bg-white/80 backdrop-blur"><span>HAIR &amp; SKIN<br/><span class="text-[6px] tracking-normal">EST. 2018</span></span></div><div class="flex flex-col"><span class="text-xs font-felix tracking-[0.22em] uppercase font-bold text-stone-900">Hair &amp; Skincare</span><span class="text-2xl font-sinfonietta text-stone-900 -mt-1.5 leading-none">by Nzuri</span></div></a><nav class="hidden md:flex items-center gap-8 text-xs tracking-widest font-medium uppercase text-stone-700"><a class="text-stone-900 font-semibold hover:text-black transition-colors" href="/catalog">Home</a><a class="hover:text-black transition-colors" href="#about">About Us</a><a class="hover:text-black transition-colors flex items-center gap-1" href="#sellers">Hair Care <span class="text-stone-400">+</span></a><a class="hover:text-black transition-colors flex items-center gap-1" href="#sellers">Skin Care <span class="text-stone-400">+</span></a><a class="hover:text-black transition-colors" href="#contact">Contact</a></nav><div class="flex items-center gap-4 text-stone-800"><button @click="router.push('/catalog')" aria-label="Search" class="hover:text-black hover:scale-105 transition-all p-1.5 rounded-full hover:bg-black/5"><span class="material-symbols-outlined text-[20px]">search</span></button><button @click="router.push('/account')" aria-label="Account" class="hover:text-black hover:scale-105 transition-all p-1.5 rounded-full hover:bg-black/5"><span class="material-symbols-outlined text-[20px]">person</span></button><a @click.prevent="uiStore.openCart()" aria-label="Cart" class="hover:text-black hover:scale-105 transition-all p-1.5 rounded-full hover:bg-black/5 relative" href="#sellers"><span class="material-symbols-outlined text-[20px]">shopping_bag</span></a></div></div></header>
+<section class="relative w-full min-h-[92vh] lg:min-h-screen bg-[#fcf9f9] overflow-hidden flex items-center pt-28 pb-16 border-b border-stone-200/60"><div class="pointer-events-none absolute top-14 left-1/2 -translate-x-1/2 w-full text-center z-0 overflow-hidden leading-none select-none opacity-[0.07]"><span class="text-[20vw] font-felix font-bold uppercase tracking-[0.25em] text-[#dcbec3] block">BY NZURI</span></div><div class="absolute -top-32 -left-32 w-96 h-96 rounded-full bg-[#dcbec3]/35 blur-3xl pointer-events-none"></div><div class="absolute bottom-0 right-0 w-[500px] h-[500px] rounded-full bg-[#dcbec3]/30 blur-3xl pointer-events-none"></div><div class="relative z-10 max-w-7xl mx-auto px-6 sm:px-12 w-full grid grid-cols-1 lg:grid-cols-12 gap-12 items-center"><div class="lg:col-span-6 text-stone-900 space-y-8"><div class="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-white border border-[#dcbec3] shadow-sm"><span class="w-2 h-2 rounded-full bg-[#111111]"></span><span class="text-[11px] font-felix tracking-widest uppercase text-stone-800 font-semibold">100% Organic &amp; Toxic-Free • Est. 2018</span></div><div class="space-y-3"><h1 class="text-4xl sm:text-5xl lg:text-6xl font-felix font-normal tracking-tight text-stone-900 leading-[1.15]">ELEVATE YOUR <br/><span class="font-sinfonietta text-5xl sm:text-6xl lg:text-7xl text-[#111111] block -mt-2">Hair &amp; Skincare Ritual</span></h1><p class="text-xs sm:text-sm text-stone-600 max-w-md font-light leading-relaxed pt-2">Formulated with nourishing raw botanicals and safe organic actives to ensure your hair and skin are completely free from sulphates, parabens, and mineral oils.</p></div><div class="flex flex-wrap items-center gap-4 pt-2"><a class="px-8 py-3.5 rounded-full bg-[#111111] text-white text-xs font-felix tracking-widest uppercase hover:bg-stone-800 transition-all shadow-md" href="#sellers">Shop The Collection</a><a class="px-8 py-3.5 rounded-full border border-stone-900 text-stone-900 text-xs font-felix tracking-widest uppercase hover:bg-[#dcbec3]/40 transition-all" href="#about">Our Story</a></div><div class="pt-4 flex flex-col sm:flex-row items-start sm:items-center gap-4 text-stone-700"><div class="flex -space-x-2"><img alt="avatar" class="w-8 h-8 rounded-full border-2 border-white object-cover shadow-sm" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC-FaszPzHCNzDz_etx4EpBCEFGClC0gc7T4aFEBM6r4mhsuTTcGHv3Oow14qwVL7L7idi6dkybjvmySGKxogu4b7jLItOFuUz0afaXIx5JiBUNGNDpeVAu-msDjMYqxTUHQD0jV0BIgBWZCt6v_RSLDp6da6AEZpRB8TURX8w8JJJ0NA-Vs-K_UCvS0qo_Sx2fxLbrhiXPk-ST521DQDV5n6V7R3RRKz0ZlBtfXA"/><img alt="avatar" class="w-8 h-8 rounded-full border-2 border-white object-cover shadow-sm" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCc_R4Dc6hXjBRK171W9jc13qPe6IjraFlGOKIodJCZLgiKrnDMbGIkxW2nWaIPkooRYiwYSvgCCsuZYPlLLBHpyBcUQPbqNH1BEN0Y86qsCtAbs_EfAvZ-Zcm0I-6XoPoK5JjN8FD-dVOtVP5S9FjT2hAqxZ5yte6wQJHreksKpX_friE6Nq4dkpUL-ri-c6eoSXDyp5XcImenDFjO5c_0ac6_bq8l62bmw_FpQ"/><img alt="avatar" class="w-8 h-8 rounded-full border-2 border-white object-cover shadow-sm" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDeaezYu98hP_FnzJhGqCq454ny3PBxGo-RL5wRl0vNeU8KWrK0BXtud1jhJqYP9ciZ_N_hTCjpvXuEjYQ2jnNkjp55XrTBrZBbJmLHNjvvXxQBtguJUDVufxTx78OotFPLoa4dKubmBLsFtwAIV9nEPIf8AEBFQweB3nUfQAVdmL1Yc1Q-ApB9Iu9m0Q-JQSQLxCXEhwdP0UtMmfKDh5dE5pzioy38LDbmwx078A"/></div><p class="text-xs text-stone-500 max-w-xs leading-relaxed font-light">Trusted by thousands since 2018 for holistic hair restoration &amp; radiant natural skin.</p></div></div><div class="lg:col-span-6 relative flex justify-center items-center"><div class="relative w-full max-w-md lg:max-w-lg"><div class="absolute -inset-4 bg-[#dcbec3] rounded-3xl filter blur-xl opacity-50 transform rotate-2"></div><img alt="Model glowing with Hair and Skincare by Nzuri natural routine" class="relative z-10 w-full h-[470px] sm:h-[560px] object-cover object-top rounded-3xl shadow-2xl border-4 border-white" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCc_R4Dc6hXjBRK171W9jc13qPe6IjraFlGOKIodJCZLgiKrnDMbGIkxW2nWaIPkooRYiwYSvgCCsuZYPlLLBHpyBcUQPbqNH1BEN0Y86qsCtAbs_EfAvZ-Zcm0I-6XoPoK5JjN8FD-dVOtVP5S9FjT2hAqxZ5yte6wQJHreksKpX_friE6Nq4dkpUL-ri-c6eoSXDyp5XcImenDFjO5c_0ac6_bq8l62bmw_FpQ"/><div class="absolute -bottom-6 -left-6 z-20 bg-white p-4 rounded-2xl shadow-xl border border-stone-200/80 max-w-[200px]"><div class="flex items-center gap-2 mb-1"><span class="material-symbols-outlined text-[16px] text-stone-800">eco</span><span class="text-[10px] font-felix tracking-wider uppercase font-bold text-stone-900">Clean Beauty</span></div><p class="text-[11px] text-stone-500 leading-tight">No sulphates, parabens, or mineral oils.</p></div></div></div></div></section>
+<!-- ============================================== -->
+<!-- 2. "OUR BEST SELLERS" PRODUCT ROW -->
+<!-- ============================================== -->
+<section class="w-full bg-[#fbf9f8] py-20 sm:py-24" id="sellers"><div class="max-w-7xl mx-auto px-6 sm:px-12"><div class="flex items-center justify-between mb-12"><div><span class="text-[11px] font-felix tracking-[0.2em] uppercase text-stone-500 block mb-1">Curated Formulations</span><h2 class="text-3xl sm:text-4xl font-felix text-stone-900 font-normal">Our <span class="font-sinfonietta text-4xl sm:text-5xl text-stone-900">Signature</span> Collection</h2></div><div class="flex items-center gap-3"></div></div><div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6"><div class="group bg-white rounded-2xl p-5 shadow-sm hover:shadow-md transition-all flex flex-col justify-between border border-stone-100"><div><div class="flex items-center justify-between mb-4"><span class="text-[10px] uppercase font-felix tracking-wider text-stone-500 font-semibold">Hair Growth</span><button class="w-7 h-7 rounded-full bg-[#111111] hover:bg-[#dcbec3] hover:text-stone-900 text-white flex items-center justify-center hover:scale-110 transition-all" @click="router.push('/catalog')" aria-label="Browse products"><span class="material-symbols-outlined text-[16px]">add</span></button></div><div class="w-full h-56 flex items-center justify-center py-4 bg-[#fcf9f9] rounded-xl overflow-hidden mb-5"><img alt="Growth Elixir" class="h-44 w-auto object-contain group-hover:scale-105 transition-transform duration-300" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB0ssQPAzPUgVQVxuqpd-eOUSEWmdNh-K6DTHvWfzZU09iZ3hoEttj0yNfwqtbt1tUbHDJmWiSB1Fcr8sBQtRUecOkHHqYgEKn7ReEnQc0W9T3DaclV6Wl9qp0Dhab27mORIAUlOS4p2oVsXfFvoDJ1RKUJSTBPvZ9h6rU2Dal8iMAQeO1DcwWzK57pMAAuh6ZwO1R19IZKgLg-XRtpGDXKZmwYWuTuej_kkKsMiA"/></div></div><div class="flex items-end justify-between pt-3 border-t border-stone-100"><div><h3 class="text-xs font-semibold text-stone-900 leading-snug font-felix tracking-wide">Growth Elixir &amp;<br/>Scalp Drops</h3></div><span class="text-sm font-bold text-stone-900">$44.00</span></div></div><div class="group bg-white rounded-2xl p-5 shadow-sm hover:shadow-md transition-all flex flex-col justify-between border border-stone-100"><div><div class="flex items-center justify-between mb-4"><span class="text-[10px] uppercase font-felix tracking-wider text-stone-500 font-semibold">Hair &amp; Body</span><button class="w-7 h-7 rounded-full bg-[#111111] hover:bg-[#dcbec3] hover:text-stone-900 text-white flex items-center justify-center hover:scale-110 transition-all" @click="router.push('/catalog')" aria-label="Browse products"><span class="material-symbols-outlined text-[16px]">add</span></button></div><div class="w-full h-56 flex items-center justify-center py-4 bg-[#fcf9f9] rounded-xl overflow-hidden mb-5"><img alt="Nourishing Hair Oil" class="h-44 w-auto object-contain group-hover:scale-105 transition-transform duration-300" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC-ZJKUc6sJqKGOW5En4g8s2BM7g18UuqFKtmlM3Ws4DKJWiIdmRx38vnoWC3bdYHsjrLHIK_Nxfb49BeKj2gUdGewMd6RNucjUR19aHWPYWfgu6GoRYaUB_7QXdJEpgtE2e8Fxyq2zxDzqni17NYYjMVUCJm79mhcGtJGD1FRwVq9ZRwqUcWlxZdJbhDN_LQF91awQPxxx9ynbtXrjSIXs-0YIMWLIYNuATWMdXg"/></div></div><div class="flex items-end justify-between pt-3 border-t border-stone-100"><div><h3 class="text-xs font-semibold text-stone-900 leading-snug font-felix tracking-wide">Nourishing Hair Oil &amp;<br/>Hydra Mist</h3></div><span class="text-sm font-bold text-stone-900">$38.00</span></div></div><div class="group bg-white rounded-2xl p-5 shadow-sm hover:shadow-md transition-all flex flex-col justify-between border border-stone-100"><div><div class="flex items-center justify-between mb-4"><span class="text-[10px] uppercase font-felix tracking-wider text-stone-500 font-semibold">Skincare</span><button class="w-7 h-7 rounded-full bg-[#111111] hover:bg-[#dcbec3] hover:text-stone-900 text-white flex items-center justify-center hover:scale-110 transition-all" @click="router.push('/catalog')" aria-label="Browse products"><span class="material-symbols-outlined text-[16px]">add</span></button></div><div class="w-full h-56 flex items-center justify-center py-4 bg-[#fcf9f9] rounded-xl overflow-hidden mb-5"><img alt="Exfoliating Toner" class="h-44 w-auto object-contain group-hover:scale-105 transition-transform duration-300" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAI_JE6aBMdsW4lx-CRck40s1h5NcW0zcDQxcBuANeeuerOQ99ekaTV1_MahCCSVGfhPX1aUXqG3wUjpyxxqy8UlzyHbqrFClu7_DCUb_KtChURaC2uVjX82ZTzDLCrbL4u81dW1cQBzYThcs2wffoodWBHpfWszb9DaSkp9nwxP4z6a6av4xHAw8XL7iEypDBFTT3X1GfwDjNRZXaZAIybgXdWvMBvwANEgvcSbA"/></div></div><div class="flex items-end justify-between pt-3 border-t border-stone-100"><div><h3 class="text-xs font-semibold text-stone-900 leading-snug font-felix tracking-wide">Exfoliating Herbal<br/>Active Toner</h3></div><span class="text-sm font-bold text-stone-900">$36.00</span></div></div><div class="group bg-white rounded-2xl p-5 shadow-sm hover:shadow-md transition-all flex flex-col justify-between border border-stone-100"><div><div class="flex items-center justify-between mb-4"><span class="text-[10px] uppercase font-felix tracking-wider text-stone-500 font-semibold">Hair Butter</span><button class="w-7 h-7 rounded-full bg-[#111111] hover:bg-[#dcbec3] hover:text-stone-900 text-white flex items-center justify-center hover:scale-110 transition-all" @click="router.push('/catalog')" aria-label="Browse products"><span class="material-symbols-outlined text-[16px]">add</span></button></div><div class="w-full h-56 flex items-center justify-center py-4 bg-[#fcf9f9] rounded-xl overflow-hidden mb-5"><img alt="Raw Whipped Shea Butter" class="h-44 w-auto object-contain group-hover:scale-105 transition-transform duration-300" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD7xcjGGlHKRl5ztYi776LTJk55bzGNuqhMCx5TLlSON-qqpccaf_PFm8ZCKAQ619PNt9i2OSHtw4oz5I8pbAsVGkWLMuP6XMFjUmyrpdeKv8euAQb_f9flZwzdiWydFQjF9jwUI0X1V7IiNFLqq_2S1AYKd_NuMowhlndEtdkqVsl_J1ZFIdC67NXTXCdzTjW7zWkpS-XXyS8TazV3ciDF5tUZftRm418Rrg4etA"/></div></div><div class="flex items-end justify-between pt-3 border-t border-stone-100"><div><h3 class="text-xs font-semibold text-stone-900 leading-snug font-felix tracking-wide">Whipped Raw Shea<br/>Butter Balm</h3></div><span class="text-sm font-bold text-stone-900">$42.00</span></div></div></div></div></section>
+<!-- ============================================== -->
+<!-- 3. MISSION / STATEMENT CALLOUT SECTION (WARM SAND / CLAY) -->
+<!-- ============================================== -->
+<section class="relative w-full bg-[#dcbec3] py-24 sm:py-32 overflow-hidden text-center" id="about"><div class="pointer-events-none absolute inset-x-0 bottom-4 text-center z-0 select-none opacity-20 overflow-hidden"><span class="text-[18vw] font-felix font-bold uppercase tracking-[0.2em] text-white block">NZURI</span></div><div class="relative z-10 max-w-4xl mx-auto px-6 sm:px-12 flex flex-col items-center"><div class="inline-block px-4 py-1.5 rounded-full bg-white/70 border border-white text-[11px] font-felix font-semibold uppercase tracking-[0.25em] text-stone-800 mb-6">Our Brand Story • Founded 2018</div><h2 class="text-2xl sm:text-4xl lg:text-5xl font-felix font-normal text-stone-900 leading-tight max-w-3xl mb-6">HAIR AND SKINCARE BY NZURI IS DEDICATED TO <span class="font-sinfonietta text-4xl sm:text-5xl lg:text-6xl text-stone-950 block mt-1">Safe Organic Formulations</span></h2><p class="text-sm sm:text-base text-stone-800 max-w-2xl font-light leading-relaxed mb-10">We create beauty essentials crafted from raw, natural ingredients with the aim of ensuring your hair and skin are completely free from toxic chemicals such as sulphates, parabens, and mineral oils.</p><div class="grid grid-cols-2 sm:grid-cols-4 gap-4 w-full max-w-2xl mb-12"><div class="p-3 bg-white/80 rounded-xl shadow-sm border border-white/60"><span class="text-xs font-felix font-bold text-stone-900 block">SULPHATE-FREE</span><span class="text-[10px] text-stone-600">Gentle cleansing</span></div><div class="p-3 bg-white/80 rounded-xl shadow-sm border border-white/60"><span class="text-xs font-felix font-bold text-stone-900 block">PARABEN-FREE</span><span class="text-[10px] text-stone-600">Zero toxins</span></div><div class="p-3 bg-white/80 rounded-xl shadow-sm border border-white/60"><span class="text-xs font-felix font-bold text-stone-900 block">NO MINERAL OIL</span><span class="text-[10px] text-stone-600">Pure botanicals</span></div><div class="p-3 bg-white/80 rounded-xl shadow-sm border border-white/60"><span class="text-xs font-felix font-bold text-stone-900 block">100% ORGANIC</span><span class="text-[10px] text-stone-600">Sustainably crafted</span></div></div><div class="relative transform rotate-1 hover:rotate-0 transition-transform duration-500 shadow-2xl rounded-2xl overflow-hidden max-w-sm sm:max-w-md border-4 border-white"><img alt="Hair and Skincare by Nzuri product line" class="w-full h-80 sm:h-96 object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBxFI_ITJ2wHn9oHAtSkWIUhP4wQKYba4BHF1jY2yn1zAQXASpDbwde8fyvC7uxfamSWnwglyyDbZq4bl3DzKBkKMf_ClKmoXVNXtMUBpif-Xi-kO3aUfpY9f4KmXhBLhaOVGRs9WdlpprPQDQ6GSCiOKMJBB6FCNiMEFJca6DR7WVKUzfWKksRp7Np6pUClkRnrPxJSvoOvMDzc1Mv8_LBdltF9H0lf7kqbrppQw"/></div></div></section>
+<!-- ============================================== -->
+<!-- 4. "OUR KEY ADVANTAGES" TRUST ROW -->
+<!-- ============================================== -->
+<section class="w-full bg-[#fcf9f9] py-16 sm:py-24"><div class="max-w-7xl mx-auto px-6 sm:px-12"><div class="rounded-3xl overflow-hidden grid grid-cols-1 lg:grid-cols-12 shadow-xl border border-stone-200/80"><div class="lg:col-span-6 relative min-h-[460px] lg:min-h-full"><img alt="Natural beauty applying Hair and Skincare by Nzuri moisturizer" class="absolute inset-0 w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBL9ynnoLh03ylDrWMAvP5yLr_chRTDm9AX54N4qA9swJWEeg38H8kHIwx9gRl28NShLRXxxMuWNp2Kn6bWmkz8kfMINfUql89pLNEnlJXV4-Q6DD8TQJsBceTCE658yWgLX7IeOq3p3JKrdZA8wb1RGEe1nF01nI_nyFaZS00ZAWMT2hcd84kG5fxAnqDZMXY6aWk8ZTt-QaXbPsepr-tw4H8ie3RAoVIK5NnXpg"/></div><div class="lg:col-span-6 bg-[#dcbec3] p-8 sm:p-14 text-stone-900 flex flex-col justify-center"><div class="mb-8"><span class="text-[11px] font-felix tracking-[0.2em] uppercase font-bold text-stone-800 block mb-2">Pure Hair &amp; Skin Wellness</span><h2 class="text-3xl sm:text-4xl font-felix font-normal text-stone-900 leading-tight">It's Time to <span class="font-sinfonietta text-4xl sm:text-5xl text-stone-950 block mt-1">Upgrade Your Routine</span></h2><p class="text-xs text-stone-700 font-light mt-3 leading-relaxed">Handcrafted with certified organic botanical oils, soothing hydrators, and nutrient-dense raw butters to give lasting radiance.</p></div><div class="space-y-3.5"><div class="bg-white rounded-2xl p-6 text-stone-900 shadow-md border border-white"><h3 class="text-sm font-felix font-bold mb-2 uppercase tracking-wide">Organic &amp; Toxic-Free Ingredients</h3><p class="text-xs text-stone-600 leading-relaxed font-light mb-4">Formulated free from parabens, harsh sulphates, and synthetic fillers for healthy scalp stimulation and hydrated, supple skin.</p><a class="text-xs font-felix font-bold text-stone-900 underline hover:text-stone-700 tracking-wider uppercase" href="#sellers">Explore All Formulations →</a></div><div class="bg-white/50 backdrop-blur rounded-2xl px-6 py-4 flex items-center justify-between text-xs font-felix font-semibold text-stone-900 hover:bg-white/70 transition-all cursor-pointer border border-white/60"><span class="tracking-wide uppercase">Nourishing Scalp &amp; Follicle Care</span><span class="material-symbols-outlined text-[16px]">arrow_forward</span></div><div class="bg-white/50 backdrop-blur rounded-2xl px-6 py-4 flex items-center justify-between text-xs font-felix font-semibold text-stone-900 hover:bg-white/70 transition-all cursor-pointer border border-white/60"><span class="tracking-wide uppercase">Raw Whipped Shea &amp; Botanical Oils</span><span class="material-symbols-outlined text-[16px]">arrow_forward</span></div><div class="bg-white/50 backdrop-blur rounded-2xl px-6 py-4 flex items-center justify-between text-xs font-felix font-semibold text-stone-900 hover:bg-white/70 transition-all cursor-pointer border border-white/60"><span class="tracking-wide uppercase">Cruelty-Free &amp; Ethically Sourced</span><span class="material-symbols-outlined text-[16px]">arrow_forward</span></div></div></div></div></div></section>
+<!-- ============================================== -->
+<!-- 5. "IT'S TIME TO UPGRADE YOUR SKINCARE" SPLIT SECTION -->
+<!-- ============================================== -->
+<section class="w-full bg-white py-20 sm:py-28"><div class="max-w-7xl mx-auto px-6 sm:px-12"><span class="text-[11px] font-felix font-bold uppercase tracking-[0.2em] text-stone-400 block mb-8">Client Reviews • Real Results</span><div class="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center"><div class="lg:col-span-5 flex flex-col items-start space-y-4"><div class="flex items-center gap-2"></div><div class="relative w-full max-w-sm rounded-2xl overflow-hidden shadow-lg border border-stone-200"><img alt="Portrait of Sara Jahan" class="w-full h-80 object-cover object-top" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC-FaszPzHCNzDz_etx4EpBCEFGClC0gc7T4aFEBM6r4mhsuTTcGHv3Oow14qwVL7L7idi6dkybjvmySGKxogu4b7jLItOFuUz0afaXIx5JiBUNGNDpeVAu-msDjMYqxTUHQD0jV0BIgBWZCt6v_RSLDp6da6AEZpRB8TURX8w8JJJ0NA-Vs-K_UCvS0qo_Sx2fxLbrhiXPk-ST521DQDV5n6V7R3RRKz0ZlBtfXA"/><div class="p-3.5 bg-[#fcf9f9] flex items-center justify-between text-[11px] text-stone-700 font-medium"><span class="font-felix tracking-wide uppercase font-semibold">Happy Client</span><span class="text-stone-400">Est. 2018</span></div></div></div><div class="lg:col-span-7 flex flex-col justify-between space-y-8"><div><span class="text-6xl font-sinfonietta text-stone-900 block leading-none select-none">“</span><blockquote class="text-2xl sm:text-4xl font-felix font-normal text-stone-900 leading-snug mt-2">My hair has never felt so strong, and my skin feels deeply hydrated without irritation. Knowing it is free from sulphates and parabens gives me so much confidence.</blockquote><p class="text-xs text-stone-500 font-felix tracking-widest uppercase font-semibold mt-6">— Sara J., Loyal Customer since 2019</p></div><div class="pt-6 border-t border-stone-100 flex items-center justify-between"><div class="flex items-center gap-3"><div class="flex -space-x-2"><img alt="user" class="w-8 h-8 rounded-full border-2 border-white object-cover shadow-sm" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCc_R4Dc6hXjBRK171W9jc13qPe6IjraFlGOKIodJCZLgiKrnDMbGIkxW2nWaIPkooRYiwYSvgCCsuZYPlLLBHpyBcUQPbqNH1BEN0Y86qsCtAbs_EfAvZ-Zcm0I-6XoPoK5JjN8FD-dVOtVP5S9FjT2hAqxZ5yte6wQJHreksKpX_friE6Nq4dkpUL-ri-c6eoSXDyp5XcImenDFjO5c_0ac6_bq8l62bmw_FpQ"/><img alt="user" class="w-8 h-8 rounded-full border-2 border-white object-cover shadow-sm" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDeaezYu98hP_FnzJhGqCq454ny3PBxGo-RL5wRl0vNeU8KWrK0BXtud1jhJqYP9ciZ_N_hTCjpvXuEjYQ2jnNkjp55XrTBrZBbJmLHNjvvXxQBtguJUDVufxTx78OotFPLoa4dKubmBLsFtwAIV9nEPIf8AEBFQweB3nUfQAVdmL1Yc1Q-ApB9Iu9m0Q-JQSQLxCXEhwdP0UtMmfKDh5dE5pzioy38LDbmwx078A"/><span class="w-8 h-8 rounded-full bg-[#111111] text-[#dcbec3] text-[10px] font-bold flex items-center justify-center border-2 border-white shadow-sm">+2k</span></div><div class="text-[11px] text-stone-600 leading-tight">They trusted by Nzuri for hair &amp; skin wellness.<br/>Ready whenever you are.</div></div></div></div></div></div></section>
+<!-- ============================================== -->
+<!-- 6. CUSTOMER REVIEWS / TESTIMONIAL SECTION -->
+<!-- ============================================== -->
+<section class="w-full bg-[#fcf9f9] py-20 sm:py-28 border-t border-stone-200/60"><div class="max-w-7xl mx-auto px-6 sm:px-12"><div class="text-center mb-14"><span class="text-[11px] font-felix tracking-[0.2em] uppercase text-stone-500 block mb-2">The Clean Journal</span><h2 class="text-3xl sm:text-4xl font-felix font-normal text-stone-900">Hair &amp; Skin <span class="font-sinfonietta text-4xl sm:text-5xl text-stone-900">Tips &amp; Rituals</span></h2></div><div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12"><article class="bg-white rounded-2xl p-4 shadow-sm hover:shadow-md transition-shadow group flex flex-col justify-between border border-stone-100"><div class="relative w-full h-52 rounded-xl overflow-hidden mb-4"><img alt="Hair oiling ritual" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBxFI_ITJ2wHn9oHAtSkWIUhP4wQKYba4BHF1jY2yn1zAQXASpDbwde8fyvC7uxfamSWnwglyyDbZq4bl3DzKBkKMf_ClKmoXVNXtMUBpif-Xi-kO3aUfpY9f4KmXhBLhaOVGRs9WdlpprPQDQ6GSCiOKMJBB6FCNiMEFJca6DR7WVKUzfWKksRp7Np6pUClkRnrPxJSvoOvMDzc1Mv8_LBdltF9H0lf7kqbrppQw"/><a class="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/90 backdrop-blur text-stone-800 flex items-center justify-center shadow-sm group-hover:bg-[#111111] group-hover:text-white transition-colors" href="/catalog"><span class="material-symbols-outlined text-[16px]">north_east</span></a></div><div><div class="flex items-center gap-3 text-[10px] font-felix tracking-wider uppercase text-stone-400 mb-2"><span>Hair Health</span><span>•</span><span>4 min read</span></div><h3 class="text-sm font-semibold text-stone-900 group-hover:text-stone-700 transition-colors leading-snug font-felix">Why Sulphate-Free Washing Revitalizes Scalp &amp; Curl Retention</h3></div></article><article class="bg-white rounded-2xl p-4 shadow-sm hover:shadow-md transition-shadow group flex flex-col justify-between border border-stone-100"><div class="relative w-full h-52 rounded-xl overflow-hidden mb-4"><img alt="Woman with glowing skin" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDeaezYu98hP_FnzJhGqCq454ny3PBxGo-RL5wRl0vNeU8KWrK0BXtud1jhJqYP9ciZ_N_hTCjpvXuEjYQ2jnNkjp55XrTBrZBbJmLHNjvvXxQBtguJUDVufxTx78OotFPLoa4dKubmBLsFtwAIV9nEPIf8AEBFQweB3nUfQAVdmL1Yc1Q-ApB9Iu9m0Q-JQSQLxCXEhwdP0UtMmfKDh5dE5pzioy38LDbmwx078A"/><a class="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/90 backdrop-blur text-stone-800 flex items-center justify-center shadow-sm group-hover:bg-[#111111] group-hover:text-white transition-colors" href="/catalog"><span class="material-symbols-outlined text-[16px]">north_east</span></a></div><div><div class="flex items-center gap-3 text-[10px] font-felix tracking-wider uppercase text-stone-400 mb-2"><span>Skincare Essentials</span><span>•</span><span>3 min read</span></div><h3 class="text-sm font-semibold text-stone-900 group-hover:text-stone-700 transition-colors leading-snug font-felix">How Raw Whipped Shea Butter Protects Your Skin Barrier Daily</h3></div></article><article class="bg-white rounded-2xl p-4 shadow-sm hover:shadow-md transition-shadow group flex flex-col justify-between border border-stone-100"><div class="relative w-full h-52 rounded-xl overflow-hidden mb-4"><img alt="Relaxing spa routine" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCc_R4Dc6hXjBRK171W9jc13qPe6IjraFlGOKIodJCZLgiKrnDMbGIkxW2nWaIPkooRYiwYSvgCCsuZYPlLLBHpyBcUQPbqNH1BEN0Y86qsCtAbs_EfAvZ-Zcm0I-6XoPoK5JjN8FD-dVOtVP5S9FjT2hAqxZ5yte6wQJHreksKpX_friE6Nq4dkpUL-ri-c6eoSXDyp5XcImenDFjO5c_0ac6_bq8l62bmw_FpQ"/><a class="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/90 backdrop-blur text-stone-800 flex items-center justify-center shadow-sm group-hover:bg-[#111111] group-hover:text-white transition-colors" href="/catalog"><span class="material-symbols-outlined text-[16px]">north_east</span></a></div><div><div class="flex items-center gap-3 text-[10px] font-felix tracking-wider uppercase text-stone-400 mb-2"><span>Toxic-Free Living</span><span>•</span><span>5 min read</span></div><h3 class="text-sm font-semibold text-stone-900 group-hover:text-stone-700 transition-colors leading-snug font-felix">The Truth About Parabens &amp; Mineral Oils in Beauty Products</h3></div></article></div><div class="text-center"><a class="inline-block px-8 py-3.5 rounded-full bg-[#111111] hover:bg-stone-800 text-white text-xs font-felix tracking-widest uppercase transition-all shadow-md" href="/catalog">View All Articles</a></div></div></section>
+<!-- ============================================== -->
+<!-- 7. "SKIN CARE TIPS & TRENDS" BLOG / ARTICLE ROW -->
+<!-- ============================================== -->
+<section class="w-full bg-[#fbf9f8] py-20 sm:py-28">
+<div class="max-w-7xl mx-auto px-6 sm:px-12">
+<div class="text-center mb-14">
+<h2 class="text-3xl sm:text-4xl font-headline font-semibold text-[#1f1a17]">
+        Skin Care <span class="font-serif-italic font-normal">Tips &amp; Trends</span>
+</h2>
+</div>
+<!-- 3 Clean Editorial Cards -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
+<!-- Article 1 -->
+<article class="bg-white rounded-2xl p-4 shadow-sm hover:shadow-md transition-shadow group flex flex-col justify-between">
+<div class="relative w-full h-52 rounded-xl overflow-hidden mb-4">
+<img alt="Woman applying facial care" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBxFI_ITJ2wHn9oHAtSkWIUhP4wQKYba4BHF1jY2yn1zAQXASpDbwde8fyvC7uxfamSWnwglyyDbZq4bl3DzKBkKMf_ClKmoXVNXtMUBpif-Xi-kO3aUfpY9f4KmXhBLhaOVGRs9WdlpprPQDQ6GSCiOKMJBB6FCNiMEFJca6DR7WVKUzfWKksRp7Np6pUClkRnrPxJSvoOvMDzc1Mv8_LBdltF9H0lf7kqbrppQw"/>
+<a class="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/90 backdrop-blur text-stone-800 flex items-center justify-center shadow-sm group-hover:bg-[#af6f4a] group-hover:text-white transition-colors" href="/catalog">
+<span class="material-symbols-outlined text-[16px]">north_east</span>
+</a>
+</div>
+<div>
+<div class="flex items-center gap-3 text-[10px] text-stone-400 mb-2">
+<span>October 10, 2026</span>
+<span>•</span>
+<span>3 min read</span>
+</div>
+<h3 class="text-sm font-bold text-stone-800 group-hover:text-[#af6f4a] transition-colors leading-snug">
+            Why Gentle Formulations Are Better for Your Skin Every Day
+          </h3>
+</div>
+</article>
+<!-- Article 2 -->
+<article class="bg-white rounded-2xl p-4 shadow-sm hover:shadow-md transition-shadow group flex flex-col justify-between">
+<div class="relative w-full h-52 rounded-xl overflow-hidden mb-4">
+<img alt="Woman holding skincare product in front of mirror" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDeaezYu98hP_FnzJhGqCq454ny3PBxGo-RL5wRl0vNeU8KWrK0BXtud1jhJqYP9ciZ_N_hTCjpvXuEjYQ2jnNkjp55XrTBrZBbJmLHNjvvXxQBtguJUDVufxTx78OotFPLoa4dKubmBLsFtwAIV9nEPIf8AEBFQweB3nUfQAVdmL1Yc1Q-ApB9Iu9m0Q-JQSQLxCXEhwdP0UtMmfKDh5dE5pzioy38LDbmwx078A"/>
+<a class="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/90 backdrop-blur text-stone-800 flex items-center justify-center shadow-sm group-hover:bg-[#af6f4a] group-hover:text-white transition-colors" href="/catalog">
+<span class="material-symbols-outlined text-[16px]">north_east</span>
+</a>
+</div>
+<div>
+<div class="flex items-center gap-3 text-[10px] text-stone-400 mb-2">
+<span>October 10, 2026</span>
+<span>•</span>
+<span>3 min read</span>
+</div>
+<h3 class="text-sm font-bold text-stone-800 group-hover:text-[#af6f4a] transition-colors leading-snug">
+            Why Gentle Deodorants Are Better for Your Skin Every Day
+          </h3>
+</div>
+</article>
+<!-- Article 3 -->
+<article class="bg-white rounded-2xl p-4 shadow-sm hover:shadow-md transition-shadow group flex flex-col justify-between">
+<div class="relative w-full h-52 rounded-xl overflow-hidden mb-4">
+<img alt="Relaxing in towel with eye patches" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCc_R4Dc6hXjBRK171W9jc13qPe6IjraFlGOKIodJCZLgiKrnDMbGIkxW2nWaIPkooRYiwYSvgCCsuZYPlLLBHpyBcUQPbqNH1BEN0Y86qsCtAbs_EfAvZ-Zcm0I-6XoPoK5JjN8FD-dVOtVP5S9FjT2hAqxZ5yte6wQJHreksKpX_friE6Nq4dkpUL-ri-c6eoSXDyp5XcImenDFjO5c_0ac6_bq8l62bmw_FpQ"/>
+<a class="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/90 backdrop-blur text-stone-800 flex items-center justify-center shadow-sm group-hover:bg-[#af6f4a] group-hover:text-white transition-colors" href="/catalog">
+<span class="material-symbols-outlined text-[16px]">north_east</span>
+</a>
+</div>
+<div>
+<div class="flex items-center gap-3 text-[10px] text-stone-400 mb-2">
+<span>October 10, 2026</span>
+<span>•</span>
+<span>3 min read</span>
+</div>
+<h3 class="text-sm font-bold text-stone-800 group-hover:text-[#af6f4a] transition-colors leading-snug">
+            Simple Evening Practices to Maintain Dewy Barrier Moisture
+          </h3>
+</div>
+</article>
+</div>
+<!-- Centered Button -->
+<div class="text-center">
+<a class="inline-block px-7 py-3 rounded-full bg-[#af6f4a] hover:bg-[#8a4f32] text-white text-xs font-semibold tracking-wide transition-colors" href="/catalog">
+        View all Article
+      </a>
+</div>
+</div>
+</section>
+<!-- ============================================== -->
+<!-- 8. STREAMLINED FOOTER (RICH WARM TERRACOTTA / SAND TONE) -->
+<!-- ============================================== -->
+<footer class="relative w-full bg-[#111111] text-white/90 pt-16 pb-12 overflow-hidden border-t border-stone-800" id="contact"><div class="max-w-7xl mx-auto px-6 sm:px-12 relative z-10"><div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-10 pb-16"><div class="lg:col-span-4 space-y-4"><div class="flex items-center gap-3"><div class="w-10 h-10 rounded-full border border-[#dcbec3] flex items-center justify-center text-[7px] font-felix tracking-widest text-[#dcbec3] uppercase p-1 leading-none"><span>NZURI<br/>2018</span></div><div><span class="text-xs font-felix tracking-[0.2em] uppercase font-bold text-white block">Hair &amp; Skincare</span><span class="text-xl font-sinfonietta text-[#dcbec3] leading-none block -mt-1">by Nzuri</span></div></div><p class="text-xs text-stone-400 font-light leading-relaxed max-w-sm">A clean beauty brand dedicated to formulating hair and skincare made with safe organic botanicals. Free from sulphates, parabens, and mineral oils. Founded in 2018.</p></div><div class="lg:col-span-2 space-y-3"><h4 class="text-xs font-felix font-bold tracking-widest uppercase text-[#dcbec3]">Quick Links</h4><ul class="space-y-2 text-xs text-stone-400 font-light"><li><a class="hover:text-white transition-colors" href="/catalog">Home</a></li><li><a class="hover:text-white transition-colors" href="#about">About Us</a></li><li><a class="hover:text-white transition-colors" href="#sellers">Hair Care</a></li><li><a class="hover:text-white transition-colors" href="#sellers">Skin Care</a></li><li><a class="hover:text-white transition-colors" href="#contact">Contact</a></li></ul></div><div class="lg:col-span-2 space-y-3"><h4 class="text-xs font-felix font-bold tracking-widest uppercase text-[#dcbec3]">Customer Care</h4><ul class="space-y-2 text-xs text-stone-400 font-light"><li><a class="hover:text-white transition-colors" href="/catalog">Shipping &amp; Delivery</a></li><li><a class="hover:text-white transition-colors" href="/catalog">Returns &amp; Refunds</a></li><li><a class="hover:text-white transition-colors" href="/catalog">Ingredients Glossary</a></li><li><a class="hover:text-white transition-colors" href="/catalog">Clean Standards</a></li></ul></div><div class="lg:col-span-4 space-y-3"><h4 class="text-xs font-felix font-bold tracking-widest uppercase text-[#dcbec3]">Join The Nzuri Circle</h4><p class="text-xs text-stone-400 font-light">Receive exclusive clean beauty tips and member-only releases.</p><router-link to="/help" class="text-xs underline">Contact us</router-link></div></div><div class="pt-8 border-t border-stone-800 flex flex-col sm:flex-row items-center justify-between text-xs text-stone-500 font-light gap-4"><p>© 2018–2026 Hair and Skincare by Nzuri. All rights reserved.</p><div class="flex items-center gap-6"><a class="hover:text-stone-300 transition-colors" href="/catalog">Terms &amp; Conditions</a><a class="hover:text-stone-300 transition-colors" href="/catalog">Privacy Policy</a></div></div></div><div class="pointer-events-none absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/3 w-full text-center z-0 overflow-hidden leading-none select-none opacity-[0.04]"><span class="text-[20vw] font-felix font-bold uppercase tracking-[0.25em] text-[#dcbec3] block">BY NZURI</span></div></footer>
 
-        <template v-if="productStore.categories.length === 0">
-          <div v-for="i in 6" :key="i" class="aspect-square rounded-[20px] bg-primary/30 animate-pulse" />
-        </template>
-      </div>
-    </section>
-
-    <!-- Best Sellers -->
-    <section ref="bestSellersRef" class="max-w-7xl mx-auto px-4 py-16 md:py-20">
-      <div class="flex items-end justify-between mb-8">
-        <div>
-          <p class="section-animate text-xs text-gold uppercase tracking-[0.2em] font-medium mb-2">Best Sellers</p>
-          <h2 class="section-animate font-heading text-2xl md:text-3xl font-semibold text-dark">Most Loved Products</h2>
-        </div>
-      </div>
-      <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
-        <ProductCard
-          v-for="product in productStore.bestSellers"
-          :key="product.id"
-          :product="product"
-          class="section-animate"
-        />
-        <template v-if="productStore.bestSellers.length === 0">
-          <div v-for="i in 4" :key="i" class="section-animate space-y-3">
-            <div class="aspect-[3/4] rounded-[20px] bg-primary/30 animate-pulse" />
-            <div class="h-3 w-16 bg-primary/30 rounded animate-pulse" />
-            <div class="h-4 w-32 bg-primary/30 rounded animate-pulse" />
-            <div class="h-4 w-20 bg-primary/30 rounded animate-pulse" />
-          </div>
-        </template>
-      </div>
-    </section>
-
-    <!-- New Arrivals -->
-    <section ref="newArrivalsRef" class="bg-primary/20 py-16 md:py-20">
-      <div class="max-w-7xl mx-auto px-4">
-        <div class="flex items-end justify-between mb-8">
-          <div>
-            <p class="section-animate text-xs text-gold uppercase tracking-[0.2em] font-medium mb-2">New In</p>
-            <h2 class="section-animate font-heading text-2xl md:text-3xl font-semibold text-dark">New Arrivals</h2>
-          </div>
-        </div>
-        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
-          <ProductCard
-            v-for="product in productStore.newArrivals"
-            :key="product.id"
-            :product="product"
-            class="section-animate"
-          />
-          <template v-if="productStore.newArrivals.length === 0">
-            <div v-for="i in 4" :key="i" class="section-animate space-y-3">
-              <div class="aspect-[3/4] rounded-[20px] bg-background/50 animate-pulse" />
-              <div class="h-3 w-16 bg-background/50 rounded animate-pulse" />
-              <div class="h-4 w-32 bg-background/50 rounded animate-pulse" />
-              <div class="h-4 w-20 bg-background/50 rounded animate-pulse" />
-            </div>
-          </template>
-        </div>
-      </div>
-    </section>
-
-    <!-- Testimonials -->
-    <section ref="testimonialsRef" class="max-w-7xl mx-auto px-4 py-16 md:py-20">
-      <div class="text-center mb-10">
-        <p class="section-animate text-xs text-gold uppercase tracking-[0.2em] font-medium mb-2">Testimonials</p>
-        <h2 class="section-animate font-heading text-2xl md:text-3xl font-semibold text-dark">Loved By Women Across Zambia</h2>
-      </div>
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div
-          v-for="(testimonial, i) in testimonials"
-          :key="i"
-          :style="{ transitionDelay: `${i * 0.1}s` }"
-          class="section-animate bg-white p-6 rounded-[20px] shadow-[0_8px_30px_rgba(0,0,0,0.06)] hover:shadow-[0_12px_40px_rgba(0,0,0,0.1)] transition-shadow duration-300"
-        >
-          <div class="flex items-center gap-1 mb-3">
-            <svg v-for="s in 5" :key="s" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1" class="text-gold"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-          </div>
-          <p class="text-sm text-muted leading-relaxed mb-4">&ldquo;{{ testimonial.text }}&rdquo;</p>
-          <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-full bg-primary/40 flex items-center justify-center flex-shrink-0">
-              <span class="text-sm font-medium text-dark">{{ testimonial.name.charAt(0) }}</span>
-            </div>
-            <div>
-              <p class="text-sm font-medium text-dark">{{ testimonial.name }}</p>
-              <p class="text-xs text-muted">{{ testimonial.location }}</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Instagram Section -->
-    <section class="bg-dark/5 py-16 md:py-20">
-      <div class="max-w-7xl mx-auto px-4">
-        <div class="text-center mb-8">
-          <p class="section-animate text-xs text-gold uppercase tracking-[0.2em] font-medium mb-2">Follow Us</p>
-          <h2 class="section-animate font-heading text-2xl md:text-3xl font-semibold text-dark">@bynzuri</h2>
-        </div>
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3">
-          <div v-for="i in 4" :key="i" class="aspect-square rounded-[14px] bg-primary/30 overflow-hidden group cursor-pointer">
-            <div class="w-full h-full bg-gradient-to-br from-primary/40 to-gold/20 flex items-center justify-center transition-transform duration-300 group-hover:scale-105">
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="text-muted group-hover:text-gold transition-colors duration-300"><rect width="20" height="20" x="2" y="2" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" x2="17.51" y1="6.5" y2="6.5"/></svg>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Newsletter -->
-    <section ref="newsletterRef" class="max-w-2xl mx-auto px-4 py-16 md:py-20 text-center">
-      <p class="section-animate text-xs text-gold uppercase tracking-[0.2em] font-medium mb-2">Stay Connected</p>
-      <h2 class="section-animate font-heading text-2xl md:text-3xl font-semibold text-dark mb-3">Join the Beauty Circle</h2>
-      <p class="section-animate text-muted text-sm mb-6">Be the first to know about new arrivals, exclusive offers, and beauty tips.</p>
-      <div v-if="!newsletterSubscribed" class="section-animate flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
-        <input
-          v-model="newsletterEmail"
-          type="email"
-          placeholder="Your email address"
-          required
-          class="flex-1 px-4 py-3 bg-white border border-primary/40 rounded-[14px] text-sm focus:outline-none focus:border-gold transition-colors"
-        />
-        <BaseButton variant="secondary" @click="handleNewsletter">
-          Subscribe
-        </BaseButton>
-      </div>
-      <p v-else class="section-animate text-sm text-success">You're in! Watch your inbox for updates from By Nzuri.</p>
-    </section>
-  </div>
+</div>
 </template>
 
-<script lang="ts">
-const testimonials = [
-  {
-    text: "By Nzuri has completely transformed my hair care routine. The growth oil is amazing — I've seen real results in just weeks.",
-    name: "Chanda M.",
-    location: "Lusaka"
-  },
-  {
-    text: "The quality of their products is unmatched. Fast delivery in Lusaka too. I'm a customer for life!",
-    name: "Mutale K.",
-    location: "Kitwe"
-  },
-  {
-    text: "Finally, a beauty brand that understands African hair. Beautiful products, beautiful packaging, beautiful results.",
-    name: "Thandiwe B.",
-    location: "Ndola"
-  }
-]
-</script>
+<style scoped>
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Great+Vibes&family=Public+Sans:wght@300;400;500;600;700&family=Material+Symbols+Outlined&display=swap');
+.stitch-landing { font-family: 'Public Sans', sans-serif; background: white; color: #1d1b20; }
+.font-felix { font-family: 'Cinzel', serif; letter-spacing: .08em; }
+.font-sinfonietta { font-family: 'Great Vibes', cursive; font-weight: 400; letter-spacing: .02em; }
+.font-headline { font-family: 'Public Sans', sans-serif; }
+.material-symbols-outlined { font-family: 'Material Symbols Outlined'; font-weight: normal; font-style: normal; display: inline-block; line-height: 1; letter-spacing: normal; text-transform: none; white-space: nowrap; word-wrap: normal; direction: ltr; -webkit-font-feature-settings: 'liga'; -webkit-font-smoothing: antialiased; }
+</style>
