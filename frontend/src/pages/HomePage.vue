@@ -30,7 +30,7 @@ onMounted(async () => {
 <!-- 1. HERO SECTION WITH MINIMALIST HEADER & WARM AMBIENT GLOW -->
 <!-- ============================================== -->
 <header class="absolute top-0 left-0 right-0 z-50"><div class="max-w-7xl mx-auto px-6 sm:px-12 h-24 flex items-center justify-between text-stone-900"><a class="flex items-center gap-3.5 group" href="/catalog"><div class="w-11 h-11 rounded-full border border-stone-900 flex items-center justify-center text-[8px] font-felix tracking-widest text-center uppercase p-1 leading-none shadow-sm bg-white/80 backdrop-blur"><span>HAIR &amp; SKIN<br/><span class="text-[6px] tracking-normal">EST. 2018</span></span></div><div class="flex flex-col"><span class="text-xs font-felix tracking-[0.22em] uppercase font-bold text-stone-900">Hair &amp; Skincare</span><span class="text-2xl font-sinfonietta text-stone-900 -mt-1.5 leading-none">by Nzuri</span></div></a><nav class="hidden md:flex items-center gap-8 text-xs tracking-widest font-medium uppercase text-stone-700"><a class="text-stone-900 font-semibold hover:text-black transition-colors" href="/catalog">Home</a><a class="hover:text-black transition-colors" href="#about">About Us</a><a class="hover:text-black transition-colors flex items-center gap-1" href="#sellers">Hair Care <span class="text-stone-400">+</span></a><a class="hover:text-black transition-colors flex items-center gap-1" href="#sellers">Skin Care <span class="text-stone-400">+</span></a><a class="hover:text-black transition-colors" href="#contact">Contact</a></nav><div class="flex items-center gap-4 text-stone-800"><button @click="router.push('/catalog')" aria-label="Search" class="hover:text-black hover:scale-105 transition-all p-1.5 rounded-full hover:bg-black/5"><span class="material-symbols-outlined text-[20px]">search</span></button><button @click="router.push('/account')" aria-label="Account" class="hover:text-black hover:scale-105 transition-all p-1.5 rounded-full hover:bg-black/5"><span class="material-symbols-outlined text-[20px]">person</span></button><a @click.prevent="uiStore.openCart()" aria-label="Cart" class="hover:text-black hover:scale-105 transition-all p-1.5 rounded-full hover:bg-black/5 relative" href="#sellers"><span class="material-symbols-outlined text-[20px]">shopping_bag</span></a></div></div></header>
-<section class="relative w-full min-h-[92vh] lg:min-h-screen bg-[#fcf9f9] overflow-hidden flex items-center pt-28 pb-16 border-b border-stone-200/60"><div class="pointer-events-none absolute top-14 left-1/2 -translate-x-1/2 w-full text-center z-0 overflow-hidden leading-none select-none opacity-[0.07]"><span class="text-[20vw] font-felix font-bold uppercase tracking-[0.25em] text-[#dcbec3] block">BY NZURI</span></div><div class="absolute -top-32 -left-32 w-96 h-96 rounded-full bg-[#dcbec3]/35 blur-3xl pointer-events-none"></div><div class="absolute bottom-0 right-0 w-[500px] h-[500px] rounded-full bg-[#dcbec3]/30 blur-3xl pointer-events-none"></div><div class="relative z-10 max-w-7xl mx-auto px-6 sm:px-12 w-full grid grid-cols-1 lg:grid-cols-12 gap-12 items-center"><div class="lg:col-span-6 text-stone-900 space-y-8"><div class="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-white border border-[#dcbec3] shadow-sm"><span class="w-2 h-2 rounded-full bg-[#111111]"></span><span class="text-[11px] font-felix tracking-widest uppercase text-stone-800 font-semibold">100% Organic &amp; Toxic-Free • Est. 2018</span></div><div class="space-y-3"><h1 class="text-4xl sm:text-5xl lg:text-6xl font-felix font-normal tracking-tight text-stone-900 leading-[1.15]">ELEVATE YOUR <br/><span class="font-sinfonietta text-5xl sm:text-6xl lg:text-7xl text-[#111111] block -mt-2">Hair &amp; Skincare Ritual</span></h1><p class="text-xs sm:text-sm text-stone-600 max-w-md font-light leading-relaxed pt-2">Formulated with nourishing raw botanicals and safe organic actives to ensure your hair and skin are completely free from sulphates, parabens, and mineral oils.</p></div><div class="flex flex-wrap items-center gap-4 pt-2"><a class="px-8 py-3.5 rounded-full bg-[#111111] text-white text-xs font-felix tracking-widest uppercase hover:bg-stone-800 transition-all shadow-md" href="#sellers">Shop The Collection</a><a class="px-8 py-3.5 rounded-full border border-stone-900 text-stone-900 text-xs font-felix tracking-widest uppercase hover:bg-[#dcbec3]/40 transition-all" href="#about">Our Story</a></div><div class="pt-4 flex flex-col sm:flex-row items-start sm:items-center gap-4 text-stone-700"><div class="flex -space-x-2"><img alt="By Nzuri product" class="w-8 h-8 rounded-full border-2 border-white object-cover shadow-sm" src="/images/products/growthelixir.png"/><img alt="By Nzuri product" class="w-8 h-8 rounded-full border-2 border-white object-cover shadow-sm" src="/images/products/sheabutter.png"/><img alt="By Nzuri product" class="w-8 h-8 rounded-full border-2 border-white object-cover shadow-sm" src="/images/products/nourishingoilmix.png"/></div><p class="text-xs text-stone-500 max-w-xs leading-relaxed font-light">Trusted by thousands since 2018 for holistic hair restoration &amp; radiant natural skin.</p></div></div><div class="lg:col-span-6 relative flex justify-center items-center"><div class="relative w-full max-w-md lg:max-w-lg"><div class="absolute -inset-4 bg-[#dcbec3] rounded-3xl filter blur-xl opacity-50 transform rotate-2"></div><img alt="By Nzuri product" class="relative z-10 w-full h-[470px] sm:h-[560px] object-cover object-top rounded-3xl shadow-2xl border-4 border-white" src="/images/products/herbalhairmist.png"/><div class="absolute -bottom-6 -left-6 z-20 bg-white p-4 rounded-2xl shadow-xl border border-stone-200/80 max-w-[200px]"><div class="flex items-center gap-2 mb-1"><span class="material-symbols-outlined text-[16px] text-stone-800">eco</span><span class="text-[10px] font-felix tracking-wider uppercase font-bold text-stone-900">Clean Beauty</span></div><p class="text-[11px] text-stone-500 leading-tight">No sulphates, parabens, or mineral oils.</p></div></div></div></div></section>
+<section class="relative w-full min-h-[92vh] lg:min-h-screen bg-[#fcf9f9] overflow-hidden flex items-center pt-28 pb-16 border-b border-stone-200/60"><div class="pointer-events-none absolute top-14 left-1/2 -translate-x-1/2 w-full text-center z-0 overflow-hidden leading-none select-none opacity-[0.07]"><span class="text-[20vw] font-felix font-bold uppercase tracking-[0.25em] text-[#dcbec3] block">BY NZURI</span></div><div class="absolute -top-32 -left-32 w-96 h-96 rounded-full bg-[#dcbec3]/35 blur-3xl pointer-events-none"></div><div class="absolute bottom-0 right-0 w-[500px] h-[500px] rounded-full bg-[#dcbec3]/30 blur-3xl pointer-events-none"></div><div class="relative z-10 max-w-7xl mx-auto px-6 sm:px-12 w-full grid grid-cols-1 lg:grid-cols-12 gap-12 items-center"><div class="lg:col-span-6 text-stone-900 space-y-8"><div class="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-white border border-[#dcbec3] shadow-sm"><span class="w-2 h-2 rounded-full bg-[#111111]"></span><span class="text-[11px] font-felix tracking-widest uppercase text-stone-800 font-semibold">100% Organic &amp; Toxic-Free • Est. 2018</span></div><div class="space-y-3"><h1 class="text-4xl sm:text-5xl lg:text-6xl font-felix font-normal tracking-tight text-stone-900 leading-[1.15]">ELEVATE YOUR <br/><span class="font-sinfonietta text-5xl sm:text-6xl lg:text-7xl text-[#111111] block -mt-2">Hair &amp; Skincare Routine</span></h1><p class="text-xs sm:text-sm text-stone-600 max-w-md font-light leading-relaxed pt-2">Formulated with nourishing raw botanicals and safe organic actives to ensure your hair and skin are completely free from sulphates, parabens, and mineral oils.</p></div><div class="flex flex-wrap items-center gap-4 pt-2"><a class="px-8 py-3.5 rounded-full bg-[#111111] text-white text-xs font-felix tracking-widest uppercase hover:bg-stone-800 transition-all shadow-md" href="#sellers">Shop The Collection</a><a class="px-8 py-3.5 rounded-full border border-stone-900 text-stone-900 text-xs font-felix tracking-widest uppercase hover:bg-[#dcbec3]/40 transition-all" href="#about">Our Story</a></div><div class="pt-4 flex flex-col sm:flex-row items-start sm:items-center gap-4 text-stone-700"><div class="flex -space-x-2"><img alt="By Nzuri product" class="w-8 h-8 rounded-full border-2 border-white object-cover shadow-sm" src="/images/products/growthelixir.png"/><img alt="By Nzuri product" class="w-8 h-8 rounded-full border-2 border-white object-cover shadow-sm" src="/images/products/sheabutter.png"/><img alt="By Nzuri product" class="w-8 h-8 rounded-full border-2 border-white object-cover shadow-sm" src="/images/products/nourishingoilmix.png"/></div><p class="text-xs text-stone-500 max-w-xs leading-relaxed font-light">Trusted by thousands since 2018 for holistic hair restoration &amp; radiant natural skin.</p></div></div><div class="lg:col-span-6 relative flex justify-center items-center"><div class="relative w-full max-w-md lg:max-w-lg"><div class="absolute -inset-4 bg-[#dcbec3] rounded-3xl filter blur-xl opacity-50 transform rotate-2"></div><img alt="By Nzuri product" class="relative z-10 w-full h-[470px] sm:h-[560px] object-cover object-top rounded-3xl shadow-2xl border-4 border-white" src="/images/products/herbalhairmist.png"/><div class="absolute -bottom-6 -left-6 z-20 bg-white p-4 rounded-2xl shadow-xl border border-stone-200/80 max-w-[200px]"><div class="flex items-center gap-2 mb-1"><span class="material-symbols-outlined text-[16px] text-stone-800">eco</span><span class="text-[10px] font-felix tracking-wider uppercase font-bold text-stone-900">Clean Beauty</span></div><p class="text-[11px] text-stone-500 leading-tight">No sulphates, parabens, or mineral oils.</p></div></div></div></div></section>
 <!-- ============================================== -->
 <!-- 2. "OUR BEST SELLERS" PRODUCT ROW -->
 <!-- ============================================== -->
@@ -76,81 +76,7 @@ onMounted(async () => {
 <!-- ============================================== -->
 <!-- 7. "SKIN CARE TIPS & TRENDS" BLOG / ARTICLE ROW -->
 <!-- ============================================== -->
-<section class="w-full bg-[#fbf9f8] py-20 sm:py-28">
-<div class="max-w-7xl mx-auto px-6 sm:px-12">
-<div class="text-center mb-14">
-<h2 class="text-3xl sm:text-4xl font-headline font-semibold text-[#1f1a17]">
-        Skin Care <span class="font-serif-italic font-normal">Tips &amp; Trends</span>
-</h2>
-</div>
-<!-- 3 Clean Editorial Cards -->
-<div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
-<!-- Article 1 -->
-<article class="bg-white rounded-2xl p-4 shadow-sm hover:shadow-md transition-shadow group flex flex-col justify-between">
-<div class="relative w-full h-52 rounded-xl overflow-hidden mb-4">
-<img alt="By Nzuri product" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" src="/images/products/deepconditioner.png"/>
-<a class="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/90 backdrop-blur text-stone-800 flex items-center justify-center shadow-sm group-hover:bg-[#af6f4a] group-hover:text-white transition-colors" href="/catalog">
-<span class="material-symbols-outlined text-[16px]">north_east</span>
-</a>
-</div>
-<div>
-<div class="flex items-center gap-3 text-[10px] text-stone-400 mb-2">
-<span>October 10, 2026</span>
-<span>•</span>
-<span>3 min read</span>
-</div>
-<h3 class="text-sm font-bold text-stone-800 group-hover:text-[#af6f4a] transition-colors leading-snug">
-            Why Gentle Formulations Are Better for Your Skin Every Day
-          </h3>
-</div>
-</article>
-<!-- Article 2 -->
-<article class="bg-white rounded-2xl p-4 shadow-sm hover:shadow-md transition-shadow group flex flex-col justify-between">
-<div class="relative w-full h-52 rounded-xl overflow-hidden mb-4">
-<img alt="By Nzuri product" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" src="/images/products/shampoobar.png"/>
-<a class="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/90 backdrop-blur text-stone-800 flex items-center justify-center shadow-sm group-hover:bg-[#af6f4a] group-hover:text-white transition-colors" href="/catalog">
-<span class="material-symbols-outlined text-[16px]">north_east</span>
-</a>
-</div>
-<div>
-<div class="flex items-center gap-3 text-[10px] text-stone-400 mb-2">
-<span>October 10, 2026</span>
-<span>•</span>
-<span>3 min read</span>
-</div>
-<h3 class="text-sm font-bold text-stone-800 group-hover:text-[#af6f4a] transition-colors leading-snug">
-            Why Gentle Deodorants Are Better for Your Skin Every Day
-          </h3>
-</div>
-</article>
-<!-- Article 3 -->
-<article class="bg-white rounded-2xl p-4 shadow-sm hover:shadow-md transition-shadow group flex flex-col justify-between">
-<div class="relative w-full h-52 rounded-xl overflow-hidden mb-4">
-<img alt="By Nzuri product" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" src="/images/products/leaveinconditioner.png"/>
-<a class="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/90 backdrop-blur text-stone-800 flex items-center justify-center shadow-sm group-hover:bg-[#af6f4a] group-hover:text-white transition-colors" href="/catalog">
-<span class="material-symbols-outlined text-[16px]">north_east</span>
-</a>
-</div>
-<div>
-<div class="flex items-center gap-3 text-[10px] text-stone-400 mb-2">
-<span>October 10, 2026</span>
-<span>•</span>
-<span>3 min read</span>
-</div>
-<h3 class="text-sm font-bold text-stone-800 group-hover:text-[#af6f4a] transition-colors leading-snug">
-            Simple Evening Practices to Maintain Dewy Barrier Moisture
-          </h3>
-</div>
-</article>
-</div>
-<!-- Centered Button -->
-<div class="text-center">
-<a class="inline-block px-7 py-3 rounded-full bg-[#af6f4a] hover:bg-[#8a4f32] text-white text-xs font-semibold tracking-wide transition-colors" href="/catalog">
-        View all Article
-      </a>
-</div>
-</div>
-</section>
+<section class="final-cta" aria-labelledby="cta-title"><div class="cta-inner"><div class="cta-copy"><p class="cta-eyebrow">A little care, every day</p><h2 id="cta-title">Your care journey<br/><em>starts here.</em></h2><p class="cta-description">Give your hair and skin the attention they deserve. Discover your next everyday essential with By Nzuri.</p><router-link to="/catalog" class="cta-button">Explore the collection <span aria-hidden="true">↗</span></router-link></div><div class="cta-visual" aria-hidden="true"><div class="cta-halo"></div><span class="cta-watermark">NZURI</span><img src="/images/products/growthelixir.png" alt="" loading="lazy"/><span class="cta-caption">Made for your<br/>everyday routine</span></div></div></section>
 <!-- ============================================== -->
 <!-- 8. STREAMLINED FOOTER (RICH WARM TERRACOTTA / SAND TONE) -->
 <!-- ============================================== -->
@@ -166,4 +92,6 @@ onMounted(async () => {
 .font-sinfonietta { font-family: 'Great Vibes', cursive; font-weight: 400; letter-spacing: .02em; }
 .font-headline { font-family: 'Public Sans', sans-serif; }
 .material-symbols-outlined { font-family: 'Material Symbols Outlined'; font-weight: normal; font-style: normal; display: inline-block; line-height: 1; letter-spacing: normal; text-transform: none; white-space: nowrap; word-wrap: normal; direction: ltr; -webkit-font-feature-settings: 'liga'; -webkit-font-smoothing: antialiased; }
+
+.final-cta{background:#e8d2d4;overflow:hidden}.cta-inner{max-width:1280px;margin:auto;min-height:480px;padding:72px 48px;display:grid;grid-template-columns:1fr 1fr;align-items:center;gap:40px}.cta-copy{position:relative;z-index:1}.cta-eyebrow{display:flex;align-items:center;gap:10px;margin-bottom:24px;font:600 10px Cinzel,serif;letter-spacing:.18em;text-transform:uppercase}.cta-eyebrow:before{content:"";width:30px;height:1px;background:#292121}.final-cta h2{margin:0;color:#211d1c;font:400 clamp(2.8rem,5vw,4.8rem)/1.08 Cinzel,serif;letter-spacing:-.035em}.final-cta h2 em{font:400 1.35em/.9 'Great Vibes',cursive;letter-spacing:0}.cta-description{max-width:360px;margin:24px 0 30px;color:#5d5050;font-size:14px;line-height:1.8}.cta-button{display:inline-flex;align-items:center;gap:36px;padding:17px 23px;border-radius:999px;background:#171414;color:white;font:600 10px Cinzel,serif;letter-spacing:.12em;text-transform:uppercase;transition:background .2s,transform .2s}.cta-button:hover{background:#403334;transform:translateY(-2px)}.cta-button:focus-visible{outline:3px solid #6a4045;outline-offset:4px}.cta-button span{font:18px sans-serif}.cta-visual{min-height:350px;position:relative;display:grid;place-items:center}.cta-halo{position:absolute;width:min(90%,370px);aspect-ratio:1;border:1px solid rgba(80,49,50,.25);border-radius:50%;background:rgba(255,255,255,.2)}.cta-visual img{position:relative;z-index:1;height:350px;max-width:90%;object-fit:contain;filter:drop-shadow(0 18px 20px rgba(62,38,40,.15))}.cta-watermark{position:absolute;color:rgba(255,255,255,.35);font:600 clamp(4rem,10vw,9rem) Cinzel,serif;letter-spacing:.08em}.cta-caption{position:absolute;z-index:2;right:0;bottom:14%;color:#554044;font:400 11px/1.5 Cinzel,serif;letter-spacing:.09em;text-transform:uppercase}@media(max-width:700px){.cta-inner{grid-template-columns:1fr;padding:64px 24px 40px;gap:10px}.cta-visual{min-height:280px}.cta-visual img{height:280px}.cta-caption{right:2%}}@media(prefers-reduced-motion:reduce){.cta-button{transition:none}}
 </style>
