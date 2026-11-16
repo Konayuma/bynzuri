@@ -9,14 +9,14 @@ const uiStore = useUIStore()
 const productStore = useProductStore()
 const productsError = ref(false)
 const collection = [
-  { name: 'Growth Elixir', image: 'growthelixir.png' },
-  { name: 'Nourishing Oil Mix', image: 'nourishingoilmix.png' },
-  { name: 'Shea Butter', image: 'sheabutter.png' },
-  { name: 'Shampoo Bar', image: 'shampoobar.png' },
-  { name: 'Deep Conditioner', image: 'deepconditioner.png' },
-  { name: 'Leave-in Conditioner', image: 'leaveinconditioner.png' },
-  { name: 'Herbal Hair Mist', image: 'herbalhairmist.png' },
-  { name: 'Exfoliating Toner', image: 'exfoliatingtoner.png' },
+  { name: 'Growth Elixir', image: 'growthelixir.png', price: 185 },
+  { name: 'Nourishing Oil Mix', image: 'nourishingoilmix.png', price: 90 },
+  { name: 'Mini Whipped Shea Butter (60 g)', image: 'sheabutter.png', price: 100, search: 'Shea Butter' },
+  { name: 'Shampoo Bar', image: 'shampoobar.png', price: 60 },
+  { name: 'Deep Conditioner', image: 'deepconditioner.png', price: 200 },
+  { name: 'Leave-in Conditioner', image: 'leaveinconditioner.png', price: 200 },
+  { name: 'Herbal Hair Mist', image: 'herbalhairmist.png', price: 150 },
+  { name: 'Exfoliating Toner', image: 'exfoliatingtoner.png', price: 150 },
 ]
 onMounted(async () => {
   try { await productStore.fetchProducts() } catch { productsError.value = true }
@@ -41,9 +41,9 @@ onMounted(async () => {
       <router-link to="/catalog" class="text-xs font-felix uppercase tracking-wider underline underline-offset-4">Shop all products</router-link>
     </div>
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-      <router-link v-for="item in collection" :key="item.image" :to="{ path: '/catalog', query: { search: item.name } }" class="group rounded-2xl bg-white p-4 sm:p-5 border border-stone-100 shadow-sm hover:shadow-md transition-shadow">
+      <router-link v-for="item in collection" :key="item.image" :to="{ path: '/catalog', query: { search: item.search || item.name } }" class="group rounded-2xl bg-white p-4 sm:p-5 border border-stone-100 shadow-sm hover:shadow-md transition-shadow">
         <div class="aspect-square bg-[#fcf9f9] rounded-xl overflow-hidden flex items-center justify-center"><img :src="`/images/products/${item.image}`" :alt="item.name" class="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300" loading="lazy" /></div>
-        <div class="flex justify-between items-center gap-2 pt-4"><h3 class="text-xs sm:text-sm font-felix font-semibold text-stone-900">{{ item.name }}</h3><span aria-hidden="true">↗</span></div>
+        <div class="flex justify-between items-start gap-2 pt-4"><div><h3 class="text-xs sm:text-sm font-felix font-semibold text-stone-900">{{ item.name }}</h3><p class="mt-2 text-sm font-semibold text-stone-700">K{{ item.price }}</p></div><span aria-hidden="true">↗</span></div>
       </router-link>
     </div>
   </div>
