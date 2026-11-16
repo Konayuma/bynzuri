@@ -23,15 +23,16 @@ docker compose up --build
 
 ## Development
 
-To start the local backend and frontend together, install their dependencies,
-configure `backend/.env` and `frontend/.env` using the examples, and start the
-configured PostgreSQL database. Then run from the project root:
+To start the local backend and frontend together, install Python 3, Node.js and
+npm, configure `backend/.env` and `frontend/.env` using the examples, and start
+the configured PostgreSQL database. Then run from the project root:
 
 ```bash
 ./scripts/start.sh
 ```
 
-The script applies migrations, starts Django on `127.0.0.1:8001` and starts
+The script creates a Python virtual environment if needed, installs backend and
+frontend dependencies, applies migrations, starts Django on `127.0.0.1:8001` and starts
 Vite. Press Ctrl+C or run `./scripts/stop.sh` in another terminal to stop both
 servers. The scripts require Linux and `flock`. Redis and Celery must be started
 separately when working on features that require them.

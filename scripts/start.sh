@@ -10,15 +10,15 @@ if [[ ! -x "$PYTHON" ]]; then
   PYTHON="$ROOT_DIR/.venv/bin/python"
 fi
 if [[ ! -x "$PYTHON" ]]; then
-  echo "Python virtual environment not found. Create backend/.venv and install backend/requirements.txt." >&2
-  exit 1
+  if ! command -v python3 >/dev/null 2>&1; then
+    echo "Python 3 is required to create the virtual environment." >&2
+    exit 1
+  fi
+  echo "Creating Python virtual environment..."
+  python3 -m venv "$ROOT_DIR/.venv"
 fi
-if ! "$PYTHON" -c 'import django, requests' >/dev/null 2>&1; then
-  echo "Backend dependencies are missing. Run: $PYTHON -m pip install -r $BACKEND_DIR/requirements.txt" >&2
-  exit 1
-fi
-if ! command -v npm >/dev/null 2>&1 || [[ ! -d "$FRONTEND_DIR/node_modules" ]]; then
-  echo "npm or frontend dependencies missing. Install Node.js and run: cd frontend && npm install" >&2
+if ! command -v npm >/dev/null 2>&1; then
+  echo "Node.js and npm are required to install frontend dependencies." >&2
   exit 1
 fi
 if [[ ! -f "$BACKEND_DIR/.env" ]]; then
@@ -50,6 +50,15 @@ cleanup() {
 trap cleanup EXIT
 trap 'exit 130' INT
 trap 'exit 143' TERM
+
+if ! "$PYTHON" -m pip --version >/dev/null 2>&1; then
+  echo "Installing pip in the virtual environment..."
+  "$PYTHON" -m ensurepip --upgrade
+fi
+echo "Installing backend dependencies..."
+"$PYTHON" -m pip install -r "$BACKEND_DIR/requirements.txt"
+echo "Installing frontend dependencies..."
+npm install --prefix "$FRONTEND_DIR" --no-save --package-lock=false --no-audit --no-fund
 
 cd "$BACKEND_DIR"
 echo "Applying database migrations..."
