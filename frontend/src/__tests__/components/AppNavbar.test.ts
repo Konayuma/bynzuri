@@ -28,7 +28,7 @@ function createWrapper() {
 describe('AppNavbar', () => {
   it('renders logo', () => {
     const wrapper = createWrapper()
-    expect(wrapper.text().toLowerCase()).toContain('bynzuri')
+    expect(wrapper.text().toLowerCase()).toContain('by nzuri')
   })
 
   it('renders navigation links', () => {

@@ -15,6 +15,7 @@ const selectedCategory = ref((route.query.category as string) || '')
 const sortOrder = ref((route.query.ordering as string) || '-created_at')
 const currentPage = ref(Number(route.query.page) || 1)
 const showFilters = ref(false)
+const searchError = ref(false)
 
 const activeSearch = computed(() => (route.query.search as string) || '')
 
@@ -30,45 +31,44 @@ const sortOptions = [
   { value: '-rating', label: 'Highest Rated' }
 ]
 
-function fetchProducts() {
-  productStore.fetchProducts({
+async function fetchProducts() {
+  searchError.value = false
+  try {
+  await productStore.fetchProducts({
     page: currentPage.value,
     search: searchQuery.value || undefined,
     category: selectedCategory.value || undefined,
     ordering: sortOrder.value
   })
+  } catch { searchError.value = true }
 }
 
 function handleSearch() {
   currentPage.value = 1
   updateUrl()
-  fetchProducts()
 }
 
 function clearSearch() {
   searchQuery.value = ''
+  selectedCategory.value = ''
   currentPage.value = 1
   updateUrl()
-  fetchProducts()
 }
 
 function handleCategoryChange(category: string) {
   selectedCategory.value = category
   currentPage.value = 1
   updateUrl()
-  fetchProducts()
 }
 
 function handleSortChange() {
   currentPage.value = 1
   updateUrl()
-  fetchProducts()
 }
 
 function changePage(delta: number) {
   currentPage.value += delta
   updateUrl()
-  fetchProducts()
 }
 
 function updateUrl() {
@@ -90,6 +90,7 @@ watch(() => route.query, () => {
   selectedCategory.value = (route.query.category as string) || ''
   sortOrder.value = (route.query.ordering as string) || '-created_at'
   currentPage.value = Number(route.query.page) || 1
+  fetchProducts()
 })
 </script>
 
@@ -107,7 +108,7 @@ watch(() => route.query, () => {
           <span v-if="activeSearch" class="inline-flex items-center gap-1.5 text-sm text-gold bg-gold/10 px-2.5 py-0.5 rounded-full">
             <Search class="w-3 h-3" />
             "{{ activeSearch }}"
-            <button class="hover:text-dark transition-colors" @click="clearSearch">
+            <button class="hover:text-dark transition-colors" aria-label="Clear search and filters" @click="clearSearch">
               <X class="w-3 h-3" />
             </button>
           </span>
@@ -116,6 +117,7 @@ watch(() => route.query, () => {
 
       <div class="flex items-center gap-3">
         <button
+          aria-label="Toggle filters" :aria-expanded="showFilters"
           class="md:hidden p-2.5 border border-primary/40 rounded-[14px] hover:bg-primary/20 transition-colors"
           @click="showFilters = !showFilters"
         >
@@ -134,9 +136,9 @@ watch(() => route.query, () => {
       </div>
     </div>
 
-    <div class="flex gap-8">
+    <div class="flex flex-col md:flex-row gap-8">
       <aside
-        class="shrink-0 w-56 space-y-6"
+        class="shrink-0 w-full md:w-56 space-y-6"
         :class="showFilters ? 'block' : 'hidden md:block'"
       >
         <div>
@@ -187,6 +189,8 @@ watch(() => route.query, () => {
             <div class="h-4 w-16 bg-primary/30 rounded animate-pulse" />
           </div>
         </div>
+
+        <div v-else-if="searchError" class="text-center py-16" role="alert"><p class="text-dark font-medium mb-2">Products could not be loaded.</p><button class="underline text-sm" @click="fetchProducts">Try again</button></div>
 
         <div
           v-else-if="productStore.products.length === 0"

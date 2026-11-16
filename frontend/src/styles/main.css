@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Great+Vibes&family=Public+Sans:wght@300;400;500;600;700&display=swap');
 @import "tailwindcss";
 
 @font-face {
@@ -19,12 +20,12 @@
 }
 
 @theme {
-  --color-primary: #F3E1E5;
-  --color-background: #FAF6F6;
-  --color-dark: #212121;
+  --color-primary: #e8d2d4;
+  --color-background: #fcf9f9;
+  --color-dark: #211a1a;
   --color-text: #212529;
-  --color-muted: #6B6B6B;
-  --color-gold: #E74C8C;
+  --color-muted: #685b5a;
+  --color-gold: #87575d;
   --color-success: #A3B899;
 
   --color-nzuri-blush: #F3E1E5;
@@ -38,8 +39,8 @@
   --color-nzuri-star-yellow: #FFE600;
   --color-nzuri-dark-text: #212529;
 
-  --font-heading: 'Playfair Display', serif;
-  --font-body: 'Inter', sans-serif;
+  --font-heading: 'Cinzel', serif;
+  --font-body: 'Public Sans', sans-serif;
 
   --radius-sm: 14px;
   --radius-md: 16px;
@@ -49,7 +50,7 @@
 
 @layer utilities {
   .font-nzuri-interface {
-    font-family: 'Inter', sans-serif;
+    font-family: 'Public Sans', sans-serif;
     letter-spacing: -0.01em;
   }
 }
@@ -89,3 +90,5 @@ textarea:focus-visible {
   outline: 2px solid var(--color-gold);
   outline-offset: 1px;
 }
+
+html { scroll-padding-top: 90px; }

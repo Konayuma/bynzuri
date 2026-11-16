@@ -88,3 +88,7 @@ function handleSubscribe() {
     </div>
   </footer>
 </template>
+
+<style scoped>
+footer :deep(.text-muted) { color: #c8b8b7; }
+</style>

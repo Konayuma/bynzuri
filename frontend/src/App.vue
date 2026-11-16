@@ -38,7 +38,7 @@ watch(() => router.currentRoute.value, () => {
 
 <template>
   <div class="min-h-screen flex flex-col bg-background">
-    <AppNavbar v-if="!router.currentRoute.value.meta.standalone" />
+    <AppNavbar />
     <main class="flex-1">
       <div
         ref="routeContainer"
