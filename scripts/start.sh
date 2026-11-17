@@ -93,6 +93,9 @@ else
 fi
 
 cd "$BACKEND_DIR"
+# Local development uses the existing SQLite database by default. Production
+# settings retain PostgreSQL; set USE_SQLITE=false to use it with this script.
+export USE_SQLITE="${USE_SQLITE:-true}"
 echo "Checking database connection..."
 if ! "$PYTHON" - <<'PY' 9>&-
 import os

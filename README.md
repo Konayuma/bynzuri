@@ -24,11 +24,10 @@ docker compose up --build
 ## Development
 
 To start the local backend and frontend together, install Python 3, Node.js and
-npm, configure `backend/.env` and `frontend/.env` using the examples, and start
-the configured PostgreSQL database. Then run from the project root:
+npm, and configure `backend/.env` and `frontend/.env` using the examples. Then
+run from the project root:
 
 ```bash
-docker compose up -d db  # For the default local PostgreSQL database
 ./scripts/start.sh
 ```
 
@@ -37,6 +36,11 @@ outdated dependencies, applies migrations, starts Django on `127.0.0.1:8001` and
 Vite. Press Ctrl+C or run `./scripts/stop.sh` in another terminal to stop both
 servers. The scripts require Linux and `flock`. Redis and Celery must be started
 separately when working on features that require them.
+
+Local startup uses `backend/db.sqlite3` by default and preserves its existing
+data. Production uses PostgreSQL by default. To use PostgreSQL with the local
+startup script, start the configured database and run `USE_SQLITE=false
+./scripts/start.sh`.
 
 ### Frontend
 
@@ -86,7 +90,7 @@ python manage.py test  # Run tests
 |----------|-------------|---------|
 | `VITE_API_BASE_URL` | Backend API URL | `http://localhost:8001/api` for local development |
 
-For local development, set `VITE_API_BASE_URL=http://localhost:8001/api` in `frontend/.env` and restart Vite. Start the configured PostgreSQL database before starting the backend. Port 8001 keeps the Bynzuri API separate from other local services; the Docker configuration retains its existing port mapping.
+For local development, set `VITE_API_BASE_URL=http://localhost:8001/api` in `frontend/.env` and restart Vite. Port 8001 keeps the Bynzuri API separate from other local services; the Docker configuration retains its existing port mapping.
 
 ## API Endpoints
 
