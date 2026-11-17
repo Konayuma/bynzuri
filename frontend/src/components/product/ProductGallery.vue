@@ -45,6 +45,7 @@ function handleMouseMove(e: MouseEvent) {
       <img
         v-for="(img, index) in images"
         :key="img.id"
+        v-show="!isZooming"
         :src="img.image"
         :alt="img.alt_text"
         class="absolute inset-0 w-full h-full object-contain transition-opacity duration-300"
@@ -56,6 +57,8 @@ function handleMouseMove(e: MouseEvent) {
       <div
         v-if="isZooming && images[currentIndex]"
         class="absolute inset-0 pointer-events-none"
+        role="img"
+        :aria-label="images[currentIndex]?.alt_text"
         :style="{
           backgroundImage: `url(${images[currentIndex]?.image})`,
           backgroundPosition: `${zoomX}% ${zoomY}%`,
