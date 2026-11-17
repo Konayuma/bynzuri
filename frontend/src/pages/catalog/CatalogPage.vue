@@ -136,6 +136,12 @@ watch(() => route.query, () => {
       </div>
     </div>
 
+    <form class="mb-6 flex gap-2" role="search" @submit.prevent="handleSearch">
+      <label for="catalog-search" class="sr-only">Search products in this category</label>
+      <input id="catalog-search" v-model="searchQuery" type="search" placeholder="Search products..."
+        class="min-w-0 flex-1 rounded-[14px] border border-[#b9a8a8] bg-white px-4 py-3 text-base text-dark focus:outline-none focus:ring-2 focus:ring-gold/40" />
+      <BaseButton type="submit" variant="secondary">Search</BaseButton>
+    </form>
     <div class="flex flex-col md:flex-row gap-8">
       <aside
         class="shrink-0 w-full md:w-56 space-y-6"

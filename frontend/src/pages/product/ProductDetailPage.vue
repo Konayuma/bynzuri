@@ -10,6 +10,7 @@ import ProductCard from '@/components/product/ProductCard.vue'
 import BaseButton from '@/components/base/BaseButton.vue'
 import { Heart, Minus, Plus, Star, Truck, ShieldCheck, Send } from '@lucide/vue'
 import type { Product } from '@/types'
+import { signatureImage } from '@/utils/productImage'
 
 const route = useRoute()
 const productStore = useProductStore()
@@ -20,6 +21,7 @@ const userStore = useUserStore()
 const quantity = ref(1)
 const addedToCart = ref(false)
 const recentlyViewed = ref<Product[]>([])
+const productError = ref(false)
 
 const reviewRating = ref(5)
 const reviewComment = ref('')
@@ -28,6 +30,12 @@ const reviewError = ref('')
 const reviewSuccess = ref(false)
 
 const product = computed(() => productStore.currentProduct)
+const galleryImages = computed(() => {
+  if (!product.value) return []
+  if (product.value.images?.length) return product.value.images
+  const image = signatureImage(product.value.slug)
+  return image ? [{ id: product.value.slug, image, alt_text: product.value.title, is_primary: true }] : []
+})
 const inStock = computed(() => product.value?.is_in_stock ?? false)
 const inWishlist = computed(() => product.value ? wishlistStore.isWishlisted(product.value.id) : false)
 const stockLabel = computed(() => {
@@ -118,19 +126,31 @@ function formatDate(dateStr: string) {
   })
 }
 
-onMounted(() => {
-  const slug = route.params.slug as string
-  productStore.fetchProduct(slug)
+onMounted(loadRecentlyViewed)
+
+watch(() => route.params.slug, async (slug) => {
+  if (typeof slug !== 'string' || !slug) return
+  productError.value = false
+  quantity.value = 1
+  addedToCart.value = false
+  reviewComment.value = ''
+  reviewRating.value = 5
+  reviewError.value = ''
+  reviewSuccess.value = false
   productStore.fetchReviews(slug)
-  loadRecentlyViewed()
-})
+  try {
+    await productStore.fetchProduct(slug)
+  } catch {
+    if (route.params.slug === slug) productError.value = true
+  }
+}, { immediate: true })
 
 watch(product, (p) => {
   if (p) {
     trackRecentlyViewed(p)
   }
-  if (p?.category) {
-    productStore.fetchRelatedProducts(p.category)
+  if (p?.category_slug) {
+    productStore.fetchRelatedProducts(p.category_slug)
   }
 })
 </script>
@@ -149,9 +169,14 @@ watch(product, (p) => {
       </div>
     </template>
 
+    <div v-else-if="productError" role="alert" class="mx-auto max-w-md py-20 text-center">
+      <h1 class="font-heading text-xl font-semibold text-dark">Product unavailable</h1>
+      <p class="mt-2 text-sm text-muted">We couldn’t load this product. Please try again or browse the collection.</p>
+      <router-link to="/catalog" class="mt-5 inline-block rounded-xl bg-dark px-5 py-3 text-sm font-medium text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold">Browse products</router-link>
+    </div>
     <template v-else-if="product">
       <div class="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-10">
-        <ProductGallery :images="product.images" />
+        <ProductGallery :key="product.slug" :images="galleryImages" />
 
         <div class="md:sticky md:top-24 md:self-start">
           <p class="text-xs text-gold uppercase tracking-[0.2em] font-medium mb-2">

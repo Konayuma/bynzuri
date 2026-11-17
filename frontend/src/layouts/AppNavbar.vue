@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { ShoppingBag, User, Search, Menu, X, Heart } from '@lucide/vue'
+import { ShoppingBag, User, Search, Menu, X, Heart, Package, MapPin, LogOut, LogIn, UserPlus, LayoutDashboard } from '@lucide/vue'
 import { useCartStore } from '@/stores/cart'
 import { useUserStore } from '@/stores/user'
 import { useUIStore } from '@/stores/ui'
+import ProductSearch from '@/components/search/ProductSearch.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -15,6 +16,33 @@ const uiStore = useUIStore()
 const searchQuery = ref('')
 const mobileSearchOpen = ref(false)
 const scrolled = ref(false)
+const accountOpen = ref(false)
+const accountMenu = ref<HTMLElement | null>(null)
+const accountTrigger = ref<HTMLButtonElement | null>(null)
+
+function closeAccount(restoreFocus = false) {
+  accountOpen.value = false
+  if (restoreFocus) nextTick(() => accountTrigger.value?.focus())
+}
+
+function onOutsidePointer(event: PointerEvent) {
+  if (accountOpen.value && !accountMenu.value?.contains(event.target as Node)) closeAccount()
+}
+
+function onKeydown(event: KeyboardEvent) {
+  if (event.key === 'Escape' && accountOpen.value) {
+    event.preventDefault()
+    closeAccount(true)
+  }
+}
+
+function signOut() {
+  userStore.logout()
+  cartStore.cart = null
+  cartStore.initGuestCart()
+  closeAccount()
+  router.push('/')
+}
 
 function handleSearch() {
   const q = searchQuery.value.trim()
@@ -32,13 +60,6 @@ async function toggleSearch() {
   if (mobileSearchOpen.value) { await nextTick(); document.getElementById('mobile-product-search')?.focus() }
 }
 
-function clearSearch() {
-  searchQuery.value = ''
-  if (route.name === 'catalog') {
-    router.push({ name: 'catalog' })
-  }
-}
-
 function onScroll() {
   const y = window.scrollY
   scrolled.value = y > 20
@@ -50,11 +71,15 @@ watch(() => route.query.search, (val) => {
 
 onMounted(() => {
   window.addEventListener('scroll', onScroll, { passive: true })
+  document.addEventListener('pointerdown', onOutsidePointer)
+  document.addEventListener('keydown', onKeydown)
 })
 onUnmounted(() => {
   window.removeEventListener('scroll', onScroll)
+  document.removeEventListener('pointerdown', onOutsidePointer)
+  document.removeEventListener('keydown', onKeydown)
 })
-watch(() => route.fullPath, () => { mobileSearchOpen.value = false; uiStore.closeMobileMenu() })
+watch(() => route.fullPath, () => { mobileSearchOpen.value = false; uiStore.closeMobileMenu(); closeAccount() })
 </script>
 
 <template>
@@ -100,26 +125,7 @@ watch(() => route.fullPath, () => { mobileSearchOpen.value = false; uiStore.clos
 
       <!-- Desktop persistent search bar -->
       <div class="hidden lg:flex flex-1 max-w-md ml-auto mr-4">
-        <div class="relative w-full group">
-          <button type="button" aria-label="Submit search" class="absolute left-3 top-1/2 -translate-y-1/2 p-1 text-muted" @click="handleSearch"><Search class="w-4 h-4" /></button>
-          <input
-            v-model="searchQuery"
-            type="search"
-            aria-label="Search products"
-            placeholder="Search products..."
-            class="w-full pl-10 pr-9 py-2.5 bg-primary/20 border border-transparent rounded-full text-sm text-dark placeholder:text-muted/60 focus:outline-none focus:bg-white focus:border-primary/40 transition-all duration-200"
-            @keyup.enter="handleSearch"
-            @keydown.esc="mobileSearchOpen = false"
-          />
-          <button
-            v-if="searchQuery"
-            class="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 hover:bg-primary/30 rounded-full transition-colors"
-            aria-label="Clear search"
-            @click="clearSearch"
-          >
-            <X class="w-3.5 h-3.5 text-muted" />
-          </button>
-        </div>
+        <ProductSearch v-model="searchQuery" @submit="handleSearch" />
       </div>
 
       <!-- Right icons -->
@@ -143,13 +149,33 @@ watch(() => route.fullPath, () => { mobileSearchOpen.value = false; uiStore.clos
           <Heart class="w-5 h-5 text-dark" />
         </router-link>
 
-        <router-link
-          :to="userStore.isAuthenticated ? '/account' : '/auth/login'"
-          class="p-2 hover:bg-primary/30 rounded-lg transition-colors active:scale-95"
-          aria-label="Account"
-        >
-          <User class="w-5 h-5 text-dark" />
-        </router-link>
+        <div ref="accountMenu" class="account-wrap">
+          <button ref="accountTrigger" type="button" class="account-trigger" aria-label="Account" aria-controls="account-popover" :aria-expanded="accountOpen" @click="accountOpen = !accountOpen">
+            <User class="w-5 h-5" />
+          </button>
+          <Transition name="account-popover">
+            <div v-if="accountOpen" id="account-popover" class="account-panel" aria-label="Account options" @focusout="(event) => { if (event.relatedTarget && !accountMenu?.contains(event.relatedTarget as Node)) closeAccount() }">
+              <template v-if="userStore.isAuthenticated">
+                <div class="account-identity">
+                  <span class="account-avatar"><User class="w-5 h-5" /></span>
+                  <div class="account-identity-text"><strong>{{ [userStore.user?.first_name, userStore.user?.last_name].filter(Boolean).join(' ') || 'My account' }}</strong><span>{{ userStore.user?.email }}</span></div>
+                </div>
+                <div class="account-links">
+                  <router-link to="/account" @click="closeAccount()"><User /> <span>My profile</span></router-link>
+                  <router-link to="/account/orders" @click="closeAccount()"><Package /> <span>Order history</span></router-link>
+                  <router-link to="/account#saved-addresses" @click="closeAccount()"><MapPin /> <span>Saved addresses</span></router-link>
+                  <router-link to="/wishlist" @click="closeAccount()"><Heart /> <span>Wishlist</span></router-link>
+                  <router-link v-if="userStore.isAdmin" to="/admin" @click="closeAccount()"><LayoutDashboard /> <span>Admin dashboard</span></router-link>
+                </div>
+                <div class="account-signout"><button type="button" @click="signOut"><LogOut /> <span>Sign out</span></button></div>
+              </template>
+              <template v-else>
+                <div class="account-welcome"><strong>Welcome to By Nzuri</strong><span>Sign in to view your orders and saved details.</span></div>
+                <div class="account-links"><router-link to="/auth/login" @click="closeAccount()"><LogIn /> <span>Sign in</span></router-link><router-link to="/auth/register" @click="closeAccount()"><UserPlus /> <span>Create account</span></router-link><router-link to="/wishlist" @click="closeAccount()"><Heart /> <span>Wishlist</span></router-link></div>
+              </template>
+            </div>
+          </Transition>
+        </div>
 
         <button
           class="p-2 hover:bg-primary/30 rounded-lg transition-colors relative active:scale-95"
@@ -174,27 +200,7 @@ watch(() => route.fullPath, () => { mobileSearchOpen.value = false; uiStore.clos
       class="lg:hidden"
     >
       <div class="px-4 pb-3">
-        <div class="relative">
-          <button type="button" aria-label="Submit search" class="absolute left-3 top-1/2 -translate-y-1/2 p-1 text-muted" @click="handleSearch"><Search class="w-4 h-4" /></button>
-          <input
-            id="mobile-product-search"
-            v-model="searchQuery"
-            type="search"
-            aria-label="Search products"
-            placeholder="Search products..."
-            class="w-full pl-10 pr-9 py-2.5 bg-primary/20 border border-transparent rounded-full text-sm text-dark placeholder:text-muted/60 focus:outline-none focus:bg-white focus:border-primary/40 transition-all duration-200"
-            @keyup.enter="handleSearch"
-            @keydown.esc="mobileSearchOpen = false"
-          />
-          <button
-            v-if="searchQuery"
-            class="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 hover:bg-primary/30 rounded-full transition-colors"
-            aria-label="Clear search"
-            @click="clearSearch"
-          >
-            <X class="w-3.5 h-3.5 text-muted" />
-          </button>
-        </div>
+        <ProductSearch v-model="searchQuery" mobile @submit="handleSearch" />
       </div>
     </div>
 
@@ -242,4 +248,27 @@ watch(() => route.fullPath, () => { mobileSearchOpen.value = false; uiStore.clos
 .brand-mark { display:flex; flex-direction:column; color:#201a1a; line-height:1; }
 .brand-mark span { font:700 10px Cinzel,serif; letter-spacing:.16em; white-space:nowrap; }
 .brand-mark em { font:400 23px 'Great Vibes',cursive; margin-top:2px; }
+.account-wrap { position: relative; }
+.account-trigger { display:grid; place-items:center; width:44px; height:44px; border-radius:12px; color:#261f20; transition:background .15s, transform .15s; }
+.account-trigger:hover, .account-trigger[aria-expanded="true"] { background:#f1e4e5; }
+.account-trigger:active { transform:scale(.95); }
+.account-trigger:focus-visible, .account-panel a:focus-visible, .account-panel button:focus-visible { outline:2px solid #875e64; outline-offset:2px; }
+.account-panel { position:absolute; top:calc(100% + 10px); right:-48px; width:min(290px, calc(100vw - 24px)); max-height:calc(100dvh - 90px); overflow:auto; padding:8px; border:1px solid rgba(112,76,80,.14); border-radius:20px; background:rgba(255,252,251,.97); box-shadow:0 18px 50px rgba(45,27,30,.16), 0 3px 10px rgba(45,27,30,.06); transform-origin:calc(100% - 68px) top; z-index:10; }
+.account-identity { display:flex; align-items:center; gap:12px; padding:12px 10px 16px; border-bottom:1px solid #eee4e4; }
+.account-avatar { display:grid; place-items:center; width:42px; height:42px; flex:none; border-radius:50%; background:#f2e2e4; color:#513b3e; }
+.account-identity-text { min-width:0; }
+.account-identity-text strong, .account-identity-text span, .account-welcome strong, .account-welcome span { display:block; overflow-wrap:anywhere; }
+.account-identity-text strong, .account-welcome strong { color:#2b2223; font-size:.9rem; font-weight:600; }
+.account-identity-text span, .account-welcome span { color:#766a6b; font-size:.75rem; line-height:1.45; margin-top:3px; }
+.account-welcome { padding:12px 10px 14px; border-bottom:1px solid #eee4e4; }
+.account-links { padding:6px 0; }
+.account-links a, .account-signout button { display:flex; align-items:center; gap:12px; width:100%; min-height:42px; padding:9px 10px; border-radius:11px; color:#342a2b; text-align:left; font-size:.875rem; transition:background .15s; }
+.account-links a:hover, .account-signout button:hover { background:#f7edee; }
+.account-links svg, .account-signout svg { width:17px; height:17px; flex:none; color:#857477; }
+.account-signout { border-top:1px solid #eee4e4; padding-top:6px; }
+.account-signout button, .account-signout svg { color:#a3434d; }
+.account-popover-enter-active, .account-popover-leave-active { transition:opacity .16s ease, transform .16s ease; }
+.account-popover-enter-from, .account-popover-leave-to { opacity:0; transform:translateY(-4px) scale(.98); }
+@media (prefers-reduced-motion:reduce) { .account-popover-enter-active, .account-popover-leave-active, .account-trigger { transition:none; } }
+@media (prefers-contrast:more) { .account-panel { background:#fff; border:2px solid #513b3e; } }
 </style>

@@ -5,6 +5,7 @@ import { useWishlistStore } from '@/stores/wishlist'
 import { Heart, ShoppingBag } from '@lucide/vue'
 import { useRouter } from 'vue-router'
 import { computed } from 'vue'
+import { signatureImage } from '@/utils/productImage'
 
 const props = defineProps<{
   product: Product
@@ -13,21 +14,7 @@ const props = defineProps<{
 const cartStore = useCartStore()
 const wishlistStore = useWishlistStore()
 const router = useRouter()
-const localProductImage = computed(() => {
-  const name = props.product.title.toLowerCase().replace(/[^a-z0-9]/g, '')
-  const images: Record<string, string> = {
-    growthelixir: 'growthelixir.png',
-    nourishingoilmix: 'nourishingoilmix.png',
-    sheabutter: 'sheabutter.png',
-    shampoobar: 'shampoobar.png',
-    deepconditioner: 'deepconditioner.png',
-    leaveinconditioner: 'leaveinconditioner.png',
-    herbalhairmist: 'herbalhairmist.png',
-    exfoliatingtoner: 'exfoliatingtoner.png',
-  }
-  const match = Object.keys(images).find((key) => name.includes(key))
-  return match ? `/images/products/${images[match]}` : props.product.images?.[0]?.image
-})
+const localProductImage = computed(() => props.product.images?.[0]?.image || signatureImage(props.product.slug))
 
 function handleAddToCart(e: Event) {
   e.stopPropagation()

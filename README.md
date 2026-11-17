@@ -37,6 +37,18 @@ Vite. Press Ctrl+C or run `./scripts/stop.sh` in another terminal to stop both
 servers. The scripts require Linux and `flock`. Redis and Celery must be started
 separately when working on features that require them.
 
+To add the eight products shown in the signature collection to a new database, run:
+
+```bash
+cd backend
+USE_SQLITE=true ../.venv/bin/python manage.py import_signature_catalog
+```
+
+The import is safe to repeat and leaves existing products untouched. New products
+start with zero stock; confirm availability in the admin before selling them. Run
+the command with your production environment configured and without `USE_SQLITE=true`
+to import into PostgreSQL.
+
 Local startup uses `backend/db.sqlite3` by default and preserves its existing
 data. Production uses PostgreSQL by default. To use PostgreSQL with the local
 startup script, start the configured database and run `USE_SQLITE=false

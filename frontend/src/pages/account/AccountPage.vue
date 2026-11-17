@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useUserStore } from '@/stores/user'
+import { useCartStore } from '@/stores/cart'
 import { useRouter } from 'vue-router'
 import { addressService } from '@/services/address.service'
 import { orderService } from '@/services/order.service'
@@ -13,6 +14,7 @@ import type { Address, Province, Town } from '@/types'
 import { isZambianPhone } from '@/utils/formValidation'
 
 const userStore = useUserStore()
+const cartStore = useCartStore()
 const router = useRouter()
 
 const addresses = ref<Address[]>([])
@@ -35,6 +37,8 @@ const form = ref({
 
 function handleLogout() {
   userStore.logout()
+  cartStore.cart = null
+  cartStore.initGuestCart()
   router.push('/')
 }
 
@@ -163,12 +167,12 @@ onMounted(async () => {
           <Package class="w-4 h-4 text-muted" />
           <span class="text-sm text-dark">Order History</span>
         </router-link>
-        <button
+        <a href="#saved-addresses"
           class="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-primary/20 transition-colors w-full text-left"
         >
           <MapPin class="w-4 h-4 text-muted" />
           <span class="text-sm text-dark">Saved Addresses</span>
-        </button>
+        </a>
         <button
           class="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-red-50 transition-colors w-full text-left text-red-500"
           @click="handleLogout"
@@ -180,7 +184,7 @@ onMounted(async () => {
     </div>
 
     <!-- Saved Addresses Section -->
-    <div class="bg-white rounded-[20px] p-6 shadow-[0_8px_30px_rgba(0,0,0,0.06)]">
+    <div id="saved-addresses" class="scroll-mt-24 bg-white rounded-[20px] p-6 shadow-[0_8px_30px_rgba(0,0,0,0.06)]">
       <div class="flex items-center justify-between mb-4">
         <h2 class="font-heading text-lg font-semibold text-dark">Saved Addresses</h2>
         <BaseButton size="sm" @click="openCreateModal">

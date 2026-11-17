@@ -11,11 +11,12 @@ class ProductImageSerializer(serializers.ModelSerializer):
 class ProductListSerializer(serializers.ModelSerializer):
     images = ProductImageSerializer(many=True, read_only=True)
     category_name = serializers.CharField(source='category.name', read_only=True)
+    category_slug = serializers.CharField(source='category.slug', read_only=True)
 
     class Meta:
         model = Product
         fields = [
-            'id', 'category', 'category_name', 'title', 'slug',
+            'id', 'category', 'category_name', 'category_slug', 'title', 'slug',
             'price', 'stock', 'is_in_stock', 'images',
             'rating', 'review_count', 'created_at'
         ]
@@ -24,11 +25,12 @@ class ProductListSerializer(serializers.ModelSerializer):
 class ProductDetailSerializer(serializers.ModelSerializer):
     images = ProductImageSerializer(many=True, read_only=True)
     category_name = serializers.CharField(source='category.name', read_only=True)
+    category_slug = serializers.CharField(source='category.slug', read_only=True)
 
     class Meta:
         model = Product
         fields = [
-            'id', 'category', 'category_name', 'title', 'slug',
+            'id', 'category', 'category_name', 'category_slug', 'title', 'slug',
             'description', 'price', 'stock', 'is_in_stock', 'images',
             'rating', 'review_count', 'created_at', 'updated_at'
         ]

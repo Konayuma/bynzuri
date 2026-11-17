@@ -31,6 +31,7 @@ export interface Product {
   id: string
   category: string
   category_name: string
+  category_slug?: string
   title: string
   slug: string
   description: string

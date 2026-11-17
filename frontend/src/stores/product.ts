@@ -20,6 +20,9 @@ export const useProductStore = defineStore('product', () => {
   })
 
   let categoriesFetched = false
+  let productRequest = 0
+  let reviewRequest = 0
+  let relatedRequest = 0
 
   async function fetchProducts(params?: {
     page?: number
@@ -38,21 +41,28 @@ export const useProductStore = defineStore('product', () => {
   }
 
   async function fetchProduct(slug: string) {
+    const request = ++productRequest
     loading.value = true
+    currentProduct.value = null
+    relatedProducts.value = []
+    ++relatedRequest
     try {
-      currentProduct.value = await productService.getProduct(slug)
+      const product = await productService.getProduct(slug)
+      if (request === productRequest) currentProduct.value = product
     } finally {
-      loading.value = false
+      if (request === productRequest) loading.value = false
     }
   }
 
   async function fetchRelatedProducts(categorySlug?: string) {
+    const request = ++relatedRequest
+    relatedProducts.value = []
     if (!categorySlug) return
     try {
       const data = await productService.getProducts({ category: categorySlug, page_size: 4 } as Parameters<typeof productService.getProducts>[0])
-      relatedProducts.value = data.results.slice(0, 4)
+      if (request === relatedRequest) relatedProducts.value = data.results.slice(0, 4)
     } catch {
-      // silently fail
+      if (request === relatedRequest) relatedProducts.value = []
     }
   }
 
@@ -85,10 +95,13 @@ export const useProductStore = defineStore('product', () => {
   }
 
   async function fetchReviews(productSlug: string) {
+    const request = ++reviewRequest
+    reviews.value = []
     try {
-      reviews.value = await reviewService.getReviews(productSlug)
+      const result = await reviewService.getReviews(productSlug)
+      if (request === reviewRequest) reviews.value = result
     } catch {
-      reviews.value = []
+      if (request === reviewRequest) reviews.value = []
     }
   }
 

@@ -13,7 +13,7 @@ class ProductViewSet(viewsets.ModelViewSet):
     queryset = Product.objects.filter(is_active=True).select_related('category').prefetch_related('images')
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['category__slug']
-    search_fields = ['title', 'description']
+    search_fields = ['title', 'description', 'category__name']
     ordering_fields = ['price', 'created_at', 'rating', 'title']
     ordering = ['-created_at']
     lookup_field = 'slug'
