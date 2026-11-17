@@ -93,6 +93,31 @@ else
 fi
 
 cd "$BACKEND_DIR"
+echo "Checking database connection..."
+if ! "$PYTHON" - <<'PY' 9>&-
+import os
+import sys
+
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
+import django
+django.setup()
+from django.db import connection
+from django.db.utils import OperationalError
+
+try:
+    connection.ensure_connection()
+except OperationalError as exc:
+    print(f"Cannot connect to the configured database: {exc}", file=sys.stderr)
+    if connection.vendor == "postgresql":
+        print("Start PostgreSQL and check the DB_HOST, DB_PORT and credentials. "
+              "For the default local database, run: docker compose up -d db", file=sys.stderr)
+    sys.exit(1)
+finally:
+    connection.close()
+PY
+then
+  exit 1
+fi
 echo "Applying database migrations..."
 "$PYTHON" manage.py migrate --noinput 9>&-
 

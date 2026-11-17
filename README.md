@@ -28,6 +28,7 @@ npm, configure `backend/.env` and `frontend/.env` using the examples, and start
 the configured PostgreSQL database. Then run from the project root:
 
 ```bash
+docker compose up -d db  # For the default local PostgreSQL database
 ./scripts/start.sh
 ```
 
