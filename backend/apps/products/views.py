@@ -3,6 +3,7 @@ from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from .models import Product, ProductImage
+from .filters import ProductFilter
 from .serializers import (
     ProductListSerializer, ProductDetailSerializer, ProductCreateSerializer,
     ProductImageSerializer, ProductImageCreateSerializer,
@@ -12,7 +13,7 @@ from .serializers import (
 class ProductViewSet(viewsets.ModelViewSet):
     queryset = Product.objects.filter(is_active=True).select_related('category').prefetch_related('images')
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['category__slug']
+    filterset_class = ProductFilter
     search_fields = ['title', 'description', 'category__name']
     ordering_fields = ['price', 'created_at', 'rating', 'title']
     ordering = ['-created_at']

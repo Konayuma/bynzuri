@@ -1,67 +1,56 @@
 import hashlib
 import hmac
-import json
 import logging
+
 import requests
 from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
-LENCO_API_BASE = 'https://api.lenco.co/access/v2'
-
 
 class LencoService:
-    def __init__(self):
-        self.api_key = settings.LENCO_API_KEY
-        self.webhook_secret = settings.LENCO_WEBHOOK_SECRET
-        self.headers = {
-            'Authorization': f'Bearer {self.api_key}',
-            'Content-Type': 'application/json',
-        }
+    @property
+    def configured(self):
+        return bool(settings.LENCO_API_KEY)
 
-    def initiate_collection(self, amount: float, reference: str, phone: str, operator: str, country: str = 'zm') -> dict:
-        payload = {
-            'amount': amount,
-            'reference': reference,
-            'phone': phone,
-            'operator': operator,
-            'country': country,
-            'bearer': 'merchant',
-        }
-
+    def _request(self, method, path, **kwargs):
+        if not self.configured:
+            return {'status': False, 'configuration_error': True}
         try:
-            response = requests.post(
-                f'{LENCO_API_BASE}/collections/mobile-money',
-                headers=self.headers,
-                json=payload,
-                timeout=30,
+            response = requests.request(
+                method, f'{settings.LENCO_API_BASE_URL.rstrip("/")}{path}',
+                headers={'Authorization': f'Bearer {settings.LENCO_API_KEY}', 'Content-Type': 'application/json'},
+                timeout=15, **kwargs,
             )
-            response.raise_for_status()
-            return response.json()
-        except requests.RequestException as e:
-            logger.error(f'Lenco collection failed: {e}')
-            return {'status': False, 'message': str(e)}
+            if response.status_code >= 500:
+                return {'status': False, 'uncertain': True}
+            if not response.ok:
+                try:
+                    error_code = str(response.json().get('errorCode', ''))
+                except (ValueError, AttributeError):
+                    error_code = ''
+                # Duplicate references and unrecognized errors require reconciliation.
+                return {'status': False, 'rejected': error_code in ('01', '12'), 'uncertain': error_code not in ('01', '12')}
+            result = response.json()
+            return result if isinstance(result, dict) else {'status': False, 'uncertain': True}
+        except (requests.RequestException, ValueError):
+            logger.warning('Lenco request could not be completed', exc_info=True)
+            return {'status': False, 'uncertain': True}
 
-    def get_collection_status(self, reference: str) -> dict:
-        try:
-            response = requests.get(
-                f'{LENCO_API_BASE}/collections/status/{reference}',
-                headers=self.headers,
-                timeout=30,
-            )
-            response.raise_for_status()
-            return response.json()
-        except requests.RequestException as e:
-            logger.error(f'Lenco status check failed: {e}')
-            return {'status': False, 'message': str(e)}
+    def initiate_collection(self, amount, reference, phone, operator):
+        return self._request('POST', '/collections/mobile-money', json={
+            'amount': float(amount), 'reference': reference, 'phone': phone,
+            'operator': operator, 'country': 'zm', 'bearer': 'merchant',
+        })
 
-    def verify_webhook_signature(self, payload: bytes, signature: str) -> bool:
-        webhook_hash_key = hashlib.sha256(self.api_key.encode()).hexdigest()
-        expected = hmac.new(
-            webhook_hash_key.encode(),
-            payload,
-            hashlib.sha512,
-        ).hexdigest()
+    def get_collection_status(self, reference):
+        return self._request('GET', f'/collections/status/{reference}')
+
+    def verify_webhook_signature(self, payload, signature):
+        if not self.configured or not signature:
+            return False
+        key = hashlib.sha256(settings.LENCO_API_KEY.encode()).hexdigest()
+        expected = hmac.new(key.encode(), payload, hashlib.sha512).hexdigest()
         return hmac.compare_digest(expected, signature)
 
 

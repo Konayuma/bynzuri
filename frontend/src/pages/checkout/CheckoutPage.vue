@@ -23,6 +23,7 @@ const fieldErrors = ref<Record<string, string>>({})
 
 const paymentStatus = ref<'idle' | 'processing' | 'success' | 'failed'>('idle')
 const paymentMessage = ref('')
+const createdOrderId = ref<string | null>(null)
 
 const provinces = ref<Province[]>([])
 const towns = ref<Town[]>([])
@@ -62,14 +63,13 @@ const grandTotal = computed(() => {
 })
 
 const isMobileMoney = computed(() =>
-  ['mtn_momo', 'airtel_money', 'zamtel_money'].includes(form.value.payment_method)
+  ['mtn_momo', 'airtel_money'].includes(form.value.payment_method)
 )
 
 const operatorLabel = computed(() => {
   const labels: Record<string, string> = {
     mtn_momo: 'MTN',
     airtel_money: 'Airtel',
-    zamtel_money: 'Zamtel',
   }
   return labels[form.value.payment_method] || ''
 })
@@ -159,7 +159,7 @@ async function handleSubmit() {
   error.value = ''
 
   try {
-    const order = await orderService.createOrder({
+    const order = createdOrderId.value ? { id: createdOrderId.value } : await orderService.createOrder({
       province: form.value.province,
       town: form.value.town,
       delivery_method: form.value.delivery_method,
@@ -169,6 +169,7 @@ async function handleSubmit() {
       notes: form.value.notes || undefined
     })
 
+    createdOrderId.value = order.id
     if (isMobileMoney.value) {
       paymentStatus.value = 'processing'
       paymentMessage.value = 'Sending your payment request. Please wait.'
@@ -187,7 +188,7 @@ async function handleSubmit() {
         }
 
         paymentMessage.value = `Check ${form.value.payment_phone} for a payment prompt and enter your PIN to authorize it.`
-        const finalPayment = await paymentService.pollPaymentStatus(order.id)
+        const finalPayment = payment.status === 'success' ? payment : await paymentService.pollPaymentStatus(order.id)
 
         if (finalPayment.status === 'success') {
           paymentStatus.value = 'success'
@@ -202,11 +203,7 @@ async function handleSubmit() {
         }
       } catch {
         paymentStatus.value = 'failed'
-        paymentMessage.value = 'Payment timed out. Please check your order history.'
-        cartStore.clearCart()
-        setTimeout(() => {
-          router.push('/account/orders')
-        }, 3000)
+        paymentMessage.value = 'We could not confirm the payment yet. Check your order status before making another payment.'
       }
     } else {
       cartStore.clearCart()
@@ -276,8 +273,9 @@ onMounted(async () => {
           <h2 class="font-heading text-xl font-semibold text-dark">Payment Failed</h2>
           <p class="text-sm text-muted">{{ paymentMessage }}</p>
           <BaseButton variant="secondary" @click="paymentStatus = 'idle'; currentStep = 4">
-            Try Again
+            Check or retry payment
           </BaseButton>
+          <button type="button" class="block mx-auto text-sm underline text-dark" @click="cartStore.clearCart(); router.push(`/order/confirmation/${createdOrderId}`)">View order status</button>
         </div>
       </div>
     </div>
@@ -551,6 +549,5 @@ onMounted(async () => {
 const paymentMethods = [
   { value: 'mtn_momo', label: 'MTN Mobile Money', description: 'Pay with your MTN MoMo account' },
   { value: 'airtel_money', label: 'Airtel Money', description: 'Pay with your Airtel Money account' },
-  { value: 'zamtel_money', label: 'Zamtel Kwacha', description: 'Pay with your Zamtel Kwacha account' },
 ]
 </script>

@@ -94,7 +94,7 @@ python manage.py test  # Run tests
 | `R2_BUCKET_NAME` | R2 bucket name | `bynzuri` |
 | `R2_ENDPOINT_URL` | R2 endpoint | - |
 | `LENCO_API_KEY` | Lenco API secret key | - |
-| `LENCO_WEBHOOK_SECRET` | Lenco webhook hash key | - |
+| `LENCO_API_BASE_URL` | Lenco v2 API base URL | `https://api.lenco.co/access/v2` |
 
 ### Frontend (`frontend/.env`)
 
@@ -179,9 +179,11 @@ bynzuri/
 
 - **MTN Mobile Money** - Primary method for Zambian customers (via Lenco API)
 - **Airtel Money** - Alternative mobile money (via Lenco API)
-- **Zamtel Kwacha** - Zamtel mobile money (via Lenco API)
-
 All payments are processed server-side via the Lenco API. The frontend never touches API keys.
+
+Set `LENCO_API_KEY` in `backend/.env` to the token supplied by Lenco. Configure a publicly reachable HTTPS webhook URL ending in `/api/payments/webhook/` in the Lenco dashboard. Webhook signatures use the SHA-256 hash of the API token as the HMAC-SHA-512 key; no separate webhook secret is required. The API base URL may be overridden with `LENCO_API_BASE_URL` when Lenco supplies an environment-specific endpoint.
+
+Use Lenco sandbox credentials and its [test mobile money accounts](https://lenco-api.readme.io/v2.0/reference/test-cards-and-accounts) to verify MTN and Airtel success, failure, callbacks, and status checks before accepting real payments. A pending or uncertain payment remains attached to its order; customers can check its status from order history. Retrying is allowed after a confirmed failure. Provider setup and real transactions have not been verified by the automated tests.
 
 ## License
 

@@ -80,6 +80,7 @@ onMounted(async () => {
           <span class="text-muted">{{ new Date(order.created_at).toLocaleDateString() }}</span>
           <span class="font-semibold text-dark">K{{ order.grand_total }}</span>
         </div>
+        <router-link :to="`/order/confirmation/${order.id}`" class="inline-block mt-3 text-sm underline text-dark">View order</router-link>
         <div class="text-xs text-muted mt-1">
           {{ order.items.length }} item{{ order.items.length !== 1 ? 's' : '' }}
         </div>

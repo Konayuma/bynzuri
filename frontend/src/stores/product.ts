@@ -20,6 +20,7 @@ export const useProductStore = defineStore('product', () => {
   })
 
   let categoriesFetched = false
+  let catalogRequest = 0
   let productRequest = 0
   let reviewRequest = 0
   let relatedRequest = 0
@@ -29,14 +30,22 @@ export const useProductStore = defineStore('product', () => {
     search?: string
     category?: string
     ordering?: string
+    min_price?: string
+    max_price?: string
+    in_stock?: boolean
   }) {
+    const request = ++catalogRequest
     loading.value = true
     try {
       const data = await productService.getProducts(params)
-      products.value = data.results
-      pagination.value = { count: data.count, next: data.next, previous: data.previous }
+      if (request === catalogRequest) {
+        products.value = data.results
+        pagination.value = { count: data.count, next: data.next, previous: data.previous }
+      }
+    } catch (error) {
+      if (request === catalogRequest) throw error
     } finally {
-      loading.value = false
+      if (request === catalogRequest) loading.value = false
     }
   }
 

@@ -1,5 +1,6 @@
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+from django.db import transaction
 
 from apps.orders.models import Order
 from .tasks import send_whatsapp_notification
@@ -45,7 +46,7 @@ def notify_order_status_change(sender, instance, created, **kwargs):
 
     message = templates.get(instance.status)
     if message:
-        send_whatsapp_notification.delay(
-            to_number=instance.phone,
-            message=message,
+        transaction.on_commit(
+            lambda: send_whatsapp_notification.delay(to_number=instance.phone, message=message),
+            robust=True,
         )

@@ -10,6 +10,7 @@ This is a source-code baseline, not a release certification. **In progress** mea
 - [ ] **P0 — Secure and verify payments (FR-4.1–4.4):** Exercise Lenco in its test environment, including signed and invalid webhooks, repeated callbacks, failed payments, status verification and simultaneous requests. Confirm provider contract, amounts, ownership and state transitions before enabling real payments.
 - [ ] **P0 — Complete account email delivery:** Registration, password reset and resend-verification views contain email-delivery TODOs in `backend/apps/users/views.py`. Implement delivery and test the complete flows without exposing tokens.
 - [ ] **P0 — Validate checkout and stock under concurrency:** Test guest cart merge, delivery pricing, order creation and inventory locking with PostgreSQL and concurrent buyers, including failure and retry paths.
+- [ ] **P0 — Repair order creation lifecycle:** The order idempotency key is derived from the persistent cart ID, so a later purchase using the same cart can be rejected. Review stock rollback when a later cart item is unavailable and define recovery for unpaid orders before live use.
 - [ ] **P1 — Address production security and deployment:** Review token storage, JWT signing, production CORS, HTTPS, secrets and cloud storage against the SRS; verify the deployed configuration.
 - [ ] **P1 — Establish a clean quality baseline:** Run frontend type-checked build, lint and tests, backend tests and a browser checkout smoke test; record results and fix failures.
 
@@ -58,7 +59,8 @@ This is a source-code baseline, not a release certification. **In progress** mea
 
 | Date | Scope | Result | Evidence / follow-up |
 | --- | --- | --- | --- |
-| 2026-11-17 | Tracker baseline | Source and requirements reviewed; runtime verification not performed. | Run the quality baseline and record commands, results, environment and any issues here. |
+| 2026-11-17 | Lenco MTN/Airtel scaffold | Implementation and mocked payment tests added; provider sandbox and PostgreSQL concurrency remain unverified. | See `backend/apps/payments/tests/test_lenco_flow.py` and README setup. |
+| 2026-11-17 | Tracker baseline | Source and requirements reviewed; runtime verification not performed at baseline. | Run the quality baseline and record commands, results, environment and any issues here. |
 
 ## Maintenance
 

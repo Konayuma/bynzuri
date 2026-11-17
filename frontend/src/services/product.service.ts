@@ -7,6 +7,9 @@ export const productService = {
     search?: string
     category?: string
     ordering?: string
+    min_price?: string
+    max_price?: string
+    in_stock?: boolean
   }): Promise<PaginatedResponse<Product>> {
     const response = await publicApi.get('/products/', { params: { ...params, category__slug: params?.category, category: undefined } })
     return response.data

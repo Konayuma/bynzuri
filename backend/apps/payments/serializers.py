@@ -15,21 +15,18 @@ class PaymentSerializer(serializers.ModelSerializer):
 
 class PaymentInitiateSerializer(serializers.Serializer):
     order_id = serializers.UUIDField()
-    method = serializers.ChoiceField(choices=['mtn_momo', 'airtel_money', 'zamtel_money'])
+    method = serializers.ChoiceField(choices=['mtn_momo', 'airtel_money'])
     phone = serializers.CharField(max_length=20)
 
-    def validate_method(self, value):
-        method_operator_map = {
-            'mtn_momo': 'mtn',
-            'airtel_money': 'airtel',
-            'zamtel_money': 'zamtel',
-        }
-        return value
-
     def validate_phone(self, value):
-        cleaned = value.replace(' ', '').replace('-', '')
-        if not cleaned.startswith('260'):
-            cleaned = f'260{cleaned.lstrip("0")}'
+        import re
+        cleaned = re.sub(r'[\s()-]', '', value)
+        if cleaned.startswith('+'):
+            cleaned = cleaned[1:]
+        if re.fullmatch(r'0[679]\d{8}', cleaned):
+            cleaned = '260' + cleaned[1:]
+        if not re.fullmatch(r'260[679]\d{8}', cleaned):
+            raise serializers.ValidationError('Enter a valid Zambian mobile number.')
         return cleaned
 
 
