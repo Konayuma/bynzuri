@@ -90,10 +90,10 @@ watch(() => route.fullPath, () => { mobileSearchOpen.value = false; uiStore.clos
     ]"
   >
     <!-- Main nav row -->
-    <div class="max-w-7xl mx-auto px-4 h-[72px] flex items-center gap-4">
+    <div class="max-w-7xl mx-auto px-3 sm:px-4 h-[72px] flex items-center gap-2 sm:gap-4">
       <!-- Mobile menu toggle -->
       <button
-        class="lg:hidden p-2 -ml-2 hover:bg-primary/30 rounded-lg transition-colors active:scale-95 shrink-0"
+        class="lg:hidden grid h-11 w-11 place-items-center hover:bg-primary/30 rounded-lg transition-colors active:scale-95 shrink-0"
         @click="uiStore.toggleMobileMenu"
         aria-label="Toggle menu"
         :aria-expanded="uiStore.isMobileMenuOpen"
@@ -104,7 +104,7 @@ watch(() => route.fullPath, () => { mobileSearchOpen.value = false; uiStore.clos
 
       <!-- Logo -->
       <router-link to="/" class="brand-mark shrink-0 hover:opacity-80 transition-opacity">
-        <span>HAIR &amp; SKINCARE</span><em>by Nzuri</em>
+        <img src="/By%20Nzuri%20Vector%20Logo%20-01.svg" alt="By Nzuri — home" />
       </router-link>
 
       <!-- Desktop nav links -->
@@ -129,10 +129,10 @@ watch(() => route.fullPath, () => { mobileSearchOpen.value = false; uiStore.clos
       </div>
 
       <!-- Right icons -->
-      <div class="flex items-center gap-1.5 shrink-0">
+      <div class="ml-auto flex items-center gap-0 sm:gap-1.5 shrink-0 lg:ml-0">
         <!-- Mobile search toggle -->
         <button
-          class="lg:hidden p-2 hover:bg-primary/30 rounded-lg transition-colors active:scale-95"
+          class="lg:hidden grid h-11 w-11 place-items-center hover:bg-primary/30 rounded-lg transition-colors active:scale-95"
           @click="toggleSearch"
           :aria-expanded="mobileSearchOpen"
           aria-controls="mobile-search"
@@ -178,7 +178,7 @@ watch(() => route.fullPath, () => { mobileSearchOpen.value = false; uiStore.clos
         </div>
 
         <button
-          class="p-2 hover:bg-primary/30 rounded-lg transition-colors relative active:scale-95"
+          class="grid h-11 w-11 place-items-center hover:bg-primary/30 rounded-lg transition-colors relative active:scale-95"
           @click="uiStore.openCart"
           aria-label="Open cart"
         >
@@ -245,9 +245,9 @@ watch(() => route.fullPath, () => { mobileSearchOpen.value = false; uiStore.clos
 </template>
 
 <style scoped>
-.brand-mark { display:flex; flex-direction:column; color:#201a1a; line-height:1; }
-.brand-mark span { font:700 10px Cinzel,serif; letter-spacing:.16em; white-space:nowrap; }
-.brand-mark em { font:400 23px 'Great Vibes',cursive; margin-top:2px; }
+.brand-mark { display:flex; align-items:center; justify-content:center; width:100px; height:68px; }
+.brand-mark img { width:100%; height:100%; object-fit:contain; }
+@media (max-width: 639px) { .brand-mark { width:78px; overflow:hidden; } .brand-mark img { transform:scale(1.45); } }
 .account-wrap { position: relative; }
 .account-trigger { display:grid; place-items:center; width:44px; height:44px; border-radius:12px; color:#261f20; transition:background .15s, transform .15s; }
 .account-trigger:hover, .account-trigger[aria-expanded="true"] { background:#f1e4e5; }

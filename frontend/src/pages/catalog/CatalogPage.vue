@@ -133,18 +133,18 @@ watch(() => route.query, () => { syncRoute(); fetchProducts() }, { immediate: tr
     </div>
 
     <div class="flex flex-col gap-8 md:flex-row">
-      <aside id="catalog-filters" class="w-full shrink-0 rounded-2xl border border-primary/50 bg-white p-5 md:block md:w-60 md:self-start" :class="showFilters ? 'block' : 'hidden'" aria-label="Product filters">
-        <div class="mb-5 flex items-center justify-between"><h2 class="font-heading text-base font-semibold text-dark">Filters</h2><button v-if="filterCount" type="button" class="text-sm text-gold underline underline-offset-4" @click="clearFilters">Clear all</button></div>
-        <fieldset class="border-t border-primary/50 py-5"><legend class="sr-only">Category</legend><p aria-hidden="true" class="mb-3 text-sm font-semibold text-dark">Category</p>
+      <aside id="catalog-filters" class="filter-panel w-full shrink-0 rounded-2xl border border-primary/50 bg-white p-5 md:block md:w-60 md:self-start" :class="showFilters ? 'block' : 'hidden'" aria-label="Product filters">
+        <div class="filter-heading mb-5 flex items-center justify-between"><h2 class="font-heading text-base font-semibold text-dark">Filters</h2><button v-if="filterCount" type="button" class="text-sm text-gold underline underline-offset-4" @click="clearFilters">Clear all</button></div>
+        <fieldset class="filter-group border-t border-primary/50 py-5"><legend class="sr-only">Category</legend><p aria-hidden="true" class="filter-group-title mb-3 text-sm font-semibold text-dark">Category</p>
           <label class="filter-option"><input type="radio" name="category" :checked="!selectedCategory" @change="selectCategory('')" /><span>All products</span></label>
           <label v-for="cat in productStore.categories" :key="cat.id" class="filter-option"><input type="radio" name="category" :checked="selectedCategory === cat.slug" @change="selectCategory(cat.slug)" /><span class="min-w-0 flex-1">{{ cat.name }}</span><span class="text-xs text-muted">{{ cat.product_count ?? 0 }}</span></label>
         </fieldset>
-        <fieldset class="border-t border-primary/50 py-5"><legend class="sr-only">Price in Zambian kwacha</legend><p aria-hidden="true" class="mb-1 text-sm font-semibold text-dark">Price</p><p class="mb-3 text-xs text-muted">Set a range in ZMW</p>
+        <fieldset class="filter-group border-t border-primary/50 py-5"><legend class="sr-only">Price in Zambian kwacha</legend><p aria-hidden="true" class="mb-1 text-sm font-semibold text-dark">Price</p><p class="price-hint mb-3 text-xs text-muted">Set a range in ZMW</p>
           <div class="grid grid-cols-2 gap-2"><label class="price-label">Min (K)<input v-model="minPrice" type="text" inputmode="decimal" placeholder="0" :aria-invalid="!!priceError" :aria-describedby="priceError ? 'price-error' : undefined" /></label><label class="price-label">Max (K)<input v-model="maxPrice" type="text" inputmode="decimal" placeholder="Any" :aria-invalid="!!priceError" :aria-describedby="priceError ? 'price-error' : undefined" /></label></div>
           <p v-if="priceError" id="price-error" role="alert" class="mt-2 text-sm text-red-700">{{ priceError }}</p>
-          <button type="button" class="mt-3 min-h-10 w-full rounded-xl border border-[#b9a8a8] text-sm font-semibold text-dark hover:bg-primary/20 focus-visible:outline-2 focus-visible:outline-gold" @click="applyPrice">Apply price</button>
+          <button type="button" class="price-apply mt-3 min-h-10 w-full rounded-xl border border-[#b9a8a8] text-sm font-semibold text-dark hover:bg-primary/20 focus-visible:outline-2 focus-visible:outline-gold" @click="applyPrice">Apply price</button>
         </fieldset>
-        <fieldset class="border-t border-primary/50 pt-5"><legend class="sr-only">Availability</legend><p aria-hidden="true" class="mb-3 text-sm font-semibold text-dark">Availability</p><label class="filter-option"><input type="checkbox" :checked="activeStock" @change="setStock(($event.target as HTMLInputElement).checked)" /><span>In stock only</span></label></fieldset>
+        <fieldset class="filter-group filter-availability border-t border-primary/50 pt-5"><legend class="sr-only">Availability</legend><p aria-hidden="true" class="filter-group-title mb-3 text-sm font-semibold text-dark">Availability</p><label class="filter-option"><input type="checkbox" :checked="activeStock" @change="setStock(($event.target as HTMLInputElement).checked)" /><span>In stock only</span></label></fieldset>
         <button type="button" class="mt-5 min-h-11 w-full rounded-xl bg-dark text-sm font-semibold text-white md:hidden" @click="closeFilters">Show products</button>
       </aside>
       <section class="min-w-0 flex-1" aria-label="Products" :aria-busy="productStore.loading">
@@ -169,4 +169,16 @@ watch(() => route.query, () => { syncRoute(); fetchProducts() }, { immediate: tr
 .filter-chip:focus-visible,.page-button:focus-visible { outline:2px solid var(--color-gold); outline-offset:2px; }
 .page-button { display:flex; align-items:center; gap:.25rem; min-height:2.75rem; border:1px solid #b9a8a8; border-radius:.75rem; padding:.5rem .75rem; font-size:.875rem; }
 .page-button:disabled { opacity:.4; cursor:not-allowed; }
+@media (min-width: 768px) {
+  .filter-panel { position:sticky; top:5.5rem; max-height:calc(100dvh - 6.5rem); overflow-y:auto; overscroll-behavior:contain; padding:1rem; scrollbar-width:thin; }
+  .filter-heading { margin-bottom:.75rem; }
+  .filter-group { padding-top:.75rem; padding-bottom:.75rem; }
+  .filter-availability { padding-bottom:0; }
+  .filter-group-title { margin-bottom:.375rem; }
+  .price-hint { margin-bottom:.5rem; }
+  .price-apply { margin-top:.5rem; }
+}
+@media (min-width: 768px) and (pointer:fine) {
+  .filter-option { min-height:2rem; }
+}
 </style>

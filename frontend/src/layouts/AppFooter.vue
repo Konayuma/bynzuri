@@ -18,7 +18,7 @@ function handleSubscribe() {
     <div class="max-w-7xl mx-auto px-4 py-12">
       <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
         <div>
-          <h3 class="font-heading text-xl font-semibold mb-4">bynzuri</h3>
+          <router-link to="/" aria-label="By Nzuri home" class="block w-44 h-28 -ml-6 -mt-5 mb-2"><img src="/By%20Nzuri%20Vector%20Logo%20-01.svg" alt="By Nzuri" class="w-full h-full object-contain brightness-0 invert" /></router-link>
           <p class="text-muted text-sm leading-relaxed">
             Premium beauty and haircare, delivered across Zambia.
             Healthy hair. Beautiful confidence.

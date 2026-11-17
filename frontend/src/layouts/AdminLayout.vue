@@ -28,7 +28,7 @@ function handleLogout() {
       :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
     >
       <div class="p-4 border-b border-gray-100">
-        <h2 class="font-heading text-lg font-semibold">bynzuri</h2>
+        <router-link to="/" aria-label="By Nzuri home" class="block w-32 h-20 -ml-4 -my-3"><img src="/By%20Nzuri%20Vector%20Logo%20-01.svg" alt="By Nzuri" class="w-full h-full object-contain" /></router-link>
         <p class="text-xs text-gray-400">Admin Dashboard</p>
       </div>
       <nav class="p-3 space-y-1">

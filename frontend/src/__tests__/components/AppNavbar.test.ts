@@ -30,7 +30,7 @@ function createWrapper() {
 describe('AppNavbar', () => {
   it('renders logo', () => {
     const wrapper = createWrapper()
-    expect(wrapper.text().toLowerCase()).toContain('by nzuri')
+    expect(wrapper.get('img[alt="By Nzuri — home"]').attributes('src')).toContain('By%20Nzuri%20Vector%20Logo%20-01.svg')
   })
 
   it('renders navigation links', () => {
