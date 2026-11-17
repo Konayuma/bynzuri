@@ -54,3 +54,19 @@ describe('BaseInput', () => {
     expect(wrapper.find('input').attributes('type')).toBe('email')
   })
 })
+
+describe('accessible field feedback', () => {
+  it('connects its generated label and error to the input', () => {
+    const wrapper = mount(BaseInput, { props: { modelValue: '', label: 'Phone', error: 'Enter a number' } })
+    const input = wrapper.get('input')
+    expect(wrapper.get('label').attributes('for')).toBe(input.attributes('id'))
+    expect(input.attributes('aria-invalid')).toBe('true')
+    expect(input.attributes('aria-describedby')).toBe(wrapper.get('[role=alert]').attributes('id'))
+  })
+  it('reveals a password without submitting the form', async () => {
+    const wrapper = mount(BaseInput, { props: { modelValue: 'secret', type: 'password', label: 'Password' } })
+    await wrapper.get('button').trigger('click')
+    expect(wrapper.get('input').attributes('type')).toBe('text')
+    expect(wrapper.get('button').attributes('type')).toBe('button')
+  })
+})

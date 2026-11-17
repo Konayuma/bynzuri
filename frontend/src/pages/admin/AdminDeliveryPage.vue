@@ -109,7 +109,8 @@ async function save() {
         await adminService.createTown(townForm.value)
       }
     } else {
-      if (!methodForm.value.name || !methodForm.value.price) { formError.value = 'Name and price are required'; saving.value = false; return }
+      if (!methodForm.value.name.trim() || !methodForm.value.price.trim()) { formError.value = 'Name and price are required'; saving.value = false; return }
+      if (!Number.isFinite(Number(methodForm.value.price)) || Number(methodForm.value.price) < 0) { formError.value = 'Enter a valid price of zero or more'; saving.value = false; return }
       if (editing.value && editingId.value) {
         await adminService.updateDeliveryMethod(editingId.value, methodForm.value)
       } else {
@@ -298,7 +299,7 @@ onMounted(loadData)
             </div>
           </template>
 
-          <p v-if="formError" class="text-sm text-red-500">{{ formError }}</p>
+          <p v-if="formError" role="alert" class="text-sm text-red-700">{{ formError }}</p>
           <div class="flex justify-end gap-3 pt-2">
             <BaseButton variant="ghost" @click="showModal = false">Cancel</BaseButton>
             <BaseButton :loading="saving" @click="save">{{ editing ? 'Update' : 'Create' }}</BaseButton>

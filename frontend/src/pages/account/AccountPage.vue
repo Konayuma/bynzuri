@@ -10,6 +10,7 @@ import BaseSelect from '@/components/base/BaseSelect.vue'
 import BaseModal from '@/components/base/BaseModal.vue'
 import { User, Package, MapPin, LogOut, Plus, Pencil, Trash2, Star } from '@lucide/vue'
 import type { Address, Province, Town } from '@/types'
+import { isZambianPhone } from '@/utils/formValidation'
 
 const userStore = useUserStore()
 const router = useRouter()
@@ -95,6 +96,9 @@ async function saveAddress() {
     formError.value = 'Please fill in all address fields'
     return
   }
+  if (!form.value.street_address.trim()) { formError.value = 'Enter a street address or landmark.'; return }
+  if (!towns.value.some(t => t.id === form.value.town)) { formError.value = 'Select a town in the chosen province.'; return }
+  if (!isZambianPhone(form.value.phone)) { formError.value = 'Enter a Zambian number, for example 0971234567 or +260971234567.'; return }
   saving.value = true
   formError.value = ''
   try {
@@ -264,7 +268,7 @@ onMounted(async () => {
           <input id="is_default" v-model="form.is_default" type="checkbox" class="rounded" />
           <label for="is_default" class="text-sm text-gray-600">Set as default address</label>
         </div>
-        <p v-if="formError" class="text-sm text-red-500">{{ formError }}</p>
+        <p v-if="formError" role="alert" class="text-sm text-red-700">{{ formError }}</p>
         <div class="flex justify-end gap-3 pt-2">
           <BaseButton variant="ghost" @click="showModal = false">Cancel</BaseButton>
           <BaseButton :loading="saving" @click="saveAddress">

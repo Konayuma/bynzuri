@@ -141,13 +141,21 @@ async function uploadImages(slug: string) {
 }
 
 async function saveProduct() {
-  if (!form.value.title || !form.value.price) {
-    formError.value = 'Title and price are required'
+  if (!form.value.title.trim() || !form.value.category || !form.value.price.trim()) {
+    formError.value = 'Enter a title, category and price.'
+    return
+  }
+  if (!Number.isFinite(Number(form.value.price)) || Number(form.value.price) < 0) {
+    formError.value = 'Enter a valid price of zero or more.'
+    return
+  }
+  if (!/^\d+$/.test(stockStr.value) || !Number.isSafeInteger(Number(stockStr.value))) {
+    formError.value = 'Stock must be a whole number of zero or more.'
     return
   }
   saving.value = true
   formError.value = ''
-  form.value.stock = parseInt(stockStr.value, 10) || 0
+  form.value.stock = Number(stockStr.value)
   try {
     let slug: string
     if (editingProduct.value) {
@@ -302,7 +310,7 @@ onMounted(async () => {
             </label>
           </div>
 
-          <p v-if="formError" class="text-sm text-red-500">{{ formError }}</p>
+          <p v-if="formError" role="alert" class="text-sm text-red-700">{{ formError }}</p>
           <div class="flex justify-end gap-3 pt-2">
             <BaseButton variant="ghost" @click="showModal = false">Cancel</BaseButton>
             <BaseButton :loading="saving || uploadingImages" @click="saveProduct">

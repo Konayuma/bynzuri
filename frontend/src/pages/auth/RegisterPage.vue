@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
+import { isEmail, isZambianPhone } from '@/utils/formValidation'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { useCartStore } from '@/stores/cart'
@@ -20,25 +21,38 @@ const form = ref({
 })
 const loading = ref(false)
 const error = ref('')
+const fieldErrors = ref<Record<string, string>>({})
+for (const key of Object.keys(form.value) as Array<keyof typeof form.value>) {
+  watch(() => form.value[key], () => {
+    delete fieldErrors.value[key]
+    error.value = ''
+  })
+}
 
 async function handleRegister() {
-  if (form.value.password !== form.value.confirm_password) {
-    error.value = 'Those passwords don\'t match. Please re-type them.'
-    return
-  }
+  const data = form.value
+  const errors: Record<string, string> = {}
+  if (!data.first_name.trim()) errors.first_name = 'Enter your first name.'
+  if (!data.last_name.trim()) errors.last_name = 'Enter your last name.'
+  if (!isEmail(data.email)) errors.email = 'Enter a valid email address.'
+  if (!isZambianPhone(data.phone)) errors.phone = 'Enter a Zambian number, for example 0971234567 or +260971234567.'
+  if (data.password.length < 8) errors.password = 'Use at least 8 characters.'
+  if (data.password !== data.confirm_password) errors.confirm_password = 'Passwords do not match.'
+  fieldErrors.value = errors
+  if (Object.keys(errors).length) return
 
   loading.value = true
   error.value = ''
 
   try {
     await userStore.register({
-      email: form.value.email,
+      email: form.value.email.trim(),
       password: form.value.password,
-      first_name: form.value.first_name,
-      last_name: form.value.last_name,
+      first_name: form.value.first_name.trim(),
+      last_name: form.value.last_name.trim(),
       phone: form.value.phone
     })
-    await userStore.login(form.value.email, form.value.password)
+    await userStore.login(form.value.email.trim(), form.value.password)
     await cartStore.mergeGuestCart()
     await cartStore.fetchCart()
     const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : ''
@@ -59,19 +73,23 @@ async function handleRegister() {
         <p class="text-sm text-muted mt-1">Track your orders, save addresses, and shop faster next time</p>
       </div>
 
-      <form @submit.prevent="handleRegister" class="space-y-4">
+      <form novalidate @submit.prevent="handleRegister" class="space-y-4">
         <div class="grid grid-cols-2 gap-3">
           <BaseInput
             v-model="form.first_name"
             label="First Name"
             required
             id="reg-first"
+            :error="fieldErrors.first_name"
+            autocomplete="given-name"
           />
           <BaseInput
             v-model="form.last_name"
             label="Last Name"
             required
             id="reg-last"
+            :error="fieldErrors.last_name"
+            autocomplete="family-name"
           />
         </div>
         <BaseInput
@@ -80,6 +98,8 @@ async function handleRegister() {
           type="email"
           required
           id="reg-email"
+            :error="fieldErrors.email"
+            autocomplete="email"
         />
         <BaseInput
           v-model="form.phone"
@@ -87,6 +107,8 @@ async function handleRegister() {
           type="tel"
           required
           id="reg-phone"
+            :error="fieldErrors.phone"
+            autocomplete="tel"
           placeholder="260xxxxxxxxx"
         />
         <p class="text-xs text-muted -mt-2">Zambian mobile number for delivery updates</p>
@@ -96,6 +118,8 @@ async function handleRegister() {
           type="password"
           required
           id="reg-password"
+            :error="fieldErrors.password"
+            autocomplete="new-password"
         />
         <p class="text-xs text-muted -mt-2">At least 8 characters</p>
         <BaseInput
@@ -104,9 +128,11 @@ async function handleRegister() {
           type="password"
           required
           id="reg-confirm"
+            :error="fieldErrors.confirm_password"
+            autocomplete="new-password"
         />
 
-        <p v-if="error" class="text-xs text-red-500">{{ error }}</p>
+        <p v-if="error" role="alert" class="text-sm text-red-700">{{ error }}</p>
 
         <BaseButton type="submit" variant="secondary" fullWidth :loading="loading">
           Create Account

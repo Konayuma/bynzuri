@@ -11,6 +11,7 @@ import BaseInput from '@/components/base/BaseInput.vue'
 import BaseSelect from '@/components/base/BaseSelect.vue'
 import { ChevronLeft, ChevronRight, MapPin, Loader2, CheckCircle2, XCircle, Smartphone } from '@lucide/vue'
 import type { Province, Town, DeliveryMethod, Address } from '@/types'
+import { isEmail, isZambianPhone, normalizeZambianPhone } from '@/utils/formValidation'
 
 const router = useRouter()
 const cartStore = useCartStore()
@@ -18,6 +19,7 @@ const userStore = useUserStore()
 const loading = ref(false)
 const currentStep = ref(1)
 const error = ref('')
+const fieldErrors = ref<Record<string, string>>({})
 
 const paymentStatus = ref<'idle' | 'processing' | 'success' | 'failed'>('idle')
 const paymentMessage = ref('')
@@ -72,8 +74,39 @@ const operatorLabel = computed(() => {
   return labels[form.value.payment_method] || ''
 })
 
+function validateStep(step: number): boolean {
+  const errors: Record<string, string> = {}
+  const data = form.value
+  if (step === 1) {
+    if (!data.first_name.trim()) errors.first_name = 'Enter your first name.'
+    if (!data.last_name.trim()) errors.last_name = 'Enter your last name.'
+    if (!isEmail(data.email)) errors.email = 'Enter a valid email address.'
+    if (!isZambianPhone(data.phone)) errors.phone = 'Enter a Zambian number, for example 0971234567 or +260971234567.'
+  } else if (step === 2) {
+    if (!data.province) errors.province = 'Select a province.'
+    if (!data.town || !towns.value.some(t => t.id === data.town)) errors.town = 'Select a town in this province.'
+    if (!data.street_address.trim()) errors.street_address = 'Enter a street address or landmark.'
+  } else if (step === 3) {
+    if (!deliveryMethods.value.some(m => m.id === data.delivery_method)) errors.delivery_method = 'Select a delivery method.'
+  } else {
+    if (!paymentMethods.some(m => m.value === data.payment_method)) errors.payment_method = 'Select a payment method.'
+    if (isMobileMoney.value && !isZambianPhone(data.payment_phone)) errors.payment_phone = 'Enter a valid Zambian mobile number.'
+  }
+  fieldErrors.value = errors
+  return Object.keys(errors).length === 0
+}
+
 function nextStep() {
-  if (currentStep.value < totalSteps) currentStep.value++
+  if (currentStep.value < totalSteps && validateStep(currentStep.value)) {
+    error.value = ''
+    currentStep.value++
+  }
+}
+for (const key of Object.keys(form.value) as Array<keyof typeof form.value>) {
+  watch(() => form.value[key], () => {
+    delete fieldErrors.value[key]
+    error.value = ''
+  })
 }
 
 function prevStep() {
@@ -111,6 +144,7 @@ function useCustomAddress() {
 }
 
 async function handleSubmit() {
+  if (!validateStep(4)) return
   if (!form.value.payment_method) {
     error.value = 'Please select a payment method to continue'
     return
@@ -137,13 +171,13 @@ async function handleSubmit() {
 
     if (isMobileMoney.value) {
       paymentStatus.value = 'processing'
-      paymentMessage.value = `A payment prompt has been sent to ${form.value.payment_phone}. Please check your phone and enter your PIN to authorize the payment.`
+      paymentMessage.value = 'Sending your payment request. Please wait.'
 
       try {
         const payment = await paymentService.initiatePayment(
           order.id,
           form.value.payment_method,
-          form.value.payment_phone
+          normalizeZambianPhone(form.value.payment_phone)
         )
 
         if (payment.status === 'failed') {
@@ -152,6 +186,7 @@ async function handleSubmit() {
           return
         }
 
+        paymentMessage.value = `Check ${form.value.payment_phone} for a payment prompt and enter your PIN to authorize it.`
         const finalPayment = await paymentService.pollPaymentStatus(order.id)
 
         if (finalPayment.status === 'success') {
@@ -263,7 +298,7 @@ onMounted(async () => {
       </div>
     </div>
 
-    <form @submit.prevent="currentStep === totalSteps ? handleSubmit() : nextStep()">
+    <form novalidate @submit.prevent="currentStep === totalSteps ? handleSubmit() : nextStep()">
       <!-- Step 1: Customer Details -->
       <div v-if="currentStep === 1" class="space-y-4">
         <h2 class="font-heading text-xl font-semibold text-dark mb-4">Your Details</h2>
@@ -273,12 +308,14 @@ onMounted(async () => {
             label="First Name"
             required
             id="first_name"
+          :error="fieldErrors.first_name"
           />
           <BaseInput
             v-model="form.last_name"
             label="Last Name"
             required
             id="last_name"
+          :error="fieldErrors.last_name"
           />
         </div>
         <BaseInput
@@ -287,6 +324,7 @@ onMounted(async () => {
           type="email"
           required
           id="email"
+          :error="fieldErrors.email"
         />
         <BaseInput
           v-model="form.phone"
@@ -294,6 +332,7 @@ onMounted(async () => {
           type="tel"
           required
           id="phone"
+          :error="fieldErrors.phone"
           placeholder="260xxxxxxxxx"
         />
         <p class="text-xs text-muted -mt-2">We'll send delivery updates via SMS</p>
@@ -344,6 +383,7 @@ onMounted(async () => {
           :options="provinces.map(p => ({ value: p.id, label: p.name }))"
           required
           id="province"
+          :error="fieldErrors.province"
           @update:modelValue="handleProvinceChange"
         />
         <BaseSelect
@@ -352,6 +392,7 @@ onMounted(async () => {
           :options="towns.map(t => ({ value: t.id, label: t.name }))"
           required
           id="town"
+          :error="fieldErrors.town"
           :disabled="!form.province"
         />
         <BaseInput
@@ -359,6 +400,7 @@ onMounted(async () => {
           label="Street Address"
           required
           id="street_address"
+          :error="fieldErrors.street_address"
           placeholder="Street, building, landmark"
         />
       </div>
@@ -370,7 +412,7 @@ onMounted(async () => {
           <label
             v-for="method in deliveryMethods"
             :key="method.id"
-            class="block p-4 border rounded-[16px] cursor-pointer transition-all"
+            class="block p-4 border rounded-[16px] cursor-pointer transition-all focus-within:ring-2 focus-within:ring-gold/50"
             :class="form.delivery_method === method.id ? 'border-gold bg-gold/5' : 'border-primary/40 hover:border-primary'"
           >
             <div class="flex items-center justify-between">
@@ -390,12 +432,14 @@ onMounted(async () => {
             </div>
             <input
               type="radio"
+              name="delivery_method"
               :value="method.id"
               v-model="form.delivery_method"
-              class="hidden"
+              class="sr-only peer"
             />
           </label>
         </div>
+        <p v-if="fieldErrors.delivery_method" role="alert" class="text-sm text-red-700">{{ fieldErrors.delivery_method }}</p>
       </div>
 
       <!-- Step 4: Payment -->
@@ -406,7 +450,7 @@ onMounted(async () => {
           <label
             v-for="method in paymentMethods"
             :key="method.value"
-            class="block p-4 border rounded-[16px] cursor-pointer transition-all"
+            class="block p-4 border rounded-[16px] cursor-pointer transition-all focus-within:ring-2 focus-within:ring-gold/50"
             :class="form.payment_method === method.value ? 'border-gold bg-gold/5' : 'border-primary/40 hover:border-primary'"
           >
             <div class="flex items-center gap-3">
@@ -423,12 +467,15 @@ onMounted(async () => {
             </div>
             <input
               type="radio"
+              name="payment_method"
               :value="method.value"
               v-model="form.payment_method"
-              class="hidden"
+              class="sr-only peer"
             />
           </label>
         </div>
+
+        <p v-if="fieldErrors.payment_method" role="alert" class="text-sm text-red-700">{{ fieldErrors.payment_method }}</p>
 
         <!-- Mobile Money Phone Input -->
         <div v-if="isMobileMoney" class="mt-4 p-4 bg-gold/5 border border-gold/20 rounded-[16px] space-y-3">
@@ -442,9 +489,17 @@ onMounted(async () => {
             type="tel"
             required
             id="payment_phone"
+          :error="fieldErrors.payment_phone"
             placeholder="260xxxxxxxxx"
           />
           <p class="text-xs text-muted">Enter the phone number registered with your {{ operatorLabel }} Money account</p>
+        </div>
+
+        <div class="rounded-[16px] border border-primary/50 bg-white p-4 text-sm space-y-2">
+          <div class="flex items-center justify-between"><h3 class="font-semibold text-dark">Delivery details</h3><button type="button" class="text-gold underline underline-offset-2" @click="currentStep = 2">Edit</button></div>
+          <p class="text-dark">{{ form.first_name }} {{ form.last_name }} · {{ form.phone }}</p>
+          <p class="text-muted">{{ form.street_address }}, {{ towns.find(t => t.id === form.town)?.name }}, {{ provinces.find(p => p.id === form.province)?.name }}</p>
+          <p class="text-muted">{{ selectedDeliveryMethod?.name }}</p>
         </div>
 
         <!-- Order Summary -->
