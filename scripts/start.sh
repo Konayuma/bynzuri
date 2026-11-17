@@ -40,8 +40,10 @@ fi
 printf '%s %s\n' "$$" "$(awk '{print $22}' "/proc/$$/stat")" > "$RUNTIME_DIR/start.pid"
 backend_pid=""
 frontend_pid=""
+install_pid=""
 cleanup() {
   trap - EXIT INT TERM
+  [[ -z "$install_pid" ]] || kill "$install_pid" 2>/dev/null || true
   [[ -z "$backend_pid" ]] || kill "$backend_pid" 2>/dev/null || true
   [[ -z "$frontend_pid" ]] || kill "$frontend_pid" 2>/dev/null || true
   wait 2>/dev/null || true
@@ -53,23 +55,53 @@ trap 'exit 143' TERM
 
 if ! "$PYTHON" -m pip --version >/dev/null 2>&1; then
   echo "Installing pip in the virtual environment..."
-  "$PYTHON" -m ensurepip --upgrade
+  "$PYTHON" -m ensurepip --upgrade 9>&-
 fi
-echo "Installing backend dependencies..."
-"$PYTHON" -m pip install -r "$BACKEND_DIR/requirements.txt"
-echo "Installing frontend dependencies..."
-npm install --prefix "$FRONTEND_DIR" --no-save --package-lock=false --no-audit --no-fund
+# Only contact package registries when the installed packages need updating.
+if "$PYTHON" - "$BACKEND_DIR/requirements.txt" <<'PY'
+import importlib.metadata as metadata
+import sys
+
+for line in open(sys.argv[1], encoding="utf-8"):
+    line = line.strip()
+    if not line or line.startswith("#"):
+        continue
+    try:
+        name, version = line.split("==", 1)
+        if metadata.version(name) != version:
+            raise ValueError(line)
+    except (ValueError, metadata.PackageNotFoundError):
+        sys.exit(1)
+PY
+then
+  echo "Backend dependencies are already installed."
+else
+  echo "Installing backend dependencies..."
+  "$PYTHON" -m pip install --timeout 15 --retries 2 -r "$BACKEND_DIR/requirements.txt" 9>&- &
+  install_pid=$!
+  wait "$install_pid"
+  install_pid=""
+fi
+if npm ls --prefix "$FRONTEND_DIR" --depth=0 9>&- >/dev/null 2>&1; then
+  echo "Frontend dependencies are already installed."
+else
+  echo "Installing frontend dependencies..."
+  npm install --prefix "$FRONTEND_DIR" --no-save --package-lock=false --no-audit --no-fund --loglevel=info --fetch-retries=2 --fetch-retry-mintimeout=1000 --fetch-retry-maxtimeout=5000 --fetch-timeout=30000 9>&- &
+  install_pid=$!
+  wait "$install_pid"
+  install_pid=""
+fi
 
 cd "$BACKEND_DIR"
 echo "Applying database migrations..."
-"$PYTHON" manage.py migrate --noinput
+"$PYTHON" manage.py migrate --noinput 9>&-
 
 echo "Starting API at http://127.0.0.1:8001"
-"$PYTHON" manage.py runserver 127.0.0.1:8001 --noreload &
+"$PYTHON" manage.py runserver 127.0.0.1:8001 --noreload 9>&- &
 backend_pid=$!
 cd "$FRONTEND_DIR"
 echo "Starting frontend (Vite will print its URL). Press Ctrl+C to stop both servers."
-./node_modules/.bin/vite &
+./node_modules/.bin/vite 9>&- &
 frontend_pid=$!
 
 set +e

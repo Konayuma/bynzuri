@@ -31,8 +31,8 @@ the configured PostgreSQL database. Then run from the project root:
 ./scripts/start.sh
 ```
 
-The script creates a Python virtual environment if needed, installs backend and
-frontend dependencies, applies migrations, starts Django on `127.0.0.1:8001` and starts
+The script creates a Python virtual environment if needed, installs missing or
+outdated dependencies, applies migrations, starts Django on `127.0.0.1:8001` and starts
 Vite. Press Ctrl+C or run `./scripts/stop.sh` in another terminal to stop both
 servers. The scripts require Linux and `flock`. Redis and Celery must be started
 separately when working on features that require them.
