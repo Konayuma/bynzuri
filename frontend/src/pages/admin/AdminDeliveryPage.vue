@@ -266,7 +266,7 @@ onMounted(loadData)
           <template v-if="activeTab === 'provinces'">
             <BaseInput v-model="provinceForm.name" label="Name" required />
             <BaseInput v-model="provinceForm.slug" label="Slug" placeholder="leave blank to auto-generate" />
-            <BaseInput v-model.number="provinceForm.sort_order" label="Sort Order" type="number" />
+            <BaseInput :model-value="String(provinceForm.sort_order)" @update:model-value="provinceForm.sort_order = Number($event)" label="Sort Order" type="number" />
           </template>
 
           <!-- Town Form -->
@@ -289,7 +289,7 @@ onMounted(loadData)
               <BaseInput v-model="methodForm.estimated_days" label="Est. Days" placeholder="e.g. 1-3 business days" />
             </div>
             <div class="grid grid-cols-2 gap-4">
-              <BaseInput v-model.number="methodForm.sort_order" label="Sort Order" type="number" />
+              <BaseInput :model-value="String(methodForm.sort_order)" @update:model-value="methodForm.sort_order = Number($event)" label="Sort Order" type="number" />
               <div class="flex items-end pb-3">
                 <label class="flex items-center gap-2 text-sm text-gray-600">
                   <input v-model="methodForm.is_active" type="checkbox" class="rounded" />

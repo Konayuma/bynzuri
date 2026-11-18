@@ -9,8 +9,8 @@ def health_check(request):
         with connection.cursor() as cursor:
             cursor.execute('SELECT 1')
         return JsonResponse({'status': 'healthy', 'database': 'connected'})
-    except Exception as e:
-        return JsonResponse({'status': 'unhealthy', 'database': str(e)}, status=503)
+    except Exception:
+        return JsonResponse({'status': 'unhealthy', 'database': 'unavailable'}, status=503)
 
 
 urlpatterns = [

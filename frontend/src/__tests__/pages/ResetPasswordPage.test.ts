@@ -19,7 +19,7 @@ describe('ResetPasswordPage', () => {
   })
 
   it('renders reset password form', async () => {
-    router.push({ name: 'reset-password', query: { uid: 'test', token: 'test' } })
+    await router.push({ name: 'reset-password', query: { uid: 'test', token: 'test' } })
     await router.isReady()
 
     const wrapper = mount(ResetPasswordPage, {
@@ -33,7 +33,7 @@ describe('ResetPasswordPage', () => {
   })
 
   it('shows error when passwords do not match', async () => {
-    router.push({ name: 'reset-password', query: { uid: 'test', token: 'test' } })
+    await router.push({ name: 'reset-password', query: { uid: 'test', token: 'test' } })
     await router.isReady()
 
     const wrapper = mount(ResetPasswordPage, {
@@ -47,7 +47,7 @@ describe('ResetPasswordPage', () => {
   })
 
   it('shows error for invalid reset link', async () => {
-    router.push({ name: 'reset-password' })
+    await router.push({ name: 'reset-password' })
     await router.isReady()
 
     const wrapper = mount(ResetPasswordPage, {
@@ -56,6 +56,7 @@ describe('ResetPasswordPage', () => {
         stubs: { BaseButton: { template: '<button><slot /></button>' }, BaseInput: { template: '<input />' } },
       },
     })
+    await wrapper.vm.$nextTick()
     expect(wrapper.text()).toContain('Invalid reset link')
   })
 })

@@ -19,7 +19,7 @@ describe('VerifyEmailPage', () => {
   })
 
   it('renders loading state initially', async () => {
-    router.push({ name: 'verify-email', query: { token: 'test-token' } })
+    await router.push({ name: 'verify-email', query: { token: 'test-token' } })
     await router.isReady()
 
     const wrapper = mount(VerifyEmailPage, {
@@ -32,7 +32,7 @@ describe('VerifyEmailPage', () => {
   })
 
   it('shows error for missing token', async () => {
-    router.push({ name: 'verify-email' })
+    await router.push({ name: 'verify-email' })
     await router.isReady()
 
     const wrapper = mount(VerifyEmailPage, {
@@ -41,7 +41,7 @@ describe('VerifyEmailPage', () => {
         stubs: { BaseButton: { template: '<button><slot /></button>' } },
       },
     })
-    await vi.dynamicImportSettled()
+    await wrapper.vm.$nextTick()
     expect(wrapper.text()).toContain('Invalid verification link')
   })
 })

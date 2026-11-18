@@ -10,3 +10,6 @@ gunicorn==26.0.0
 pillow==12.2.0
 psycopg2-binary==2.9.12
 redis==8.0.0
+dj-database-url==3.1.2
+whitenoise==6.12.0
+boto3==1.44.5

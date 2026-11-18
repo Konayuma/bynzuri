@@ -2,11 +2,19 @@ import os
 from pathlib import Path
 from datetime import timedelta
 
+import dj_database_url
+from django.core.exceptions import ImproperlyConfigured
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-dev-key-change-in-production')
 DEBUG = os.environ.get('DJANGO_DEBUG', 'True').lower() == 'true'
-ALLOWED_HOSTS = os.environ.get('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1,api.bynzuri.com').split(',')
+ALLOWED_HOSTS = [host.strip() for host in os.environ.get('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',') if host.strip()]
+render_host = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
+if render_host and render_host not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append(render_host)
+if not DEBUG and (not os.environ.get('DJANGO_SECRET_KEY') or SECRET_KEY == 'django-insecure-dev-key-change-in-production'):
+    raise ImproperlyConfigured('DJANGO_SECRET_KEY must be set when DJANGO_DEBUG is false.')
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -38,6 +46,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -76,7 +85,10 @@ DATABASES = {
     }
 }
 
-if os.environ.get('USE_SQLITE') == 'true':
+if os.environ.get('DATABASE_URL'):
+    DATABASES['default'] = dj_database_url.config(conn_max_age=60, conn_health_checks=True)
+
+if os.environ.get('USE_SQLITE', '').lower() == 'true':
     DATABASES['default'] = {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.sqlite3',
@@ -96,7 +108,7 @@ TIME_ZONE = 'Africa/Lusaka'
 USE_I18N = True
 USE_TZ = True
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'static'
 
 MEDIA_URL = '/media/'
@@ -141,35 +153,50 @@ CORS_ALLOWED_ORIGINS = os.environ.get(
     'CORS_ALLOWED_ORIGINS',
     'http://localhost:5173,http://localhost:3000,https://bynzuri.com'
 ).split(',')
+CORS_ALLOWED_ORIGINS = [origin.strip() for origin in CORS_ALLOWED_ORIGINS if origin.strip()]
 CORS_ALLOW_CREDENTIALS = True
+CSRF_TRUSTED_ORIGINS = [origin.strip() for origin in os.environ.get('CSRF_TRUSTED_ORIGINS', '').split(',') if origin.strip()]
 
 CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL', 'redis://localhost:6379/0')
 CELERY_RESULT_BACKEND = os.environ.get('CELERY_RESULT_BACKEND', 'redis://localhost:6379/0')
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 
+r2_keys = ('R2_ACCESS_KEY_ID', 'R2_SECRET_ACCESS_KEY', 'R2_BUCKET_NAME', 'R2_ENDPOINT_URL', 'R2_PUBLIC_DOMAIN')
+r2_values = {key: os.environ.get(key, '').strip() for key in r2_keys}
+if os.environ.get('REQUIRE_PERSISTENT_MEDIA', '').lower() == 'true' and not all(r2_values.values()):
+    raise ImproperlyConfigured('Persistent media requires all R2 credentials, endpoint, bucket and public domain.')
+if (r2_values['R2_ACCESS_KEY_ID'] or r2_values['R2_SECRET_ACCESS_KEY']) and not all(r2_values.values()):
+    raise ImproperlyConfigured('R2 configuration is incomplete; provide all R2 settings or leave them unset.')
+
 STORAGES = {
-    'default': {
+    'default': {'BACKEND': 'django.core.files.storage.FileSystemStorage'},
+    'staticfiles': {'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage'},
+}
+if all(r2_values.values()):
+    STORAGES['default'] = {
         'BACKEND': 'storages.backends.s3.S3Storage',
         'OPTIONS': {
-            'access_key': os.environ.get('R2_ACCESS_KEY_ID', ''),
-            'secret_key': os.environ.get('R2_SECRET_ACCESS_KEY', ''),
-            'bucket_name': os.environ.get('R2_BUCKET_NAME', 'bynzuri'),
-            'endpoint_url': os.environ.get('R2_ENDPOINT_URL', 'https://<account>.r2.cloudflarestorage.com'),
+            'access_key': r2_values['R2_ACCESS_KEY_ID'],
+            'secret_key': r2_values['R2_SECRET_ACCESS_KEY'],
+            'bucket_name': r2_values['R2_BUCKET_NAME'],
+            'endpoint_url': r2_values['R2_ENDPOINT_URL'],
+            'custom_domain': r2_values['R2_PUBLIC_DOMAIN'],
             'region_name': 'auto',
-            'default_acl': 'public-read',
+            'default_acl': None,
+            'querystring_auth': False,
             'file_overwrite': False,
-        }
-    },
-    'staticfiles': {
-        'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage',
-    },
-}
-
-if not os.environ.get('R2_ACCESS_KEY_ID'):
-    STORAGES['default'] = {
-        'BACKEND': 'django.core.files.storage.FileSystemStorage',
+        },
     }
+
+if not DEBUG:
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    SECURE_SSL_REDIRECT = True
+    # Render probes the service over HTTP and treats redirects as healthy.
+    SECURE_REDIRECT_EXEMPT = [r'^api/health/$']
+    SECURE_HSTS_SECONDS = 31536000
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
 
 SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
 SECURE_BROWSER_XSS_FILTER = True
