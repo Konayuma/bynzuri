@@ -28,6 +28,8 @@ const createdOrderId = ref<string | null>(null)
 const provinces = ref<Province[]>([])
 const towns = ref<Town[]>([])
 const deliveryMethods = ref<DeliveryMethod[]>([])
+const deliveryLoading = ref(false)
+const deliveryError = ref('')
 const savedAddresses = ref<Address[]>([])
 const selectedAddressId = ref<string | null>(null)
 
@@ -223,13 +225,23 @@ watch(() => form.value.payment_method, (val) => {
   }
 })
 
+async function loadDeliveryMethods() {
+  deliveryLoading.value = true
+  deliveryError.value = ''
+  try {
+    deliveryMethods.value = await orderService.getDeliveryMethods()
+  } catch {
+    deliveryError.value = 'Delivery methods could not be loaded. Check your connection and try again.'
+  } finally {
+    deliveryLoading.value = false
+  }
+}
+
 onMounted(async () => {
-  const [provincesData, methodsData] = await Promise.all([
-    orderService.getProvinces(),
-    orderService.getDeliveryMethods(),
+  await Promise.all([
+    orderService.getProvinces().then(data => { provinces.value = data }).catch(() => { error.value = 'Could not load provinces. Please refresh and try again.' }),
+    loadDeliveryMethods(),
   ])
-  provinces.value = provincesData
-  deliveryMethods.value = methodsData
 
   if (userStore.isAuthenticated) {
     try {
@@ -406,7 +418,15 @@ onMounted(async () => {
       <!-- Step 3: Delivery Method -->
       <div v-if="currentStep === 3" class="space-y-4">
         <h2 class="font-heading text-xl font-semibold text-dark mb-4">Delivery Method</h2>
-        <div class="space-y-3">
+        <p v-if="deliveryLoading" role="status" class="text-sm text-muted">Loading delivery methods…</p>
+        <div v-else-if="deliveryError" role="alert" class="rounded-xl bg-red-50 p-4 text-sm text-red-700">
+          <p>{{ deliveryError }}</p><button type="button" class="mt-2 underline" @click="loadDeliveryMethods">Try again</button>
+        </div>
+        <div v-else-if="deliveryMethods.length === 0" role="status" class="rounded-xl border border-primary/40 p-4 text-sm text-muted">
+          No delivery methods are available right now. Please contact the store for assistance.
+          <button type="button" class="mt-2 block underline" @click="loadDeliveryMethods">Check again</button>
+        </div>
+        <div v-else class="space-y-3">
           <label
             v-for="method in deliveryMethods"
             :key="method.id"
