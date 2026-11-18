@@ -4,7 +4,7 @@ import { useCartStore } from '@/stores/cart'
 import { useWishlistStore } from '@/stores/wishlist'
 import { Heart, ShoppingBag } from '@lucide/vue'
 import { useRouter } from 'vue-router'
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { signatureImage } from '@/utils/productImage'
 
 const props = defineProps<{
@@ -12,13 +12,18 @@ const props = defineProps<{
 }>()
 
 const cartStore = useCartStore()
+const cartError = ref('')
+const adding = ref(false)
 const wishlistStore = useWishlistStore()
 const router = useRouter()
 const localProductImage = computed(() => props.product.images?.[0]?.image || signatureImage(props.product.slug))
 
-function handleAddToCart(e: Event) {
+async function handleAddToCart(e: Event) {
   e.stopPropagation()
-  cartStore.addToCart(props.product)
+  if (adding.value) return
+  adding.value = true
+  cartError.value = ''
+  try { await cartStore.addToCart(props.product) } catch { cartError.value = cartStore.error } finally { adding.value = false }
 }
 
 function handleToggleWishlist(e: Event) {
@@ -61,6 +66,7 @@ function goToProduct() {
         </button>
         <button
           class="w-9 h-9 rounded-full bg-background/90 backdrop-blur-sm flex items-center justify-center hover:bg-background transition-colors shadow-sm active:scale-90"
+          :disabled="adding"
           @click="handleAddToCart"
           aria-label="Add to cart"
         >
@@ -81,5 +87,6 @@ function goToProduct() {
     <p class="text-xs text-muted uppercase tracking-wider mb-1">{{ product.category_name }}</p>
     <h3 class="text-sm font-medium text-dark leading-snug mb-1">{{ product.title }}</h3>
     <p class="text-sm font-bold text-dark">K{{ product.price }}</p>
+    <p v-if="cartError" role="alert" class="text-sm text-red-700">{{ cartError }}</p>
   </div>
 </template>

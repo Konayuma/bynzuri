@@ -20,6 +20,8 @@ const userStore = useUserStore()
 
 const quantity = ref(1)
 const addedToCart = ref(false)
+const addingToCart = ref(false)
+const cartError = ref('')
 const recentlyViewed = ref<Product[]>([])
 const productError = ref(false)
 
@@ -60,11 +62,18 @@ function decrementQty() {
   if (quantity.value > 1) quantity.value--
 }
 
-function handleAddToCart() {
-  if (product.value) {
-    cartStore.addToCart(product.value, quantity.value)
+async function handleAddToCart() {
+  if (!product.value || addingToCart.value) return
+  addingToCart.value = true
+  cartError.value = ''
+  try {
+    await cartStore.addToCart(product.value, quantity.value)
     addedToCart.value = true
     setTimeout(() => { addedToCart.value = false }, 2000)
+  } catch {
+    cartError.value = cartStore.error || 'Could not add this product. Please try again.'
+  } finally {
+    addingToCart.value = false
   }
 }
 
@@ -239,12 +248,14 @@ watch(product, (p) => {
             <BaseButton
               variant="secondary"
               :fullWidth="true"
+              :loading="addingToCart"
               @click="handleAddToCart"
             >
               <template v-if="addedToCart">Added to Cart!</template>
               <template v-else>Add to Cart</template>
             </BaseButton>
           </div>
+          <p v-if="cartError" role="alert" class="mt-2 text-sm text-red-700">{{ cartError }}</p>
 
           <div class="flex items-center gap-2 text-xs text-muted py-4 border-t border-primary/20">
             <button

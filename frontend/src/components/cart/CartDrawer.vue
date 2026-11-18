@@ -28,7 +28,12 @@ function formatPrice(price: string | number, quantity: number): string {
 
 <template>
   <BaseDrawer :open="open" title="Shopping Cart" position="right" @close="emit('close')">
-    <div v-if="cartStore.items.length === 0" class="flex flex-col items-center justify-center h-full px-4 text-center">
+    <div v-if="cartStore.loading && cartStore.items.length === 0" class="p-6 text-sm text-muted" role="status">Loading your cart…</div>
+    <div v-else-if="cartStore.error && cartStore.items.length === 0" class="p-6 text-sm text-red-700" role="alert">
+      <p>{{ cartStore.error }}</p>
+      <button v-if="!cartStore.items.length" class="mt-3 underline" @click="cartStore.fetchCart()">Try loading cart again</button>
+    </div>
+    <div v-else-if="cartStore.items.length === 0" class="flex flex-col items-center justify-center h-full px-4 text-center">
       <div class="w-16 h-16 rounded-full bg-primary/40 flex items-center justify-center mb-4">
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="text-muted"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
       </div>

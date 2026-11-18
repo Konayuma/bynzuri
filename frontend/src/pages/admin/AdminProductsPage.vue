@@ -41,6 +41,7 @@ const form = ref<ProductCreateData>({
 
 const stockStr = ref('0')
 const formError = ref('')
+const sessionExpired = ref(false)
 const imageFiles = ref<File[]>([])
 const imagePreviews = ref<string[]>([])
 const uploadingImages = ref(false)
@@ -217,6 +218,7 @@ async function saveProduct() {
     return
   }
   saving.value = true
+  sessionExpired.value = false
   formError.value = ''
   form.value.stock = Number(stockStr.value)
   try {
@@ -233,7 +235,16 @@ async function saveProduct() {
     showModal.value = false
     await loadProducts()
   } catch (e: any) {
-    formError.value = e.response?.data?.detail || e.response?.data?.title?.[0] || 'Failed to save product'
+    if (!localStorage.getItem('refresh_token') || e.response?.status === 401) {
+      sessionExpired.value = true
+      formError.value = 'Your session has expired. Sign in again in another tab, then return here and retry; your changes are still in this form.'
+    } else if (!e.response) {
+      formError.value = 'Could not reach the server or the request timed out. Your changes are still here; check the connection and retry.'
+    } else if (e.response.status === 403) {
+      formError.value = 'This account does not have permission to change products.'
+    } else {
+      formError.value = e.response.data?.detail || e.response.data?.title?.[0] || e.response.data?.slug?.[0] || 'Could not save the product. Please check the details and retry.'
+    }
   } finally {
     saving.value = false
   }
@@ -406,7 +417,7 @@ onMounted(async () => {
             </label>
           </div>
 
-          <p v-if="formError" role="alert" class="text-sm text-red-700">{{ formError }}</p>
+          <p v-if="formError" role="alert" class="text-sm text-red-700">{{ formError }} <a v-if="sessionExpired" href="/auth/login?redirect=/admin/products" target="_blank" rel="noopener" class="underline">Sign in in a new tab</a></p>
           <div class="flex justify-end gap-3 pt-2">
             <BaseButton variant="ghost" @click="showModal = false">Cancel</BaseButton>
             <BaseButton :loading="saving || uploadingImages" @click="saveProduct">

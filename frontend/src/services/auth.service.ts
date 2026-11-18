@@ -1,9 +1,9 @@
-import api from './api'
+import api, { publicApi } from './api'
 import type { User, AuthTokens } from '@/types'
 
 export const authService = {
   async login(email: string, password: string): Promise<AuthTokens> {
-    const response = await api.post('/auth/token/', { email, password })
+    const response = await publicApi.post('/auth/token/', { email, password })
     return response.data
   },
 

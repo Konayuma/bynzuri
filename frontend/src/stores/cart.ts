@@ -6,6 +6,8 @@ import { cartService } from '@/services/cart.service'
 export const useCartStore = defineStore('cart', () => {
   const cart = ref<Cart | null>(null)
   const loading = ref(false)
+  const error = ref('')
+  let cartRevision = 0
 
   const items = computed(() => cart.value?.items || [])
   const itemCount = computed(() => cart.value?.item_count || 0)
@@ -15,7 +17,7 @@ export const useCartStore = defineStore('cart', () => {
   function initGuestCart() {
     const stored = localStorage.getItem('guest_cart')
     if (stored) {
-      cart.value = JSON.parse(stored)
+      try { cart.value = JSON.parse(stored) } catch { localStorage.removeItem('guest_cart') }
     }
   }
 
@@ -26,24 +28,31 @@ export const useCartStore = defineStore('cart', () => {
   }
 
   async function fetchCart() {
+    const revision = cartRevision
     loading.value = true
+    error.value = ''
     try {
       const data = await cartService.getCart()
-      cart.value = data
+      if (revision === cartRevision) cart.value = data
     } catch {
-      initGuestCart()
+      if (revision === cartRevision) error.value = 'Could not load your cart. Please check your connection and try again.'
     } finally {
       loading.value = false
     }
   }
 
   async function addToCart(product: Product, quantity: number = 1) {
+    cartRevision++
+    error.value = ''
     const token = localStorage.getItem('access_token')
     if (token) {
       loading.value = true
       try {
         const data = await cartService.addItem(product.id, quantity)
         cart.value = data
+      } catch (cause) {
+        error.value = 'Could not add this product. Check your connection or sign in again, then retry.'
+        throw cause
       } finally {
         loading.value = false
       }
@@ -146,6 +155,7 @@ export const useCartStore = defineStore('cart', () => {
   return {
     cart,
     loading,
+    error,
     items,
     itemCount,
     subtotal,
