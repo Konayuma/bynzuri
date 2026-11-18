@@ -8,7 +8,7 @@ export const useUserStore = defineStore('user', () => {
   const loading = ref(false)
 
   const isAuthenticated = computed(() => !!user.value)
-  const isAdmin = computed(() => user.value?.role === 'admin')
+  const isAdmin = computed(() => user.value?.is_staff === true)
 
   async function fetchProfile() {
     const token = localStorage.getItem('access_token')

@@ -31,7 +31,7 @@ function handleLogout() {
         <router-link to="/" aria-label="By Nzuri home" class="block w-32 h-20 -ml-4 -my-3"><img src="/By%20Nzuri%20Vector%20Logo%20-01.svg" alt="By Nzuri" class="w-full h-full object-contain" /></router-link>
         <p class="text-xs text-gray-400">Admin Dashboard</p>
       </div>
-      <nav class="p-3 space-y-1">
+      <nav aria-label="Admin navigation" class="p-3 space-y-1">
         <router-link
           v-for="item in navItems"
           :key="item.to"
@@ -59,7 +59,7 @@ function handleLogout() {
 
     <div class="flex-1 flex flex-col min-w-0">
       <header class="h-16 bg-white border-b border-gray-200 flex items-center px-4 lg:px-6">
-        <button class="lg:hidden p-2 -ml-2" @click="sidebarOpen = true">
+        <button aria-label="Open admin navigation" :aria-expanded="sidebarOpen" class="lg:hidden p-2 -ml-2" @click="sidebarOpen = true">
           <Menu class="w-5 h-5" />
         </button>
       </header>

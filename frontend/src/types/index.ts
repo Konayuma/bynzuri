@@ -5,6 +5,7 @@ export interface User {
   last_name: string
   phone: string
   role: 'customer' | 'admin'
+  is_staff?: boolean
 }
 
 export interface AuthTokens {

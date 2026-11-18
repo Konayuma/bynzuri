@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router'
 import { useUserStore } from '@/stores/user'
+import { adminRoutes } from './admin'
 
 let userStore: ReturnType<typeof useUserStore> | null = null
 
@@ -76,29 +77,11 @@ const routes: RouteRecordRaw[] = [
     name: 'verify-email',
     component: () => import('@/pages/auth/VerifyEmailPage.vue')
   },
+  ...adminRoutes,
   {
-    path: '/admin',
-    name: 'admin-dashboard',
-    component: () => import('@/pages/admin/AdminDashboardPage.vue'),
-    meta: { requiresAuth: true, requiresAdmin: true }
-  },
-  {
-    path: '/admin/products',
-    name: 'admin-products',
-    component: () => import('@/pages/admin/AdminProductsPage.vue'),
-    meta: { requiresAuth: true, requiresAdmin: true }
-  },
-  {
-    path: '/admin/orders',
-    name: 'admin-orders',
-    component: () => import('@/pages/admin/AdminOrdersPage.vue'),
-    meta: { requiresAuth: true, requiresAdmin: true }
-  },
-  {
-    path: '/admin/delivery',
-    name: 'admin-delivery',
-    component: () => import('@/pages/admin/AdminDeliveryPage.vue'),
-    meta: { requiresAuth: true, requiresAdmin: true }
+    path: '/access-denied',
+    name: 'access-denied',
+    component: () => import('@/pages/AccessDeniedPage.vue')
   },
   {
     path: '/wishlist',
@@ -129,7 +112,7 @@ router.beforeEach(async (to, from, next) => {
     if (!token) {
       return next({ name: 'login', query: { redirect: to.fullPath } })
     }
-    if (!store.user) {
+    if (!store.user || to.meta.requiresAdmin) {
       try {
         await store.fetchProfile()
       } catch {
@@ -142,7 +125,7 @@ router.beforeEach(async (to, from, next) => {
   }
 
   if (to.meta.requiresAdmin && !store.isAdmin) {
-    return next({ name: 'home' })
+    return next({ name: 'access-denied' })
   }
 
   next()

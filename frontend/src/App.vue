@@ -45,7 +45,7 @@ watch(() => router.currentRoute.value, () => {
 
 <template>
   <div class="min-h-screen flex flex-col bg-background">
-    <AppNavbar />
+    <AppNavbar v-if="!router.currentRoute.value.meta.adminArea" />
     <main class="flex-1">
       <div
         ref="routeContainer"
@@ -55,9 +55,9 @@ watch(() => router.currentRoute.value, () => {
         <router-view />
       </div>
     </main>
-    <AppFooter v-if="!router.currentRoute.value.meta.standalone" />
+    <AppFooter v-if="!router.currentRoute.value.meta.standalone && !router.currentRoute.value.meta.adminArea" />
     <CartDrawer
-      v-if="uiStore.isCartOpen"
+      v-if="uiStore.isCartOpen && !router.currentRoute.value.meta.adminArea"
       :open="uiStore.isCartOpen"
       @close="uiStore.closeCart"
     />

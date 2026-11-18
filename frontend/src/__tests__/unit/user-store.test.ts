@@ -19,6 +19,15 @@ describe('UserStore', () => {
     expect(store.isAdmin).toBe(false)
   })
 
+  it('uses server staff status rather than the display role', () => {
+    const store = useUserStore()
+    const user = { id: '1', email: 'a@example.com', first_name: '', last_name: '', phone: '', role: 'admin' as const, is_staff: false }
+    store.user = user
+    expect(store.isAdmin).toBe(false)
+    store.user = { ...user, role: 'customer', is_staff: true }
+    expect(store.isAdmin).toBe(true)
+  })
+
   it('stores tokens in localStorage', () => {
     localStorage.setItem('access_token', 'test-access')
     localStorage.setItem('refresh_token', 'test-refresh')
