@@ -26,21 +26,31 @@ CATEGORIES = {
 }
 
 
+@transaction.atomic
+def import_catalog():
+    categories = {}
+    for slug, (name, order) in CATEGORIES.items():
+        categories[slug], _ = Category.objects.get_or_create(
+            slug=slug, defaults={'name': name, 'sort_order': order}
+        )
+    created_items, skipped_items = [], []
+    for title, slug, category, price in PRODUCTS:
+        _, created = Product.objects.get_or_create(
+            slug=slug,
+            defaults={'title': title, 'category': categories[category],
+                      'description': '', 'price': Decimal(price), 'stock': 0},
+        )
+        (created_items if created else skipped_items).append(title)
+    return created_items, skipped_items
+
+
 class Command(BaseCommand):
     help = 'Import missing signature-collection products without changing existing records.'
 
-    @transaction.atomic
     def handle(self, *args, **options):
-        categories = {}
-        for slug, (name, order) in CATEGORIES.items():
-            categories[slug], _ = Category.objects.get_or_create(
-                slug=slug, defaults={'name': name, 'sort_order': order}
-            )
-        for title, slug, category, price in PRODUCTS:
-            _, created = Product.objects.get_or_create(
-                slug=slug,
-                defaults={'title': title, 'category': categories[category],
-                          'description': '', 'price': Decimal(price), 'stock': 0},
-            )
-            self.stdout.write(f"{'Created' if created else 'Kept existing'}: {title}")
+        created, skipped = import_catalog()
+        for title in created:
+            self.stdout.write(f'Created: {title}')
+        for title in skipped:
+            self.stdout.write(f'Kept existing: {title}')
         self.stdout.write('New products have zero stock until an administrator updates availability.')

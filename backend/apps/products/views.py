@@ -75,3 +75,12 @@ class ProductImageDeleteView(views.APIView):
         image.image.delete(save=False)
         image.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class SignatureCatalogImportView(views.APIView):
+    permission_classes = [permissions.IsAdminUser]
+
+    def post(self, request):
+        from .management.commands.import_signature_catalog import import_catalog
+        created, skipped = import_catalog()
+        return Response({'created': created, 'skipped': skipped})

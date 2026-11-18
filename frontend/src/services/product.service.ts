@@ -15,6 +15,11 @@ export const productService = {
     return response.data
   },
 
+  async importSignatureCatalog(): Promise<{ created: string[]; skipped: string[] }> {
+    const response = await api.post('/products/import-signature/')
+    return response.data
+  },
+
   async getManagedProducts(page: number): Promise<PaginatedResponse<Product>> {
     const response = await api.get('/products/manage/', { params: { page } })
     return response.data

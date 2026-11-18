@@ -35,3 +35,24 @@ class SignatureCatalogTest(TestCase):
         detail = client.get('/api/products/growth-elixir/')
         self.assertEqual(detail.status_code, 200)
         self.assertEqual(detail.data['category_slug'], 'hair-growth')
+
+    def test_web_import_requires_staff_and_preserves_existing_products(self):
+        from apps.users.models import User
+        client = APIClient()
+        self.assertIn(client.post('/api/products/import-signature/').status_code, (401, 403))
+        customer = User.objects.create_user(username='customer', email='customer@example.com', password='secret')
+        client.force_authenticate(customer)
+        self.assertEqual(client.post('/api/products/import-signature/').status_code, 403)
+        admin = User.objects.create_superuser(username='admin', email='admin@example.com', password='secret')
+        client.force_authenticate(admin)
+        response = client.post('/api/products/import-signature/')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.data['created']), 8)
+        self.assertEqual(Product.objects.get(slug='growth-elixir').stock, 0)
+        product = Product.objects.get(slug='growth-elixir')
+        product.price = '199.00'
+        product.save()
+        response = client.post('/api/products/import-signature/')
+        self.assertEqual(len(response.data['skipped']), 8)
+        product.refresh_from_db()
+        self.assertEqual(str(product.price), '199.00')

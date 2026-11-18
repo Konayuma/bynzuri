@@ -19,6 +19,8 @@ const page = ref(1)
 const totalCount = ref(0)
 const nextPage = ref(false)
 const listError = ref('')
+const importing = ref(false)
+const importResult = ref<{ created: string[]; skipped: string[] } | null>(null)
 
 const form = ref<ProductCreateData>({
   category: '',
@@ -37,6 +39,22 @@ const imageFiles = ref<File[]>([])
 const imagePreviews = ref<string[]>([])
 const uploadingImages = ref(false)
 const currentImages = ref<ProductImage[]>([])
+
+async function importSignature() {
+  if (!confirm('Import the eight existing signature products and prices? Existing products will be kept unchanged. New products will have zero stock.')) return
+  importing.value = true
+  listError.value = ''
+  importResult.value = null
+  try {
+    importResult.value = await productService.importSignatureCatalog()
+    page.value = 1
+    await Promise.all([loadProducts(), loadCategories()])
+  } catch {
+    listError.value = 'The import could not be completed. Please try again.'
+  } finally {
+    importing.value = false
+  }
+}
 
 async function loadProducts() {
   loading.value = true
@@ -199,13 +217,21 @@ onMounted(async () => {
 <template>
   <AdminLayout>
     <div>
-      <div class="flex items-center justify-between mb-6">
+      <div class="flex flex-wrap gap-3 items-center justify-between mb-6">
         <h1 class="font-heading text-xl font-semibold">Products ({{ totalCount }})</h1>
+        <div class="flex flex-wrap gap-2">
+        <BaseButton size="sm" variant="secondary" :loading="importing" @click="importSignature">Import existing products</BaseButton>
         <BaseButton size="sm" @click="openCreateModal">
           <Plus class="w-4 h-4 mr-1" /> Add Product
         </BaseButton>
+        </div>
       </div>
 
+      <div v-if="importResult" role="status" class="mb-4 rounded-lg bg-green-50 p-4 text-sm text-green-900">
+        <p>Imported {{ importResult.created.length }} products. Kept {{ importResult.skipped.length }} existing products unchanged.</p>
+        <p v-if="importResult.created.length">Added: {{ importResult.created.join(', ') }}. Set stock after checking availability.</p>
+        <p v-if="importResult.skipped.length">Already present: {{ importResult.skipped.join(', ') }}.</p>
+      </div>
       <p v-if="listError" role="alert" class="mb-4 text-sm text-red-700">{{ listError }}</p>
       <div v-if="loading" class="bg-white rounded-[16px] border border-gray-100 overflow-hidden">
         <div class="p-8 text-center text-gray-400">Loading...</div>
