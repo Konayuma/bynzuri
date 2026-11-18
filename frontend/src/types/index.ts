@@ -38,6 +38,8 @@ export interface Product {
   price: string
   stock: number
   is_in_stock: boolean
+  is_active?: boolean
+  is_featured?: boolean
   images: ProductImage[]
   rating: number
   review_count: number

@@ -17,6 +17,8 @@ const editingProduct = ref<Product | null>(null)
 const saving = ref(false)
 const page = ref(1)
 const totalCount = ref(0)
+const nextPage = ref(false)
+const listError = ref('')
 
 const form = ref<ProductCreateData>({
   category: '',
@@ -39,10 +41,13 @@ const currentImages = ref<ProductImage[]>([])
 async function loadProducts() {
   loading.value = true
   try {
-    const data = await productService.getProducts({ page: page.value })
+    listError.value = ''
+    const data = await productService.getManagedProducts(page.value)
+    nextPage.value = !!data.next
     products.value = data.results
     totalCount.value = data.count
   } catch {
+    listError.value = 'Could not load products. Please try again.'
     products.value = []
   } finally {
     loading.value = false
@@ -86,8 +91,8 @@ function openEditModal(product: Product) {
     description: product.description,
     price: product.price,
     stock: product.stock,
-    is_active: true,
-    is_featured: false,
+    is_active: product.is_active ?? true,
+    is_featured: product.is_featured ?? false,
   }
   stockStr.value = String(product.stock)
   formError.value = ''
@@ -119,7 +124,7 @@ async function removeExistingImage(image: ProductImage) {
     await productService.deleteProductImage(editingProduct.value.slug, image.id)
     currentImages.value = currentImages.value.filter(i => i.id !== image.id)
   } catch {
-    /* ignore */
+    formError.value = 'Could not remove the image. Please try again.'
   }
 }
 
@@ -164,6 +169,7 @@ async function saveProduct() {
     } else {
       const created = await productService.createProduct(form.value)
       slug = created.slug
+      editingProduct.value = created
     }
     await uploadImages(slug)
     showModal.value = false
@@ -181,7 +187,7 @@ async function deleteProduct(product: Product) {
     await productService.deleteProduct(product.slug)
     await loadProducts()
   } catch {
-    /* ignore */
+    listError.value = 'Could not delete the product. Please try again.'
   }
 }
 
@@ -200,6 +206,7 @@ onMounted(async () => {
         </BaseButton>
       </div>
 
+      <p v-if="listError" role="alert" class="mb-4 text-sm text-red-700">{{ listError }}</p>
       <div v-if="loading" class="bg-white rounded-[16px] border border-gray-100 overflow-hidden">
         <div class="p-8 text-center text-gray-400">Loading...</div>
       </div>
@@ -241,6 +248,12 @@ onMounted(async () => {
             </tr>
           </tbody>
         </table>
+      </div>
+
+      <div class="flex items-center justify-between mt-4 text-sm">
+        <button :disabled="page === 1 || loading" @click="page--; loadProducts()">Previous</button>
+        <span>Page {{ page }}</span>
+        <button :disabled="!nextPage || loading" @click="page++; loadProducts()">Next</button>
       </div>
 
       <BaseModal :open="showModal" :title="editingProduct ? 'Edit Product' : 'Add Product'" @close="showModal = false">

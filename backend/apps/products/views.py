@@ -20,21 +20,24 @@ class ProductViewSet(viewsets.ModelViewSet):
     lookup_field = 'slug'
 
     def get_serializer_class(self):
-        if self.action == 'retrieve':
+        if self.action in ('retrieve', 'admin_list'):
             return ProductDetailSerializer
         if self.action in ('create', 'update', 'partial_update'):
             return ProductCreateSerializer
         return ProductListSerializer
 
     def get_permissions(self):
-        if self.action in ('create', 'update', 'partial_update', 'destroy'):
+        if self.action in ('create', 'update', 'partial_update', 'destroy', 'admin_list'):
             return [permissions.IsAdminUser()]
         return [permissions.AllowAny()]
 
     def get_queryset(self):
-        if self.action in ('create', 'update', 'partial_update', 'destroy'):
+        if self.action in ('create', 'update', 'partial_update', 'destroy', 'admin_list'):
             return Product.objects.all().select_related('category').prefetch_related('images')
         return super().get_queryset()
+
+    def admin_list(self, request):
+        return self.list(request)
 
     @decorators.action(detail=False)
     def best_sellers(self, request):

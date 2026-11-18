@@ -15,6 +15,11 @@ export const productService = {
     return response.data
   },
 
+  async getManagedProducts(page: number): Promise<PaginatedResponse<Product>> {
+    const response = await api.get('/products/manage/', { params: { page } })
+    return response.data
+  },
+
   async getProduct(slug: string): Promise<Product> {
     const response = await publicApi.get(`/products/${slug}/`)
     return response.data
