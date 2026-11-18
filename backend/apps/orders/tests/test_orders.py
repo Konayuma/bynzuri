@@ -1,4 +1,5 @@
 import pytest
+import uuid
 from rest_framework import status
 from decimal import Decimal
 from django.contrib.auth import get_user_model
@@ -79,22 +80,43 @@ class TestOrderCreation:
         self.product.refresh_from_db()
         assert self.product.stock == 1  # not deducted
 
-    def test_idempotent_order(self, user):
+    def test_checkout_key_replays_same_order_and_allows_next_order(self, user):
         self.client.force_authenticate(user=user)
         self._setup_cart(user)
-
         data = {
-            'province': 'Lusaka', 'town': 'Lusaka',
-            'street_address': '123', 'phone': '260977000000',
-            'delivery_method': str(self.delivery.id),
-            'payment_method': 'mastercard'
+            'checkout_key': str(uuid.uuid4()),
+            'province': 'Lusaka', 'town': 'Lusaka', 'street_address': '123',
+            'phone': '260977000000', 'delivery_method': str(self.delivery.id),
+            'payment_method': 'mtn_momo'
         }
-        self.client.post('/api/orders/', data, format='json')
-        # Re-setup cart (previous order cleared it)
+        first = self.client.post('/api/orders/', data, format='json')
+        replay = self.client.post('/api/orders/', data, format='json')
+        assert first.status_code == 201
+        assert replay.status_code == 200
+        assert first.data['id'] == replay.data['id']
+        self.product.refresh_from_db()
+        assert self.product.stock == 3
         self._setup_cart(user)
-        response = self.client.post('/api/orders/', data, format='json')
+        data['checkout_key'] = str(uuid.uuid4())
+        second = self.client.post('/api/orders/', data, format='json')
+        assert second.status_code == 201
+        assert second.data['id'] != first.data['id']
+        self.product.refresh_from_db()
+        assert self.product.stock == 1
 
-        assert response.status_code == status.HTTP_409_CONFLICT
+    def test_unavailable_delivery_does_not_deduct_stock(self, user):
+        self.client.force_authenticate(user=user)
+        self._setup_cart(user)
+        self.delivery.is_active = False
+        self.delivery.save()
+        response = self.client.post('/api/orders/', {
+            'province': 'Lusaka', 'town': 'Lusaka', 'street_address': '123',
+            'phone': '260977000000', 'delivery_method': str(self.delivery.id),
+            'payment_method': 'mtn_momo'
+        }, format='json')
+        assert response.status_code == 400
+        self.product.refresh_from_db()
+        assert self.product.stock == 5
 
     def test_order_with_empty_cart(self, user):
         self.client.force_authenticate(user=user)

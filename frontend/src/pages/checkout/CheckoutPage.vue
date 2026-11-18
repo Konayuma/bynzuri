@@ -21,9 +21,32 @@ const currentStep = ref(1)
 const error = ref('')
 const fieldErrors = ref<Record<string, string>>({})
 
-const paymentStatus = ref<'idle' | 'processing' | 'success' | 'failed'>('idle')
+const paymentStatus = ref<'idle' | 'processing' | 'success' | 'failed' | 'unknown'>('idle')
 const paymentMessage = ref('')
+const pendingKey = 'bynzuri_checkout_attempt'
 const createdOrderId = ref<string | null>(null)
+let checkoutKey = ''
+let paymentRun = 0
+try {
+  const saved = JSON.parse(sessionStorage.getItem(pendingKey) || 'null')
+  if (saved?.userId === userStore.user?.id && typeof saved?.key === 'string') {
+    checkoutKey = saved.key
+    createdOrderId.value = saved.orderId || null
+  }
+} catch { sessionStorage.removeItem(pendingKey) }
+
+function saveCheckoutAttempt(orderId: string | null = null) {
+  sessionStorage.setItem(pendingKey, JSON.stringify({ key: checkoutKey, orderId, userId: userStore.user?.id }))
+}
+function clearCheckoutAttempt() { sessionStorage.removeItem(pendingKey); checkoutKey = '' }
+function viewOrder() {
+  paymentRun++
+  if (createdOrderId.value) {
+    clearCheckoutAttempt()
+    cartStore.clearCart()
+    router.push(`/order/confirmation/${createdOrderId.value}`)
+  }
+}
 
 const provinces = ref<Province[]>([])
 const towns = ref<Town[]>([])
@@ -161,7 +184,9 @@ async function handleSubmit() {
   error.value = ''
 
   try {
+    if (!checkoutKey) { checkoutKey = crypto.randomUUID(); saveCheckoutAttempt() }
     const order = createdOrderId.value ? { id: createdOrderId.value } : await orderService.createOrder({
+      checkout_key: checkoutKey,
       province: form.value.province,
       town: form.value.town,
       delivery_method: form.value.delivery_method,
@@ -172,7 +197,9 @@ async function handleSubmit() {
     })
 
     createdOrderId.value = order.id
+    saveCheckoutAttempt(order.id)
     if (isMobileMoney.value) {
+      const run = ++paymentRun
       paymentStatus.value = 'processing'
       paymentMessage.value = 'Sending your payment request. Please wait.'
 
@@ -183,19 +210,22 @@ async function handleSubmit() {
           normalizeZambianPhone(form.value.payment_phone)
         )
 
+        if (run !== paymentRun) return
         if (payment.status === 'failed') {
           paymentStatus.value = 'failed'
           paymentMessage.value = 'Payment initiation failed. Please try again.'
           return
         }
 
-        paymentMessage.value = `Check ${form.value.payment_phone} for a payment prompt and enter your PIN to authorize it.`
+        paymentMessage.value = payment.status === 'processing' ? `Check ${form.value.payment_phone} for a payment prompt and enter your PIN to authorize it.` : 'Checking whether the payment request reached your provider. Please do not submit another payment.'
         const finalPayment = payment.status === 'success' ? payment : await paymentService.pollPaymentStatus(order.id)
 
+        if (run !== paymentRun) return
         if (finalPayment.status === 'success') {
           paymentStatus.value = 'success'
           paymentMessage.value = 'Payment successful! Redirecting...'
           cartStore.clearCart()
+          clearCheckoutAttempt()
           setTimeout(() => {
             router.push(`/order/confirmation/${order.id}`)
           }, 2000)
@@ -204,15 +234,23 @@ async function handleSubmit() {
           paymentMessage.value = 'Payment was not completed. Please try again.'
         }
       } catch {
-        paymentStatus.value = 'failed'
-        paymentMessage.value = 'We could not confirm the payment yet. Check your order status before making another payment.'
+        if (run !== paymentRun) return
+        paymentStatus.value = 'unknown'
+        paymentMessage.value = 'We could not confirm whether the request reached your phone. Check the order status before making another payment.'
       }
     } else {
+      clearCheckoutAttempt()
       cartStore.clearCart()
       router.push(`/order/confirmation/${order.id}`)
     }
   } catch (e: unknown) {
-    error.value = (e as { response?: { data?: { detail?: string } } })?.response?.data?.detail || 'We couldn\'t place your order. Please check your details and try again.'
+    const response = (e as { response?: { status?: number; data?: { detail?: string } } }).response
+    if (response && response.status && response.status < 500) {
+      clearCheckoutAttempt()
+      error.value = response.data?.detail || 'We could not place your order. Check your details and try again.'
+    } else {
+      error.value = 'We could not confirm your order. Retry this checkout to recover it, or check your order history before starting another.'
+    }
     paymentStatus.value = 'idle'
   } finally {
     loading.value = false
@@ -268,6 +306,7 @@ onMounted(async () => {
           <Loader2 class="w-12 h-12 text-gold animate-spin mx-auto" />
           <h2 class="font-heading text-xl font-semibold text-dark">Processing Payment</h2>
           <p class="text-sm text-muted">{{ paymentMessage }}</p>
+          <button v-if="createdOrderId" type="button" class="block mx-auto text-sm underline text-dark" @click="viewOrder">View order status</button>
           <div class="flex items-center justify-center gap-2 text-xs text-muted">
             <Smartphone class="w-4 h-4" />
             <span>Check your phone for the payment prompt</span>
@@ -280,6 +319,12 @@ onMounted(async () => {
           <p class="text-sm text-muted">{{ paymentMessage }}</p>
         </div>
 
+        <div v-else-if="paymentStatus === 'unknown'" class="space-y-4">
+          <h2 class="font-heading text-xl font-semibold text-dark">Payment status unknown</h2>
+          <p class="text-sm text-muted">{{ paymentMessage }}</p>
+          <BaseButton variant="secondary" @click="viewOrder">View order and check status</BaseButton>
+        </div>
+
         <div v-else-if="paymentStatus === 'failed'" class="space-y-4">
           <XCircle class="w-12 h-12 text-red-500 mx-auto" />
           <h2 class="font-heading text-xl font-semibold text-dark">Payment Failed</h2>
@@ -287,11 +332,15 @@ onMounted(async () => {
           <BaseButton variant="secondary" @click="paymentStatus = 'idle'; currentStep = 4">
             Check or retry payment
           </BaseButton>
-          <button type="button" class="block mx-auto text-sm underline text-dark" @click="cartStore.clearCart(); router.push(`/order/confirmation/${createdOrderId}`)">View order status</button>
+          <button type="button" class="block mx-auto text-sm underline text-dark" @click="viewOrder">View order status</button>
         </div>
       </div>
     </div>
 
+    <div v-if="createdOrderId && paymentStatus === 'idle'" class="mb-5 rounded-xl border border-primary/40 p-4 text-sm" role="status">
+      You have an order awaiting payment. Check its status before starting another payment.
+      <button type="button" class="block mt-2 underline" @click="viewOrder">View order status</button>
+    </div>
     <!-- Progress -->
     <div class="mb-8">
       <div class="flex items-center justify-between mb-2">

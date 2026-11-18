@@ -26,6 +26,7 @@ class OrderListSerializer(serializers.ModelSerializer):
 
 
 class OrderCreateSerializer(serializers.Serializer):
+    checkout_key = serializers.UUIDField(required=False)
     province = serializers.CharField(max_length=100)
     town = serializers.CharField(max_length=100)
     street_address = serializers.CharField()

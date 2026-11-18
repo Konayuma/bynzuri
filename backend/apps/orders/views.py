@@ -1,5 +1,7 @@
 import hashlib
+import uuid
 from django.db import transaction
+from django.core.exceptions import ValidationError
 from django.shortcuts import get_object_or_404
 from rest_framework import views, status, permissions
 from rest_framework.response import Response
@@ -21,82 +23,58 @@ class OrderListCreateView(views.APIView):
         serializer = OrderCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        try:
-            cart = Cart.objects.get(user=request.user)
-        except Cart.DoesNotExist:
-            return Response(
-                {'detail': 'Cart is empty'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        cart_items = cart.items.select_related('product').all()
-
-        if not cart_items:
-            return Response(
-                {'detail': 'Cart is empty'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        idempotency_input = f"{request.user.id}:{cart.id}"
-        idempotency_key = hashlib.sha256(idempotency_input.encode()).hexdigest()
-
-        if Order.objects.filter(idempotency_key=idempotency_key).exists():
-            return Response(
-                {'detail': 'Order already submitted'},
-                status=status.HTTP_409_CONFLICT
-            )
+        # Older clients may omit the key; cart locking still prevents concurrent consumption.
+        raw_key = str(serializer.validated_data.get('checkout_key') or uuid.uuid4())
+        idempotency_key = hashlib.sha256(f'{request.user.id}:{raw_key}'.encode()).hexdigest()
 
         with transaction.atomic():
-            total_amount = 0
-            order_items_data = []
-
-            for cart_item in cart_items:
-                product = Product.objects.select_for_update().get(id=cart_item.product.id)
-
-                if product.stock < cart_item.quantity:
-                    return Response(
-                        {'detail': f'Insufficient stock for {product.title}'},
-                        status=status.HTTP_400_BAD_REQUEST
-                    )
-
-                product.stock -= cart_item.quantity
-                product.save()
-
-                line_total = product.price * cart_item.quantity
-                total_amount += line_total
-
-                order_items_data.append({
-                    'product': product,
-                    'product_title': product.title,
-                    'quantity': cart_item.quantity,
-                    'price_at_purchase': product.price
-                })
+            # A cart row persists across orders and serializes concurrent checkouts for this user.
+            cart = Cart.objects.select_for_update().filter(user=request.user).first()
+            existing = Order.objects.filter(user=request.user, idempotency_key=idempotency_key).first()
+            if existing:
+                return Response(OrderListSerializer(existing).data, status=status.HTTP_200_OK)
+            if not cart:
+                return Response({'detail': 'Cart is empty'}, status=400)
+            cart_items = list(cart.items.select_related('product').all())
+            if not cart_items:
+                return Response({'detail': 'Cart is empty'}, status=400)
 
             from apps.delivery.models import DeliveryMethod
-            delivery = DeliveryMethod.objects.filter(
-                id=serializer.validated_data['delivery_method']
-            ).first()
-            delivery_fee = delivery.price if delivery else 0
+            try:
+                delivery = DeliveryMethod.objects.filter(id=serializer.validated_data['delivery_method'], is_active=True).first()
+            except (ValueError, TypeError, ValidationError):
+                delivery = None
+            if not delivery:
+                return Response({'detail': 'This delivery method is unavailable. Please select another.'}, status=400)
+
+            # Validate every line before changing any stock.
+            products = {p.id: p for p in Product.objects.select_for_update().filter(
+                id__in=[item.product_id for item in cart_items]).order_by('id')}
+            for item in cart_items:
+                product = products[item.product_id]
+                if not product.is_active or product.stock < item.quantity:
+                    return Response({'detail': f'Insufficient stock for {product.title}'}, status=400)
+
+            total_amount = 0
+            order_items_data = []
+            for item in cart_items:
+                product = products[item.product_id]
+                product.stock -= item.quantity
+                product.save(update_fields=['stock'])
+                total_amount += product.price * item.quantity
+                order_items_data.append({'product': product, 'product_title': product.title,
+                                         'quantity': item.quantity, 'price_at_purchase': product.price})
 
             order = Order.objects.create(
-                user=request.user,
-                idempotency_key=idempotency_key,
-                total_amount=total_amount,
-                delivery_fee=delivery_fee,
-                grand_total=total_amount + delivery_fee,
-                province=serializer.validated_data['province'],
-                town=serializer.validated_data['town'],
-                street_address=serializer.validated_data['street_address'],
-                phone=serializer.validated_data['phone'],
-                delivery_method=serializer.validated_data['delivery_method'],
-                payment_method=serializer.validated_data['payment_method'],
+                user=request.user, idempotency_key=idempotency_key, total_amount=total_amount,
+                delivery_fee=delivery.price, grand_total=total_amount + delivery.price,
+                province=serializer.validated_data['province'], town=serializer.validated_data['town'],
+                street_address=serializer.validated_data['street_address'], phone=serializer.validated_data['phone'],
+                delivery_method=serializer.validated_data['delivery_method'], payment_method=serializer.validated_data['payment_method'],
                 notes=serializer.validated_data.get('notes', '')
             )
-
-            for item_data in order_items_data:
-                OrderItem.objects.create(order=order, **item_data)
-
-            cart_items.delete()
+            OrderItem.objects.bulk_create([OrderItem(order=order, **item) for item in order_items_data])
+            cart.items.all().delete()
 
         result_serializer = OrderListSerializer(order)
         return Response(result_serializer.data, status=status.HTTP_201_CREATED)

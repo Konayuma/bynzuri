@@ -15,6 +15,7 @@ const loading = ref(true)
 const payment = ref<Payment | null>(null)
 const paymentLoading = ref(false)
 const paymentError = ref('')
+const paymentStatusChecked = ref(false)
 const paymentPhone = ref('')
 const paymentMethod = ref('mtn_momo')
 
@@ -22,11 +23,13 @@ async function checkPayment() {
   if (!order.value) return
   paymentLoading.value = true
   paymentError.value = ''
+  paymentStatusChecked.value = false
   try {
     payment.value = await paymentService.getPaymentStatus(order.value.id)
+    paymentStatusChecked.value = true
     order.value = await orderService.getOrder(order.value.id)
   } catch (e: unknown) {
-    if ((e as { response?: { status?: number } }).response?.status === 404) payment.value = null
+    if ((e as { response?: { status?: number } }).response?.status === 404) { payment.value = null; paymentStatusChecked.value = true }
     else paymentError.value = 'Unable to check payment status. Please try again.'
   } finally { paymentLoading.value = false }
 }
@@ -104,7 +107,7 @@ onMounted(async () => {
       <div v-if="order.status === 'awaiting_payment'" class="bg-white rounded-[20px] p-6 shadow-[0_8px_30px_rgba(0,0,0,0.06)] text-left mb-6 space-y-3">
         <h2 class="font-semibold text-dark">Mobile money payment</h2>
         <p v-if="payment && ['pending', 'processing'].includes(payment.status)" class="text-sm text-muted">Your payment is pending. Check your phone for the prompt, then check the status here.</p>
-        <template v-else>
+        <template v-else-if="paymentStatusChecked && !paymentLoading">
           <p class="text-sm text-muted">{{ payment?.status === 'failed' ? 'The previous payment failed. You can try again.' : 'Choose a network and enter your mobile money number.' }}</p>
           <label for="retry-method" class="block text-sm text-dark">Mobile money network</label>
           <select id="retry-method" v-model="paymentMethod" class="w-full rounded-xl border border-primary/40 p-3"><option value="mtn_momo">MTN Mobile Money</option><option value="airtel_money">Airtel Money</option></select>
@@ -112,6 +115,7 @@ onMounted(async () => {
           <input id="retry-phone" v-model="paymentPhone" type="tel" autocomplete="tel" class="w-full rounded-xl border border-primary/40 p-3" placeholder="0971234567" />
           <BaseButton :loading="paymentLoading" @click="retryPayment">Request payment</BaseButton>
         </template>
+        <p v-if="paymentLoading" role="status" class="text-sm text-muted">Checking payment status…</p>
         <p v-if="paymentError" role="alert" class="text-sm text-red-600">{{ paymentError }}</p>
         <button type="button" class="block text-sm underline text-dark" :disabled="paymentLoading" @click="checkPayment">Check payment status</button>
       </div>

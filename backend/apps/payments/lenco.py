@@ -29,8 +29,10 @@ class LencoService:
                     error_code = str(response.json().get('errorCode', ''))
                 except (ValueError, AttributeError):
                     error_code = ''
-                # Duplicate references and unrecognized errors require reconciliation.
-                return {'status': False, 'rejected': error_code in ('01', '12'), 'uncertain': error_code not in ('01', '12')}
+                # Authentication failures and documented validation errors cannot start a collection.
+                rejected = response.status_code in (401, 403) or error_code in ('01', '12')
+                logger.warning('Lenco request returned HTTP %s (code %s)', response.status_code, error_code or 'unknown')
+                return {'status': False, 'rejected': rejected, 'uncertain': not rejected}
             result = response.json()
             return result if isinstance(result, dict) else {'status': False, 'uncertain': True}
         except (requests.RequestException, ValueError):

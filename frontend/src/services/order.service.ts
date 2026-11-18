@@ -3,6 +3,7 @@ import type { Order, DeliveryMethod, Province, Town, AdminOrder, PaginatedRespon
 
 export const orderService = {
   async createOrder(data: {
+    checkout_key?: string
     province: string
     town: string
     delivery_method: string

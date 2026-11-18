@@ -31,12 +31,14 @@ export const paymentService = {
     return response.data
   },
 
-  async pollPaymentStatus(orderId: string, maxAttempts = 40, interval = 3000): Promise<Payment> {
-    for (let i = 0; i < maxAttempts; i++) {
+  async pollPaymentStatus(orderId: string, maxAttempts = 8, interval = 3000): Promise<Payment> {
+    const deadline = Date.now() + 60000
+    for (let i = 0; i < maxAttempts && Date.now() < deadline; i++) {
       const payment = await this.getPaymentStatus(orderId)
       if (payment.status === 'success' || payment.status === 'failed') {
         return payment
       }
+      if (Date.now() + interval >= deadline) break
       await new Promise((resolve) => setTimeout(resolve, interval))
     }
     throw new Error('Payment timeout')
