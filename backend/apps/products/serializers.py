@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from django.utils.text import slugify
 from .models import Product, ProductImage
 
 
@@ -37,6 +38,8 @@ class ProductDetailSerializer(serializers.ModelSerializer):
 
 
 class ProductCreateSerializer(serializers.ModelSerializer):
+    slug = serializers.SlugField(required=False, allow_blank=True, max_length=250)
+    description = serializers.CharField(required=False, allow_blank=True)
     images = ProductImageSerializer(many=True, read_only=True, required=False)
 
     class Meta:
@@ -46,7 +49,19 @@ class ProductCreateSerializer(serializers.ModelSerializer):
             'is_active', 'is_featured', 'images',
         ]
 
+    def validate(self, attrs):
+        if not self.instance and not attrs.get('slug'):
+            slug = slugify(attrs.get('title', ''))[:250]
+            if not slug:
+                raise serializers.ValidationError({'title': 'Use a title containing letters or numbers for the product URL.'})
+            attrs['slug'] = slug
+        if attrs.get('slug'):
+            attrs['slug'] = self.validate_slug(attrs['slug'])
+        return attrs
+
     def validate_slug(self, value):
+        if not value:
+            return value
         qs = Product.objects.filter(slug=value)
         if self.instance:
             qs = qs.exclude(id=self.instance.id)

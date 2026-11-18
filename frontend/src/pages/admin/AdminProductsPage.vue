@@ -20,6 +20,12 @@ const totalCount = ref(0)
 const nextPage = ref(false)
 const listError = ref('')
 const importing = ref(false)
+const categoryLoading = ref(false)
+const categoryLoadError = ref('')
+const addingCategory = ref(false)
+const categoryName = ref('')
+const categoryError = ref('')
+const savingCategory = ref(false)
 const importResult = ref<{ created: string[]; skipped: string[] } | null>(null)
 
 const form = ref<ProductCreateData>({
@@ -73,10 +79,38 @@ async function loadProducts() {
 }
 
 async function loadCategories() {
+  categoryLoading.value = true
+  categoryLoadError.value = ''
   try {
     categories.value = await productService.getCategories()
   } catch {
-    categories.value = []
+    categoryLoadError.value = 'Could not load categories. Check your connection and try again.'
+  } finally {
+    categoryLoading.value = false
+  }
+}
+
+async function createCategory() {
+  if (savingCategory.value) return
+  const name = categoryName.value.trim()
+  if (!name) {
+    categoryError.value = 'Enter a category name.'
+    return
+  }
+  savingCategory.value = true
+  categoryError.value = ''
+  try {
+    const category = await productService.createCategory(name)
+    categories.value = [...categories.value.filter(c => c.id !== category.id), category]
+    form.value.category = category.id
+    categoryName.value = ''
+    addingCategory.value = false
+    categoryLoadError.value = ''
+  } catch (error: any) {
+    const data = error.response?.data
+    categoryError.value = data?.name?.[0] || data?.slug?.[0] || data?.detail || 'Could not create the category. Please try again.'
+  } finally {
+    savingCategory.value = false
   }
 }
 
@@ -94,6 +128,9 @@ function openCreateModal() {
   }
   stockStr.value = '0'
   formError.value = ''
+  addingCategory.value = false
+  categoryName.value = ''
+  categoryError.value = ''
   imageFiles.value = []
   imagePreviews.value = []
   currentImages.value = []
@@ -114,6 +151,9 @@ function openEditModal(product: Product) {
   }
   stockStr.value = String(product.stock)
   formError.value = ''
+  addingCategory.value = false
+  categoryName.value = ''
+  categoryError.value = ''
   imageFiles.value = []
   imagePreviews.value = []
   currentImages.value = [...product.images]
@@ -286,11 +326,28 @@ onMounted(async () => {
         <div class="space-y-4">
           <BaseInput v-model="form.title" label="Title" required />
           <BaseInput v-model="form.slug" label="Slug" placeholder="leave blank to auto-generate" />
-          <BaseSelect
-            v-model="form.category"
-            label="Category"
-            :options="categories.map(c => ({ value: c.id, label: c.name }))"
-          />
+          <div class="space-y-2">
+            <BaseSelect
+              v-model="form.category"
+              label="Category"
+              required
+              :disabled="categoryLoading || categories.length === 0"
+              :options="categories.map(c => ({ value: c.id, label: c.name }))"
+            />
+            <p v-if="categoryLoading" class="text-sm text-gray-600">Loading categories…</p>
+            <p v-else-if="categoryLoadError" role="alert" class="text-sm text-red-700">
+              {{ categoryLoadError }} <button type="button" class="underline" @click="loadCategories">Retry</button>
+            </p>
+            <p v-else-if="categories.length === 0" class="text-sm text-gray-600">No categories yet. Add one below.</p>
+            <button v-if="!addingCategory" type="button" class="text-sm font-medium underline" @click="addingCategory = true">Add a category</button>
+            <div v-else class="space-y-2 rounded-xl border border-primary/40 p-3">
+              <BaseInput v-model="categoryName" label="New category name" maxlength="100" :error="categoryError" />
+              <div class="flex flex-wrap gap-2">
+                <BaseButton size="sm" :loading="savingCategory" @click="createCategory">Create category</BaseButton>
+                <BaseButton size="sm" variant="ghost" :disabled="savingCategory" @click="addingCategory = false; categoryError = ''">Cancel</BaseButton>
+              </div>
+            </div>
+          </div>
           <div class="grid grid-cols-2 gap-4">
             <BaseInput v-model="form.price" label="Price (ZMW)" type="number" required />
             <BaseInput v-model="stockStr" label="Stock" type="number" />
