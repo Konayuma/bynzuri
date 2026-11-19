@@ -22,6 +22,7 @@ def test_upstream_denial_remains_a_provider_denial():
     with patch('apps.payments.lenco.requests.request', return_value=response):
         result = lenco_service.get_collection_status('ref')
     assert result['rejected'] is True
+    assert result['access_denied'] is True
 
 
 @override_settings(LENCO_API_KEY='provider-key', LENCO_RELAY_URL='http://relay.example', LENCO_RELAY_SECRET='relay-secret')

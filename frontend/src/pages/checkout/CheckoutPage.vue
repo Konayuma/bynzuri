@@ -10,7 +10,7 @@ import BaseButton from '@/components/base/BaseButton.vue'
 import BaseInput from '@/components/base/BaseInput.vue'
 import BaseSelect from '@/components/base/BaseSelect.vue'
 import { ChevronLeft, ChevronRight, MapPin, Loader2, CheckCircle2, XCircle, Smartphone } from '@lucide/vue'
-import type { Province, Town, DeliveryMethod, Address } from '@/types'
+import type { Province, Town, DeliveryMethod, Address, Order } from '@/types'
 import { isEmail, isZambianPhone, normalizeZambianPhone } from '@/utils/formValidation'
 
 const router = useRouter()
@@ -25,6 +25,9 @@ const paymentStatus = ref<'idle' | 'processing' | 'success' | 'failed' | 'unknow
 const paymentMessage = ref('')
 const pendingKey = 'bynzuri_checkout_attempt'
 const createdOrderId = ref<string | null>(null)
+const createdOrder = ref<Order | null>(null)
+const checkoutCartLoading = ref(true)
+const orderLoadError = ref('')
 let checkoutKey = ''
 let paymentRun = 0
 try {
@@ -81,11 +84,9 @@ const selectedDeliveryMethod = computed(() =>
   deliveryMethods.value.find(m => m.id === form.value.delivery_method)
 )
 
-const grandTotal = computed(() => {
-  const subtotal = parseFloat(cartStore.subtotal) || 0
-  const delivery = parseFloat(selectedDeliveryMethod.value?.price || '0')
-  return (subtotal + delivery).toFixed(2)
-})
+const checkoutSubtotal = computed(() => createdOrder.value?.total_amount ?? cartStore.subtotal)
+const checkoutDelivery = computed(() => createdOrder.value?.delivery_fee ?? selectedDeliveryMethod.value?.price ?? '0.00')
+const grandTotal = computed(() => createdOrder.value?.grand_total ?? ((Number(cartStore.subtotal) || 0) + (Number(selectedDeliveryMethod.value?.price) || 0)).toFixed(2))
 
 const isMobileMoney = computed(() =>
   ['mtn_momo', 'airtel_money'].includes(form.value.payment_method)
@@ -169,6 +170,10 @@ function useCustomAddress() {
 }
 
 async function handleSubmit() {
+  if (createdOrderId.value) { viewOrder(); return }
+  if (checkoutCartLoading.value || cartStore.loading) { error.value = 'Your cart is still loading. Please wait.'; return }
+  if (cartStore.error) { error.value = 'Your cart could not be loaded. Please retry before placing your order.'; return }
+  if (!cartStore.items.length) { error.value = 'Your cart is empty. Add a product before placing an order.'; return }
   if (!validateStep(4)) return
   if (!form.value.payment_method) {
     error.value = 'Please select a payment method to continue'
@@ -197,6 +202,7 @@ async function handleSubmit() {
     })
 
     createdOrderId.value = order.id
+    createdOrder.value = order as Order
     saveCheckoutAttempt(order.id)
     if (isMobileMoney.value) {
       const run = ++paymentRun
@@ -213,7 +219,9 @@ async function handleSubmit() {
         if (run !== paymentRun) return
         if (payment.status === 'failed') {
           paymentStatus.value = 'failed'
-          paymentMessage.value = 'Payment initiation failed. Please try again.'
+          paymentMessage.value = payment.failure_reason === 'provider_access_denied'
+            ? 'The payment provider could not authorize this request. No payment prompt was sent. Please contact the store; your order remains unpaid.'
+            : 'The payment request was declined. Check the order status before trying again.'
           return
         }
 
@@ -277,6 +285,13 @@ async function loadDeliveryMethods() {
 
 onMounted(async () => {
   await Promise.all([
+    (async () => {
+      try {
+        if (createdOrderId.value) createdOrder.value = await orderService.getOrder(createdOrderId.value)
+        else await cartStore.fetchCart()
+      } catch { orderLoadError.value = 'Could not load the order total. Open order status and try again.' }
+      finally { checkoutCartLoading.value = false }
+    })(),
     orderService.getProvinces().then(data => { provinces.value = data }).catch(() => { error.value = 'Could not load provinces. Please refresh and try again.' }),
     loadDeliveryMethods(),
   ])
@@ -340,6 +355,14 @@ onMounted(async () => {
     <div v-if="createdOrderId && paymentStatus === 'idle'" class="mb-5 rounded-xl border border-primary/40 p-4 text-sm" role="status">
       You have an order awaiting payment. Check its status before starting another payment.
       <button type="button" class="block mt-2 underline" @click="viewOrder">View order status</button>
+    </div>
+    <div v-if="checkoutCartLoading" role="status" class="mb-4 text-sm text-muted">Loading your order summary…</div>
+    <div v-else-if="orderLoadError" role="alert" class="mb-4 text-sm text-red-700">{{ orderLoadError }}</div>
+    <div v-else-if="!createdOrderId && cartStore.error" role="alert" class="mb-4 text-sm text-red-700">
+      {{ cartStore.error }} <button type="button" class="underline" @click="cartStore.fetchCart()">Try again</button>
+    </div>
+    <div v-else-if="!createdOrderId && cartStore.items.length === 0" role="alert" class="mb-4 text-sm text-red-700">
+      Your cart is empty. <router-link class="underline" to="/catalog">Add a product</router-link> before placing an order.
     </div>
     <!-- Progress -->
     <div class="mb-8">
@@ -573,11 +596,11 @@ onMounted(async () => {
         <div class="bg-white p-4 rounded-[16px] mt-6 space-y-2">
           <div class="flex justify-between text-sm">
             <span class="text-muted">Subtotal</span>
-            <span class="font-medium">K{{ cartStore.subtotal }}</span>
+            <span class="font-medium">K{{ checkoutSubtotal }}</span>
           </div>
           <div class="flex justify-between text-sm">
             <span class="text-muted">Delivery</span>
-            <span class="font-medium">K{{ selectedDeliveryMethod?.price || '0.00' }}</span>
+            <span class="font-medium">K{{ checkoutDelivery }}</span>
           </div>
           <div class="flex justify-between text-sm font-semibold pt-2 border-t border-primary/20">
             <span class="text-dark">Total</span>
@@ -604,9 +627,10 @@ onMounted(async () => {
           :type="currentStep === totalSteps ? 'submit' : 'button'"
           variant="secondary"
           :loading="loading"
+          :disabled="checkoutCartLoading || (currentStep === totalSteps && !createdOrderId && (!!cartStore.error || cartStore.loading || cartStore.items.length === 0))"
           @click="currentStep < totalSteps ? nextStep() : undefined"
         >
-          {{ currentStep === totalSteps ? 'Place Order & Pay' : 'Continue' }}
+          {{ currentStep === totalSteps ? (createdOrderId ? 'View order status' : 'Place Order & Pay') : 'Continue' }}
           <ChevronRight class="w-4 h-4 ml-1" />
         </BaseButton>
       </div>

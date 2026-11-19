@@ -39,10 +39,14 @@ class LencoService:
                     error_code = str(response.json().get('errorCode', ''))
                 except (ValueError, AttributeError):
                     error_code = ''
+                # Never log arbitrary provider text, which may contain sensitive data.
+                if error_code not in ('01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12', '13'):
+                    error_code = ''
                 # Authentication failures and documented validation errors cannot start a collection.
                 rejected = response.status_code in (401, 403) or error_code in ('01', '12')
                 logger.warning('Lenco request returned HTTP %s (code %s)', response.status_code, error_code or 'unknown')
-                return {'status': False, 'rejected': rejected, 'uncertain': not rejected}
+                return {'status': False, 'rejected': rejected, 'uncertain': not rejected,
+                        'access_denied': response.status_code in (401, 403)}
             result = response.json()
             return result if isinstance(result, dict) else {'status': False, 'uncertain': True}
         except (requests.RequestException, ValueError):

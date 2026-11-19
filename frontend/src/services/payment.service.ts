@@ -8,6 +8,7 @@ export interface Payment {
   amount: string
   currency: string
   status: string
+  failure_reason?: 'provider_access_denied'
   transaction_reference: string
   lenco_reference: string
   phone: string

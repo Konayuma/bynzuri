@@ -67,6 +67,8 @@ class PaymentInitiateView(views.APIView):
             order = get_object_or_404(Order.objects.select_for_update(), id=serializer.validated_data['order_id'], user=request.user)
             if order.status != 'awaiting_payment':
                 return Response({'detail': 'Order is not awaiting payment.'}, status=400)
+            if order.grand_total <= 0:
+                return Response({'detail': 'The order total must be greater than zero for mobile money. Please contact the store.'}, status=400)
             existing = order.payments.filter(status__in=['pending', 'processing', 'success']).order_by('-created_at').first()
             if existing:
                 return Response(PaymentSerializer(existing).data)
@@ -91,7 +93,10 @@ class PaymentInitiateView(views.APIView):
                     locked.save(update_fields=['status', 'updated_at'])
         # Transport errors are uncertain: never create another charge until reconciled.
         payment.refresh_from_db()
-        return Response(PaymentSerializer(payment).data, status=status.HTTP_201_CREATED)
+        response = dict(PaymentSerializer(payment).data)
+        if payment.status == 'failed' and result.get('access_denied'):
+            response['failure_reason'] = 'provider_access_denied'
+        return Response(response, status=status.HTTP_201_CREATED)
 
 
 class PaymentStatusView(views.APIView):

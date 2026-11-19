@@ -65,6 +65,43 @@ class TestPaymentAPI:
         assert response.data['status'] == 'pending'
 
     @override_settings(LENCO_API_KEY='test-token')
+    def test_provider_access_denial_is_reported_without_secret(self, user, order):
+        self.client.force_authenticate(user=user)
+        with patch('apps.payments.views.lenco_service.initiate_collection', return_value={
+            'status': False, 'rejected': True, 'access_denied': True
+        }):
+            response = self.client.post('/api/payments/initiate/', {
+                'order_id': str(order.id), 'method': 'mtn_momo', 'phone': '0971111111'
+            }, format='json')
+        assert response.status_code == 201
+        assert response.data['status'] == 'failed'
+        assert response.data['failure_reason'] == 'provider_access_denied'
+        assert 'test-token' not in str(response.data)
+
+    @override_settings(LENCO_API_KEY='test-token')
+    def test_provider_receives_server_calculated_total(self, user, order):
+        self.client.force_authenticate(user=user)
+        with patch('apps.payments.views.lenco_service.initiate_collection', return_value={'status': False, 'uncertain': True}) as initiate:
+            response = self.client.post('/api/payments/initiate/', {
+                'order_id': str(order.id), 'method': 'mtn_momo', 'phone': '0971111111', 'amount': '1.00'
+            }, format='json')
+        assert response.status_code == 201
+        assert initiate.call_args.kwargs['amount'] == order.grand_total
+        assert initiate.call_args.kwargs['amount'] == Decimal('235.00')
+
+    @override_settings(LENCO_API_KEY='test-token')
+    def test_zero_total_does_not_request_mobile_payment(self, user, order):
+        order.grand_total = Decimal('0.00')
+        order.save()
+        self.client.force_authenticate(user=user)
+        with patch('apps.payments.views.lenco_service.initiate_collection') as initiate:
+            response = self.client.post('/api/payments/initiate/', {
+                'order_id': str(order.id), 'method': 'mtn_momo', 'phone': '0971111111'
+            }, format='json')
+        assert response.status_code == 400
+        initiate.assert_not_called()
+
+    @override_settings(LENCO_API_KEY='test-token')
     def test_initiate_payment_for_processed_order(self, user, order):
         order.status = 'paid'
         order.save()
