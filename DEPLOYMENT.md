@@ -54,6 +54,14 @@ Set the API URL for every Pages environment you actually deploy; preview deploym
 - Visit the Render `/api/health/` URL and Django `/admin/`; verify the admin's static assets load.
 - Open a Pages deep link such as `/product/growth-elixir` directly and on refresh. Check the browser network panel for HTTPS API requests and CORS errors.
 - Verify public catalog/search, admin login and roles, saved addresses, stock, checkout, and payment callbacks with test credentials before enabling live payments. Configure Lenco separately (`LENCO_API_KEY` and provider webhook settings); never put provider secrets in Pages.
+
+### Optional Lenco relay on Neon
+
+The `functions/lenco-relay.mjs` function can route mobile-money initiation and status requests through Neon. It accepts only those two Lenco paths and requires a high-entropy `LENCO_RELAY_SECRET`. The existing Django backend remains responsible for authentication, order totals, payment state and webhook verification. It sends the Lenco API token to the relay over HTTPS; the relay does not store it.
+
+Deploy the function to the intended Neon project and branch with `neon functions deploy lencorelay --src functions/lenco-relay.mjs`. Configure `LENCO_RELAY_SECRET` on the function through an appropriately protected deployment workflow. Set the same secret and the function's invocation URL (without a path) as `LENCO_RELAY_SECRET` and `LENCO_RELAY_URL` on the Render backend, then deploy the backend. Keep `LENCO_API_KEY` configured on Render. Never place either secret in source control or the browser. Remove `LENCO_RELAY_URL` and redeploy to restore direct Lenco requests. A relay failure is treated as an uncertain payment, so check its status before retrying.
+
+Verify the Neon project region supports Functions, test an unauthorized function request, and then test a real collection only after deployment. A working relay does not guarantee that Lenco will accept the payment.
 - Upload a test product image, check its public R2 URL, and confirm it survives an API redeploy. Remove only your own disposable test data afterwards.
 
 ## Known launch work

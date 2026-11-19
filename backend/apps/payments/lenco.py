@@ -1,6 +1,7 @@
 import hashlib
 import hmac
 import logging
+from urllib.parse import urlparse
 
 import requests
 from django.conf import settings
@@ -16,12 +17,21 @@ class LencoService:
     def _request(self, method, path, **kwargs):
         if not self.configured:
             return {'status': False, 'configuration_error': True}
+        relay = settings.LENCO_RELAY_URL.rstrip('/')
+        if relay and (urlparse(relay).scheme != 'https' or not settings.LENCO_RELAY_SECRET):
+            logger.error('Lenco relay configuration is incomplete or not HTTPS')
+            return {'status': False, 'uncertain': True}
         try:
+            headers = {'Authorization': f'Bearer {settings.LENCO_API_KEY}', 'Content-Type': 'application/json'}
+            if relay:
+                headers['X-Relay-Secret'] = settings.LENCO_RELAY_SECRET
             response = requests.request(
-                method, f'{settings.LENCO_API_BASE_URL.rstrip("/")}{path}',
-                headers={'Authorization': f'Bearer {settings.LENCO_API_KEY}', 'Content-Type': 'application/json'},
-                timeout=15, **kwargs,
+                method, f'{relay or settings.LENCO_API_BASE_URL.rstrip("/")}{path}',
+                headers=headers, timeout=30, allow_redirects=False, **kwargs,
             )
+            if relay and response.headers.get('X-Lenco-Relay') != 'upstream':
+                logger.warning('Lenco relay did not return an upstream response')
+                return {'status': False, 'uncertain': True}
             if response.status_code >= 500:
                 return {'status': False, 'uncertain': True}
             if not response.ok:
