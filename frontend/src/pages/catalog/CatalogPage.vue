@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useProductStore } from '@/stores/product'
 import ProductCard from '@/components/product/ProductCard.vue'
 import BaseButton from '@/components/base/BaseButton.vue'
+import BaseSelect from '@/components/base/BaseSelect.vue'
 import { SlidersHorizontal, ChevronLeft, ChevronRight, X } from '@lucide/vue'
 
 const route = useRoute()
@@ -110,9 +111,15 @@ watch(() => route.query, () => { syncRoute(); fetchProducts() }, { immediate: tr
           <SlidersHorizontal class="h-4 w-4" /> Filters <span v-if="filterCount" class="grid h-5 min-w-5 place-items-center rounded-full bg-dark px-1 text-xs text-white">{{ filterCount }}</span>
         </button>
         <div class="flex flex-1 items-center gap-2 sm:flex-none"><label for="catalog-sort" class="whitespace-nowrap text-sm text-muted">Sort by</label>
-          <select id="catalog-sort" :value="sortOrder" class="min-h-11 min-w-0 flex-1 rounded-xl border border-[#b9a8a8] bg-white px-3 text-sm text-dark focus-visible:outline-2 focus-visible:outline-gold sm:w-44" @change="updateQuery({ ordering: ($event.target as HTMLSelectElement).value === '-created_at' ? undefined : ($event.target as HTMLSelectElement).value })">
-            <option v-for="option in sortOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
-          </select>
+          <BaseSelect
+            id="catalog-sort"
+            :model-value="sortOrder"
+            :options="sortOptions"
+            size="md"
+            aria-label="Sort by"
+            class="min-w-0 flex-1 sm:w-48 sm:flex-none"
+            @update:model-value="(val) => updateQuery({ ordering: val === '-created_at' ? undefined : val })"
+          />
         </div>
       </div>
     </div>

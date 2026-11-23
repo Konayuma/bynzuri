@@ -1,5 +1,6 @@
 import axios from 'axios'
 import type { AxiosInstance, InternalAxiosRequestConfig } from 'axios'
+import { sessionExpired, sessionUnavailable } from './session'
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api').replace(/\/+$/, '')
 const REQUEST_TIMEOUT = 30000
@@ -44,7 +45,19 @@ api.interceptors.response.use(
   response => response,
   async error => {
     const originalRequest = error.config
-    if (error.response?.status !== 401 || !originalRequest || originalRequest._retry) return Promise.reject(error)
+    if (!error.response && originalRequest?.headers?.Authorization) sessionUnavailable()
+    if (error.response?.status !== 401 || !originalRequest) return Promise.reject(error)
+    if (originalRequest._retry) {
+      const token = localStorage.getItem('access_token')
+      if (token && originalRequest.headers?.Authorization === `Bearer ${token}`) {
+        localStorage.removeItem('access_token')
+        localStorage.removeItem('refresh_token')
+        sessionExpired()
+      }
+      return Promise.reject(error)
+    }
+    const hadCredentials = !!localStorage.getItem('access_token') || !!localStorage.getItem('refresh_token')
+    if (!hadCredentials) return Promise.reject(error)
     originalRequest._retry = true
     const oldRefresh = localStorage.getItem('refresh_token')
     try {
@@ -56,6 +69,9 @@ api.interceptors.response.use(
       if ((!oldRefresh || (axios.isAxiosError(refreshError) && [400, 401, 403].includes(refreshError.response?.status ?? 0))) && localStorage.getItem('refresh_token') === oldRefresh) {
         localStorage.removeItem('access_token')
         localStorage.removeItem('refresh_token')
+        sessionExpired()
+      } else if (localStorage.getItem('refresh_token') === oldRefresh && (!axios.isAxiosError(refreshError) || !refreshError.response || refreshError.response.status >= 500)) {
+        sessionUnavailable()
       }
       return Promise.reject(refreshError)
     }

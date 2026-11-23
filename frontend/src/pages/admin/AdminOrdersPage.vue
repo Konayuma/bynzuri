@@ -127,18 +127,18 @@ onMounted(loadOrders)
               <td class="px-4 py-3">K{{ order.grand_total }}</td>
               <td class="px-4 py-3 text-gray-500 hidden md:table-cell">{{ new Date(order.created_at).toLocaleDateString() }}</td>
               <td class="px-4 py-3 text-right">
-                <select
+                <BaseSelect
                   v-if="transitionOptions[order.status]?.length"
-                  :value="''"
-                  class="text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:border-gold"
+                  model-value=""
+                  size="sm"
+                  align="right"
+                  :placeholder="updatingId === order.id ? 'Updating...' : 'Change status'"
+                  :aria-label="`Change status for order ${order.id.slice(0, 8)}`"
+                  :options="transitionOptions[order.status]!"
                   :disabled="updatingId === order.id"
-                  @change="(e) => updateStatus(order, (e.target as HTMLSelectElement).value)"
-                >
-                  <option value="" disabled>{{ updatingId === order.id ? 'Updating...' : 'Change status' }}</option>
-                  <option v-for="opt in transitionOptions[order.status]" :key="opt.value" :value="opt.value">
-                    {{ opt.label }}
-                  </option>
-                </select>
+                  class="inline-block w-36 text-left"
+                  @update:model-value="(val) => updateStatus(order, val)"
+                />
                 <span v-else class="text-xs text-gray-400">No actions</span>
               </td>
             </tr>

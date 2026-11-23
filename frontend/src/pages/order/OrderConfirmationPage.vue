@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { orderService } from '@/services/order.service'
 import { CheckCircle } from '@lucide/vue'
 import BaseButton from '@/components/base/BaseButton.vue'
+import BaseSelect from '@/components/base/BaseSelect.vue'
 import type { Order } from '@/types'
 import { paymentService, type Payment } from '@/services/payment.service'
 import { isZambianPhone, normalizeZambianPhone } from '@/utils/formValidation'
@@ -18,6 +19,10 @@ const paymentError = ref('')
 const paymentStatusChecked = ref(false)
 const paymentPhone = ref('')
 const paymentMethod = ref('mtn_momo')
+const paymentMethodOptions = [
+  { value: 'mtn_momo', label: 'MTN Mobile Money' },
+  { value: 'airtel_money', label: 'Airtel Money' },
+]
 
 async function checkPayment() {
   if (!order.value) return
@@ -109,8 +114,12 @@ onMounted(async () => {
         <p v-if="payment && ['pending', 'processing'].includes(payment.status)" class="text-sm text-muted">Your payment is pending. Check your phone for the prompt, then check the status here.</p>
         <template v-else-if="paymentStatusChecked && !paymentLoading">
           <p class="text-sm text-muted">{{ payment?.status === 'failed' ? 'The previous payment failed. You can try again.' : 'Choose a network and enter your mobile money number.' }}</p>
-          <label for="retry-method" class="block text-sm text-dark">Mobile money network</label>
-          <select id="retry-method" v-model="paymentMethod" class="w-full rounded-xl border border-primary/40 p-3"><option value="mtn_momo">MTN Mobile Money</option><option value="airtel_money">Airtel Money</option></select>
+          <BaseSelect
+            id="retry-method"
+            v-model="paymentMethod"
+            label="Mobile money network"
+            :options="paymentMethodOptions"
+          />
           <label for="retry-phone" class="block text-sm text-dark">Mobile money number</label>
           <input id="retry-phone" v-model="paymentPhone" type="tel" autocomplete="tel" class="w-full rounded-xl border border-primary/40 p-3" placeholder="0971234567" />
           <BaseButton :loading="paymentLoading" @click="retryPayment">Request payment</BaseButton>

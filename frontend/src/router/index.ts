@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { adminRoutes } from './admin'
+import axios from 'axios'
 
 let userStore: ReturnType<typeof useUserStore> | null = null
 
@@ -51,6 +52,11 @@ const routes: RouteRecordRaw[] = [
     name: 'order-history',
     component: () => import('@/pages/order/OrderHistoryPage.vue'),
     meta: { requiresAuth: true }
+  },
+  {
+    path: '/session-unavailable',
+    name: 'session-unavailable',
+    component: () => import('@/pages/auth/SessionUnavailablePage.vue')
   },
   {
     path: '/auth/login',
@@ -115,8 +121,10 @@ router.beforeEach(async (to, from, next) => {
     if (!store.user || to.meta.requiresAdmin) {
       try {
         await store.fetchProfile()
-      } catch {
-        return next({ name: 'login', query: { redirect: to.fullPath } })
+      } catch (error) {
+        if (!localStorage.getItem('access_token')) return next({ name: 'login', query: { redirect: to.fullPath, reason: 'expired' } })
+        if (axios.isAxiosError(error) && error.response?.status === 403) return next({ name: 'access-denied' })
+        return next({ name: 'session-unavailable', query: { redirect: to.fullPath } })
       }
     }
     if (!store.user) {

@@ -14,10 +14,20 @@ vi.mock('@/services/order.service', () => ({ orderService: {
 
 describe('checkout validation', () => {
   beforeEach(() => setActivePinia(createPinia()))
+
+  async function selectDropdownOption(wrapper: ReturnType<typeof mount>, triggerId: string, label: string) {
+    await wrapper.get(triggerId).trigger('click')
+    const option = Array.from(document.body.querySelectorAll<HTMLButtonElement>('[role="option"]'))
+      .find(el => el.textContent?.trim() === label)
+    expect(option).toBeTruthy()
+    option!.click()
+    await flushPromises()
+  }
+
   it('does not advance without valid details and delivery selections', async () => {
     vi.spyOn(useCartStore(), 'fetchCart').mockResolvedValue()
     const router = createRouter({ history: createMemoryHistory(), routes: [{ path: '/', component: CheckoutPage }] })
-    const wrapper = mount(CheckoutPage, { global: { plugins: [router] } })
+    const wrapper = mount(CheckoutPage, { attachTo: document.body, global: { plugins: [router] } })
     await flushPromises()
     const continueButton = () => wrapper.findAll('button').find(button => button.text().includes('Continue'))!
     await continueButton().trigger('click')
@@ -31,9 +41,8 @@ describe('checkout validation', () => {
     expect(wrapper.text()).toContain('Step 2 of 4')
     await continueButton().trigger('click')
     expect(wrapper.text()).toContain('Select a province.')
-    await wrapper.get('#province').setValue('p1')
-    await flushPromises()
-    await wrapper.get('#town').setValue('t1')
+    await selectDropdownOption(wrapper, '#province', 'Lusaka')
+    await selectDropdownOption(wrapper, '#town', 'Lusaka')
     await wrapper.get('#street_address').setValue('123 Main Street')
     await continueButton().trigger('click')
     expect(wrapper.text()).toContain('Step 3 of 4')
@@ -43,13 +52,14 @@ describe('checkout validation', () => {
     await continueButton().trigger('click')
     expect(wrapper.text()).toContain('Delivery details')
     expect(wrapper.text()).toContain('123 Main Street')
+    wrapper.unmount()
   })
   it('shows the actual cart subtotal and selected delivery price in the total', async () => {
     const cart = useCartStore()
     cart.cart = { id: 'cart', items: [{ id: 'line', quantity: 1, total_price: '100.00', product: { id: 'p', title: 'Oil', slug: 'oil', category: 'c', category_name: 'Care', description: '', price: '100.00', stock: 2, is_in_stock: true, images: [], rating: 0, review_count: 0, created_at: '' } }], subtotal: '100.00', total: '100.00', item_count: 1 }
     vi.spyOn(cart, 'fetchCart').mockResolvedValue()
     const router = createRouter({ history: createMemoryHistory(), routes: [{ path: '/', component: CheckoutPage }] })
-    const wrapper = mount(CheckoutPage, { global: { plugins: [router] } })
+    const wrapper = mount(CheckoutPage, { attachTo: document.body, global: { plugins: [router] } })
     await flushPromises()
     const next = () => wrapper.findAll('button').find(button => button.text().includes('Continue'))!
     await wrapper.get('#first_name').setValue('Ada')
@@ -57,9 +67,8 @@ describe('checkout validation', () => {
     await wrapper.get('#email').setValue('ada@example.com')
     await wrapper.get('#phone').setValue('0971234567')
     await next().trigger('click')
-    await wrapper.get('#province').setValue('p1')
-    await flushPromises()
-    await wrapper.get('#town').setValue('t1')
+    await selectDropdownOption(wrapper, '#province', 'Lusaka')
+    await selectDropdownOption(wrapper, '#town', 'Lusaka')
     await wrapper.get('#street_address').setValue('123 Main Street')
     await next().trigger('click')
     await wrapper.get('input[name=delivery_method]').setValue()
@@ -67,6 +76,7 @@ describe('checkout validation', () => {
     expect(wrapper.text()).toContain('K100.00')
     expect(wrapper.text()).toContain('K110.00')
     expect(wrapper.text()).not.toContain('Your cart is empty')
+    wrapper.unmount()
   })
 
 })

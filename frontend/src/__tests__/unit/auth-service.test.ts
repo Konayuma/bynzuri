@@ -3,7 +3,7 @@ import { authService } from '@/services/auth.service'
 import api, { publicApi } from '@/services/api'
 
 vi.mock('@/services/api', () => ({
-  publicApi: { post: vi.fn() },
+  publicApi: { post: vi.fn(), get: vi.fn() },
   default: {
     post: vi.fn(),
     get: vi.fn(),
@@ -24,7 +24,7 @@ describe('authService', () => {
   })
 
   it('calls register endpoint', async () => {
-    vi.mocked(api.post).mockResolvedValue({ data: { id: '1', email: 'test@example.com' } })
+    vi.mocked(publicApi.post).mockResolvedValue({ data: { id: '1', email: 'test@example.com' } })
     await authService.register({
       email: 'test@example.com',
       password: 'password123',
@@ -32,7 +32,7 @@ describe('authService', () => {
       last_name: 'User',
       phone: '260123456789',
     })
-    expect(api.post).toHaveBeenCalledWith('/auth/register/', {
+    expect(publicApi.post).toHaveBeenCalledWith('/auth/register/', {
       email: 'test@example.com',
       password: 'password123',
       first_name: 'Test',
@@ -42,18 +42,18 @@ describe('authService', () => {
   })
 
   it('calls forgot password endpoint', async () => {
-    vi.mocked(api.post).mockResolvedValue({ data: {} })
+    vi.mocked(publicApi.post).mockResolvedValue({ data: {} })
     await authService.forgotPassword('test@example.com', 'https://bynzuri.com')
-    expect(api.post).toHaveBeenCalledWith('/auth/forgot-password/', {
+    expect(publicApi.post).toHaveBeenCalledWith('/auth/forgot-password/', {
       email: 'test@example.com',
       redirect_url: 'https://bynzuri.com',
     })
   })
 
   it('calls reset password endpoint', async () => {
-    vi.mocked(api.post).mockResolvedValue({ data: {} })
+    vi.mocked(publicApi.post).mockResolvedValue({ data: {} })
     await authService.resetPassword('uid123', 'token123', 'newpassword')
-    expect(api.post).toHaveBeenCalledWith('/auth/reset-password/', {
+    expect(publicApi.post).toHaveBeenCalledWith('/auth/reset-password/', {
       uid: 'uid123',
       token: 'token123',
       new_password: 'newpassword',
@@ -61,15 +61,15 @@ describe('authService', () => {
   })
 
   it('calls verify email endpoint', async () => {
-    vi.mocked(api.get).mockResolvedValue({ data: {} })
+    vi.mocked(publicApi.get).mockResolvedValue({ data: {} })
     await authService.verifyEmail('token123')
-    expect(api.get).toHaveBeenCalledWith('/auth/verify-email/', { params: { token: 'token123' } })
+    expect(publicApi.get).toHaveBeenCalledWith('/auth/verify-email/', { params: { token: 'token123' } })
   })
 
   it('calls resend verification email endpoint', async () => {
-    vi.mocked(api.post).mockResolvedValue({ data: {} })
+    vi.mocked(publicApi.post).mockResolvedValue({ data: {} })
     await authService.resendVerificationEmail('test@example.com')
-    expect(api.post).toHaveBeenCalledWith('/auth/resend-verification/', { email: 'test@example.com' })
+    expect(publicApi.post).toHaveBeenCalledWith('/auth/resend-verification/', { email: 'test@example.com' })
   })
 
   it('calls get profile endpoint', async () => {

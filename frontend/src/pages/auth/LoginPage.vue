@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import axios from 'axios'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { useCartStore } from '@/stores/cart'
@@ -26,8 +27,14 @@ async function handleLogin() {
 
   try {
     await userStore.login(email.value, password.value)
-  } catch {
-    error.value = 'Email or password is incorrect. Please try again.'
+  } catch (cause) {
+    if (localStorage.getItem('access_token')) {
+      error.value = 'Signed in, but we could not load your account. Check your connection and try again.'
+    } else if (axios.isAxiosError(cause) && [400, 401].includes(cause.response?.status ?? 0)) {
+      error.value = 'Email or password is incorrect. Please try again.'
+    } else {
+      error.value = 'We could not sign you in right now. Check your connection and try again.'
+    }
     loading.value = false
     return
   }
@@ -35,13 +42,14 @@ async function handleLogin() {
   try {
     await cartStore.mergeGuestCart()
     await cartStore.fetchCart()
-    const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : ''
-    router.push(redirect.startsWith('/') && !redirect.startsWith('//') ? redirect : '/')
   } catch {
-    error.value = 'Signed in, but your cart could not be restored. Please try again.'
+    // Signing in succeeds even when cart synchronization is temporarily unavailable.
+    cartStore.error = 'Signed in, but your cart could not be restored. Please try again.'
   } finally {
     loading.value = false
   }
+  const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : ''
+  await router.push(redirect.startsWith('/') && !redirect.startsWith('//') ? redirect : '/')
 }
 </script>
 
@@ -50,7 +58,7 @@ async function handleLogin() {
     <div class="w-full max-w-sm">
       <div class="text-center mb-8">
         <h1 class="font-heading text-2xl font-semibold text-dark">Welcome Back</h1>
-        <p class="text-sm text-muted mt-1">{{ route.query.redirect === '/checkout' ? 'Sign in to continue to checkout. Your cart will be kept.' : 'Sign in to track orders, save addresses, and check out faster' }}</p>
+        <p class="text-sm text-muted mt-1">{{ route.query.reason === 'expired' ? 'Your session expired. Sign in again to continue.' : route.query.redirect === '/checkout' ? 'Sign in to continue to checkout. Your cart will be kept.' : 'Sign in to track orders, save addresses, and check out faster' }}</p>
       </div>
 
       <form @submit.prevent="handleLogin" class="space-y-4">

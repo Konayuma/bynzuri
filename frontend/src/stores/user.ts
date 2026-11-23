@@ -2,6 +2,8 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { User } from '@/types'
 import { authService } from '@/services/auth.service'
+import { sessionExpired, sessionRestored, sessionUnavailable } from '@/services/session'
+import axios from 'axios'
 
 export const useUserStore = defineStore('user', () => {
   const user = ref<User | null>(null)
@@ -17,8 +19,11 @@ export const useUserStore = defineStore('user', () => {
     loading.value = true
     try {
       user.value = await authService.getProfile()
-    } catch {
-      user.value = null
+      sessionRestored()
+    } catch (error) {
+      if (!localStorage.getItem('access_token')) user.value = null
+      else if (!axios.isAxiosError(error) || !error.response || error.response.status >= 500) sessionUnavailable()
+      throw error
     } finally {
       loading.value = false
     }
@@ -54,6 +59,17 @@ export const useUserStore = defineStore('user', () => {
     user.value = null
     localStorage.removeItem('access_token')
     localStorage.removeItem('refresh_token')
+    sessionRestored()
+  }
+
+  if (typeof window !== 'undefined') {
+    window.addEventListener('bynzuri:session-expired', () => { user.value = null })
+    window.addEventListener('storage', event => {
+      if (event.key === 'refresh_token' && event.oldValue && !event.newValue) {
+        user.value = null
+        if (!localStorage.getItem('access_token')) sessionExpired()
+      }
+    })
   }
 
   return {
