@@ -4,6 +4,10 @@ import BaseButton from '@/components/base/BaseButton.vue'
 import { useCartStore } from '@/stores/cart'
 import { Minus, Plus, Trash2 } from '@lucide/vue'
 import { useRouter } from 'vue-router'
+import { reactive } from 'vue'
+import { productService } from '@/services/product.service'
+import { signatureImage } from '@/utils/productImage'
+import type { CartItem } from '@/types'
 
 const props = defineProps<{
   open: boolean
@@ -15,6 +19,29 @@ const emit = defineEmits<{
 
 const cartStore = useCartStore()
 const router = useRouter()
+const imageOverrides = reactive<Record<string, string>>({})
+const imageRetries = new Set<string>()
+
+function cartImage(item: CartItem) {
+  return imageOverrides[item.id] ?? item.product.images?.[0]?.image ?? signatureImage(item.product.slug) ?? ''
+}
+
+async function recoverImage(item: CartItem) {
+  const failed = cartImage(item)
+  if (!imageRetries.has(item.id)) {
+    imageRetries.add(item.id)
+    try {
+      const product = await productService.getProduct(item.product.slug)
+      const current = product.images?.[0]?.image
+      if (current && current !== failed) {
+        imageOverrides[item.id] = current
+        return
+      }
+    } catch { /* Keep the cart usable if product details are unavailable. */ }
+  }
+  const fallback = signatureImage(item.product.slug)
+  imageOverrides[item.id] = fallback && fallback !== failed ? fallback : ''
+}
 
 function handleCheckout() {
   emit('close')
@@ -63,10 +90,11 @@ async function removeItem(itemId: string) {
         >
           <div class="w-20 h-24 rounded-[14px] bg-primary/30 shrink-0 overflow-hidden">
             <img
-              v-if="item.product.images?.[0]?.image"
-              :src="item.product.images[0].image"
+              v-if="cartImage(item)"
+              :src="cartImage(item)"
               :alt="item.product.title"
               class="w-full h-full object-cover"
+              @error="recoverImage(item)"
             />
           </div>
           <div class="flex-1 min-w-0">
