@@ -75,3 +75,15 @@ Verify the Neon project region supports Functions, test an unauthorized function
 The browser keeps access tokens in memory and the API keeps rotating refresh tokens in an HttpOnly cookie. Deploy the frontend and backend together. Existing localStorage sessions are discarded, so customers must sign in again. Set `CORS_ALLOWED_ORIGINS` and `CSRF_TRUSTED_ORIGINS` to the exact HTTPS storefront origins, and serve the API over HTTPS. Production CSRF and refresh cookies use Secure and SameSite=None for the cross-site storefront/API deployment. Browsers that block third-party cookies may prevent sign-in persistence or refresh; a same-site custom API domain is recommended and must be tested on the target browsers. Do not expose the refresh cookie to JavaScript.
 
 Unpaid orders older than 24 hours are eligible for automatic cancellation and stock restoration only if there is no pending, processing, or successful payment. Orders with uncertain payments remain reserved for reconciliation. The hourly Celery beat schedule is configured in Django, but it only runs when an actual Celery worker, Celery beat, and broker are running. Provision and monitor those services in production, or schedule `python manage.py expire_unpaid_orders` hourly using a scheduler connected to the same database. This repository does not provision a production scheduler. Use `--hours` to choose an expiry of at least one hour for a manual invocation. A paid order cannot be cancelled through the status endpoint until a refund workflow is implemented.
+
+### PostgreSQL locking checks
+
+Run the checkout and payment concurrency checks against a **disposable local PostgreSQL database**, never production. The configured user must be able to create and drop Django's separate test database. For example, with a local test-only server on port 55439:
+
+```bash
+cd backend
+env -u DATABASE_URL USE_SQLITE=false DB_HOST=127.0.0.1 DB_PORT=55439 DB_NAME=bynzuri_test DB_USER=bynzuri_test DB_PASSWORD='your-local-test-password' \
+  ../.venv/bin/python -m pytest apps/orders/tests/test_postgres_concurrency.py -q
+```
+
+These tests intentionally skip on SQLite. They exercise competing purchases for the last item, concurrent initiation of one payment, and conflicting provider updates using separate PostgreSQL connections. They do not contact Lenco or verify production configuration.
