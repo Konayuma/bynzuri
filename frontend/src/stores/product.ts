@@ -7,6 +7,8 @@ import { reviewService } from '@/services/review.service'
 export const useProductStore = defineStore('product', () => {
   const products = ref<Product[]>([])
   const categories = ref<Category[]>([])
+  const categoriesLoading = ref(false)
+  const categoriesError = ref(false)
   const bestSellers = ref<Product[]>([])
   const newArrivals = ref<Product[]>([])
   const currentProduct = ref<Product | null>(null)
@@ -77,11 +79,16 @@ export const useProductStore = defineStore('product', () => {
 
   async function fetchCategories() {
     if (categoriesFetched && categories.value.length > 0) return
+    if (categoriesLoading.value) return
+    categoriesLoading.value = true
+    categoriesError.value = false
     try {
       categories.value = await productService.getCategories()
       categoriesFetched = true
     } catch {
-      // silently fail
+      categoriesError.value = true
+    } finally {
+      categoriesLoading.value = false
     }
   }
 
@@ -123,6 +130,8 @@ export const useProductStore = defineStore('product', () => {
   return {
     products,
     categories,
+    categoriesLoading,
+    categoriesError,
     bestSellers,
     newArrivals,
     currentProduct,

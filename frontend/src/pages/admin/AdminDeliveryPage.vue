@@ -156,7 +156,7 @@ onMounted(loadData)
       <BaseTabs v-model="activeTab" :tabs="tabs" />
 
       <div v-if="loading" class="bg-white rounded-[16px] border border-gray-100 overflow-hidden">
-        <div class="p-8 text-center text-gray-400">Loading...</div>
+        <div class="p-8 text-center text-gray-600" role="status" aria-live="polite">Loading delivery settings…</div>
       </div>
 
       <div v-else class="bg-white rounded-[16px] border border-gray-100 overflow-hidden">

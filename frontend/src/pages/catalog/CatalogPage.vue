@@ -3,6 +3,7 @@ import { onMounted, ref, watch, computed, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useProductStore } from '@/stores/product'
 import ProductCard from '@/components/product/ProductCard.vue'
+import ProductGridSkeleton from '@/components/product/ProductGridSkeleton.vue'
 import BaseButton from '@/components/base/BaseButton.vue'
 import BaseSelect from '@/components/base/BaseSelect.vue'
 import { SlidersHorizontal, ChevronLeft, ChevronRight, X } from '@lucide/vue'
@@ -144,6 +145,8 @@ watch(() => route.query, () => { syncRoute(); fetchProducts() }, { immediate: tr
         <div class="filter-heading mb-5 flex items-center justify-between"><h2 class="font-heading text-base font-semibold text-dark">Filters</h2><button v-if="filterCount" type="button" class="text-sm text-gold underline underline-offset-4" @click="clearFilters">Clear all</button></div>
         <fieldset class="filter-group border-t border-primary/50 py-5"><legend class="sr-only">Category</legend><p aria-hidden="true" class="filter-group-title mb-3 text-sm font-semibold text-dark">Category</p>
           <label class="filter-option"><input type="radio" name="category" :checked="!selectedCategory" @change="selectCategory('')" /><span>All products</span></label>
+          <p v-if="productStore.categoriesLoading" role="status" class="py-2 text-sm text-muted">Loading categories…</p>
+          <div v-else-if="productStore.categoriesError" role="alert" class="py-2 text-sm text-muted">Categories unavailable. <button type="button" class="underline text-dark" @click="productStore.fetchCategories()">Try again</button></div>
           <label v-for="cat in productStore.categories" :key="cat.id" class="filter-option"><input type="radio" name="category" :checked="selectedCategory === cat.slug" @change="selectCategory(cat.slug)" /><span class="min-w-0 flex-1">{{ cat.name }}</span><span class="text-xs text-muted">{{ cat.product_count ?? 0 }}</span></label>
         </fieldset>
         <fieldset class="filter-group border-t border-primary/50 py-5"><legend class="sr-only">Price in Zambian kwacha</legend><p aria-hidden="true" class="mb-1 text-sm font-semibold text-dark">Price</p><p class="price-hint mb-3 text-xs text-muted">Set a range in ZMW</p>
@@ -155,7 +158,7 @@ watch(() => route.query, () => { syncRoute(); fetchProducts() }, { immediate: tr
         <button type="button" class="mt-5 min-h-11 w-full rounded-xl bg-dark text-sm font-semibold text-white md:hidden" @click="closeFilters">Show products</button>
       </aside>
       <section class="min-w-0 flex-1" aria-label="Products" :aria-busy="productStore.loading">
-        <div v-if="productStore.loading" class="grid grid-cols-2 gap-4 md:grid-cols-3 md:gap-6" role="status"><span class="sr-only">Loading products</span><div v-for="i in 6" :key="i" class="space-y-3"><div class="aspect-[3/4] animate-pulse rounded-[20px] bg-primary/30" /><div class="h-4 w-28 rounded bg-primary/30" /></div></div>
+        <ProductGridSkeleton v-if="productStore.loading" :count="6" catalog message="Finding products…" />
         <div v-else-if="searchError" class="py-16 text-center" role="alert"><p class="mb-2 font-medium text-dark">Products could not be loaded.</p><button class="text-sm underline" @click="fetchProducts">Try again</button></div>
         <div v-else-if="!productStore.products.length" class="rounded-2xl border border-primary/40 bg-white px-5 py-16 text-center"><p class="font-medium text-dark">No products found</p><p class="mt-2 text-sm text-muted">Try a different search or remove a filter.</p><BaseButton variant="outline" class="mt-5" @click="clearAll">Clear search &amp; filters</BaseButton></div>
         <div v-else class="grid grid-cols-2 gap-4 md:grid-cols-3 md:gap-6"><ProductCard v-for="product in productStore.products" :key="product.id" :product="product" /></div>

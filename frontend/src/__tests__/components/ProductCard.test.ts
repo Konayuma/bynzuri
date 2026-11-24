@@ -70,6 +70,13 @@ describe('ProductCard', () => {
     expect(img.attributes('src')).toBe('/test.jpg')
   })
 
+  it('keeps a placeholder until the product image loads', async () => {
+    const wrapper = createWrapper()
+    expect(wrapper.get('img').classes()).toContain('opacity-0')
+    await wrapper.get('img').trigger('load')
+    expect(wrapper.get('img').classes()).not.toContain('opacity-0')
+  })
+
   it('renders image placeholder when no images', () => {
     const noImg = { ...mockProduct, images: [] }
     const wrapper = createWrapper(noImg)

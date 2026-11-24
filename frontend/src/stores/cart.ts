@@ -90,12 +90,16 @@ export const useCartStore = defineStore('cart', () => {
   }
 
   async function updateQuantity(itemId: string, quantity: number) {
+    error.value = ''
     const token = hasSession()
     if (token) {
       loading.value = true
       try {
         const data = await cartService.updateItem(itemId, quantity)
         cart.value = data
+      } catch (cause) {
+        error.value = 'Could not update your cart. Check stock and your connection, then try again.'
+        throw cause
       } finally {
         loading.value = false
       }
@@ -115,12 +119,16 @@ export const useCartStore = defineStore('cart', () => {
 
   async function removeItem(itemId: string) {
     cartRevision++
+    error.value = ''
     const token = hasSession()
     if (token) {
       loading.value = true
       try {
         const data = await cartService.removeItem(itemId)
         cart.value = data
+      } catch (cause) {
+        error.value = 'Could not remove this item. Check your connection and try again.'
+        throw cause
       } finally {
         loading.value = false
       }

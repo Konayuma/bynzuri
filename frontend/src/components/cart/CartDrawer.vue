@@ -24,6 +24,14 @@ function handleCheckout() {
 function formatPrice(price: string | number, quantity: number): string {
   return (parseFloat(String(price)) * quantity).toFixed(2)
 }
+
+async function updateQuantity(itemId: string, quantity: number) {
+  try { await cartStore.updateQuantity(itemId, quantity) } catch { /* The cart shows the error. */ }
+}
+
+async function removeItem(itemId: string) {
+  try { await cartStore.removeItem(itemId) } catch { /* The cart shows the error. */ }
+}
 </script>
 
 <template>
@@ -44,7 +52,9 @@ function formatPrice(price: string | number, quantity: number): string {
       </BaseButton>
     </div>
 
-    <div v-else class="flex flex-col h-full">
+    <div v-else class="flex flex-col h-full" :aria-busy="cartStore.loading">
+      <p v-if="cartStore.loading" role="status" class="px-4 pt-3 text-sm text-muted">Updating your cart…</p>
+      <p v-else-if="cartStore.error" role="alert" class="px-4 pt-3 text-sm text-red-700">{{ cartStore.error }}</p>
       <div class="flex-1 px-4 py-4 space-y-4 overflow-y-auto">
         <div
           v-for="item in cartStore.items"
@@ -66,7 +76,8 @@ function formatPrice(price: string | number, quantity: number): string {
               <button
                 class="w-11 h-11 rounded-full border border-primary/40 flex items-center justify-center hover:bg-primary/30 transition-colors"
                 :aria-label="`Decrease quantity of ${item.product.title}`"
-                @click="cartStore.updateQuantity(item.id, Math.max(1, item.quantity - 1))"
+                :disabled="cartStore.loading || item.quantity <= 1"
+                @click="updateQuantity(item.id, Math.max(1, item.quantity - 1))"
               >
                 <Minus class="w-3 h-3" />
               </button>
@@ -74,7 +85,8 @@ function formatPrice(price: string | number, quantity: number): string {
               <button
                 class="w-11 h-11 rounded-full border border-primary/40 flex items-center justify-center hover:bg-primary/30 transition-colors"
                 :aria-label="`Increase quantity of ${item.product.title}`"
-                @click="cartStore.updateQuantity(item.id, item.quantity + 1)"
+                :disabled="cartStore.loading || item.quantity >= item.product.stock"
+                @click="updateQuantity(item.id, item.quantity + 1)"
               >
                 <Plus class="w-3 h-3" />
               </button>
@@ -84,8 +96,9 @@ function formatPrice(price: string | number, quantity: number): string {
             <p class="text-sm font-semibold text-dark">K{{ formatPrice(item.product.price, item.quantity) }}</p>
             <button
               class="w-11 h-11 flex items-center justify-center hover:text-red-500 transition-colors"
-              @click="cartStore.removeItem(item.id)"
+              @click="removeItem(item.id)"
               :aria-label="`Remove ${item.product.title} from cart`"
+              :disabled="cartStore.loading"
             >
               <Trash2 class="w-4 h-4" />
             </button>
@@ -99,7 +112,7 @@ function formatPrice(price: string | number, quantity: number): string {
           <span class="font-semibold text-dark">K{{ cartStore.subtotal }}</span>
         </div>
         <p class="text-xs text-muted">Delivery fee calculated at checkout based on your location</p>
-        <BaseButton fullWidth @click="handleCheckout">
+        <BaseButton fullWidth :disabled="cartStore.loading" @click="handleCheckout">
           Checkout
         </BaseButton>
         <button

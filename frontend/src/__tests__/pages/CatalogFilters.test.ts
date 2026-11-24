@@ -20,6 +20,16 @@ async function setup(query = '') {
 }
 
 describe('catalog filters', () => {
+  it('reports a category loading failure and can retry', async () => {
+    vi.mocked(productService.getCategories).mockRejectedValueOnce(new Error('offline'))
+    const { wrapper } = await setup()
+    expect(wrapper.text()).toContain('Categories unavailable')
+    const retry = wrapper.findAll('button').find(button => button.text() === 'Try again')!
+    await retry.trigger('click')
+    await flushPromises()
+    expect(wrapper.text()).toContain('Hair Care')
+    wrapper.unmount()
+  })
   it('combines filters with search, resets pagination, and removes filters independently', async () => {
     const { wrapper, router } = await setup('?search=oil&page=2')
     await wrapper.findAll('input[type=radio]')[1]!.setValue()

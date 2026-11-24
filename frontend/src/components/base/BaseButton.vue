@@ -17,6 +17,7 @@ defineEmits<{
   <button
     :type="type || 'button'"
     :disabled="disabled || loading"
+    :aria-busy="loading || undefined"
     :class="[
       'inline-flex items-center justify-center font-medium transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-gold/50 active:scale-[0.97]',
       {
@@ -36,6 +37,7 @@ defineEmits<{
   >
     <svg
       v-if="loading"
+      aria-hidden="true"
       class="animate-spin -ml-1 mr-2 h-4 w-4"
       xmlns="http://www.w3.org/2000/svg"
       fill="none"
@@ -44,6 +46,6 @@ defineEmits<{
       <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
       <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
     </svg>
-    <slot />
+    <slot /><span v-if="loading" class="sr-only">, please wait</span>
   </button>
 </template>

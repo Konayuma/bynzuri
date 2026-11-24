@@ -7,6 +7,7 @@ import type { Order } from '@/types'
 
 const orders = ref<Order[]>([])
 const loading = ref(true)
+const error = ref(false)
 
 const statusColors: Record<string, string> = {
   awaiting_payment: 'text-gold bg-gold/10',
@@ -26,26 +27,36 @@ const statusLabels: Record<string, string> = {
   cancelled: 'Cancelled'
 }
 
-onMounted(async () => {
+async function loadOrders() {
+  loading.value = true
+  error.value = false
   try {
     orders.value = await orderService.getOrders()
   } catch {
-    // silently fail
+    error.value = true
   } finally {
     loading.value = false
   }
-})
+}
+onMounted(loadOrders)
 </script>
 
 <template>
   <div class="max-w-3xl mx-auto px-4 py-8">
     <h1 class="font-heading text-2xl font-semibold text-dark mb-6">Order History</h1>
 
-    <div v-if="loading" class="space-y-4">
+    <div v-if="loading" class="space-y-4" role="status" aria-live="polite">
+      <p class="text-sm text-muted">Loading your orders…</p>
       <div v-for="i in 3" :key="i" class="bg-white rounded-[20px] p-6 shadow-[0_8px_30px_rgba(0,0,0,0.06)]">
         <div class="h-4 w-32 bg-primary/30 rounded animate-pulse mb-3" />
         <div class="h-3 w-48 bg-primary/30 rounded animate-pulse" />
       </div>
+    </div>
+
+    <div v-else-if="error" class="rounded-[20px] border border-primary/40 bg-white p-6 text-center" role="alert">
+      <p class="font-medium text-dark">We couldn’t load your orders.</p>
+      <p class="mt-2 text-sm text-muted">Check your connection and try again.</p>
+      <BaseButton class="mt-4" variant="outline" @click="loadOrders">Try again</BaseButton>
     </div>
 
     <div v-else-if="orders.length === 0" class="text-center py-16">

@@ -16,11 +16,13 @@ const adding = ref(false)
 const wishlistStore = useWishlistStore()
 const imageFailed = ref(false)
 const fallbackFailed = ref(false)
+const imageLoading = ref(true)
 const localProductImage = computed(() => !imageFailed.value && props.product.images?.[0]?.image || (!fallbackFailed.value && signatureImage(props.product.slug)) || undefined)
-watch(() => props.product, () => { imageFailed.value = false; fallbackFailed.value = false })
+watch(() => props.product, () => { imageFailed.value = false; fallbackFailed.value = false; imageLoading.value = true })
 function handleImageError() {
   if (!imageFailed.value && props.product.images?.[0]?.image) imageFailed.value = true
   else fallbackFailed.value = true
+  imageLoading.value = Boolean(localProductImage.value)
 }
 
 async function handleAddToCart(e: Event) {
@@ -42,12 +44,16 @@ function handleToggleWishlist(e: Event) {
   <div class="group">
     <div class="relative aspect-[3/4] rounded-[20px] overflow-hidden bg-primary/20 mb-3">
       <router-link :to="`/product/${product.slug}`" :aria-label="`View ${product.title}`" class="block w-full h-full focus-visible:outline-2 focus-visible:outline-offset-[-3px] focus-visible:outline-gold">
+      <div v-if="localProductImage && imageLoading" class="absolute inset-0 bg-primary/30 motion-safe:animate-pulse pointer-events-none" aria-hidden="true" />
       <img
         v-if="localProductImage"
         :src="localProductImage"
         :alt="product.title"
-        class="w-full h-full object-cover transition-transform duration-[300ms] ease-[ease] group-hover:scale-[1.02]"
+        class="relative w-full h-full object-cover transition-transform duration-[300ms] ease-[ease] group-hover:scale-[1.02]"
+        :class="{ 'opacity-0': imageLoading }"
         loading="lazy"
+        decoding="async"
+        @load="imageLoading = false"
         @error="handleImageError"
       />
       <div v-else class="w-full h-full flex items-center justify-center text-muted">

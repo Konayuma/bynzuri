@@ -20,6 +20,15 @@ const routeContainer = ref<HTMLElement | null>(null)
 const isRouteAnimating = ref(false)
 const retryingSession = ref(false)
 const updateAvailable = ref(false)
+const navigating = ref(false)
+let navigationTimer: ReturnType<typeof setTimeout> | undefined
+let removeNavigationStart: (() => void) | undefined
+let removeNavigationEnd: (() => void) | undefined
+let removeNavigationError: (() => void) | undefined
+function finishNavigation() {
+  clearTimeout(navigationTimer)
+  navigating.value = false
+}
 const signInDestination = computed(() => {
   const route = router.currentRoute.value
   const original = route.name === 'session-unavailable' ? route.query.redirect : route.fullPath
@@ -57,6 +66,12 @@ async function retrySession() {
 }
 
 onMounted(async () => {
+  removeNavigationStart = router.beforeEach(() => {
+    clearTimeout(navigationTimer)
+    navigationTimer = setTimeout(() => { navigating.value = true }, 200)
+  })
+  removeNavigationEnd = router.afterEach(finishNavigation)
+  removeNavigationError = router.onError(finishNavigation)
   window.addEventListener('bynzuri:session-expired', resetDisplayedCart)
   window.addEventListener('vite:preloadError', handlePreloadError)
   cartStore.initGuestCart()
@@ -74,6 +89,10 @@ onMounted(async () => {
   }
 })
 onUnmounted(() => {
+  finishNavigation()
+  removeNavigationStart?.()
+  removeNavigationEnd?.()
+  removeNavigationError?.()
   window.removeEventListener('bynzuri:session-expired', resetDisplayedCart)
   window.removeEventListener('vite:preloadError', handlePreloadError)
 })
@@ -90,6 +109,9 @@ watch(() => router.currentRoute.value, () => {
 
 <template>
   <div class="min-h-screen flex flex-col bg-background">
+    <div v-if="navigating" role="status" aria-live="polite" class="fixed top-3 left-1/2 z-[70] -translate-x-1/2 rounded-full border border-primary/50 bg-white px-4 py-2 text-sm font-medium text-dark shadow-lg">
+      Loading page…
+    </div>
     <AppNavbar v-if="!router.currentRoute.value.meta.adminArea" />
     <div v-if="updateAvailable" role="alert" class="border-b border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950">
       <div class="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3">
