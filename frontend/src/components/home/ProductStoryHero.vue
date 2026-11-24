@@ -59,15 +59,15 @@ onUnmounted(() => {
         <div class="story-product" aria-hidden="true">
           <div class="story-orbit"></div>
           <span class="story-watermark">NZURI</span>
-          <img class="product-image" src="/images/products/growthelixir.png" alt="" :style="reducedMotion ? undefined : firstStyle" />
-          <img v-if="!reducedMotion" class="product-image" src="/images/products/nourishingoilmix.png" alt="" :style="secondStyle" />
+          <img class="product-image" src="/images/products/growthelixir.webp" alt="" :style="reducedMotion ? undefined : firstStyle" />
+          <img v-if="!reducedMotion" class="product-image" src="/images/products/nourishingoilmix.webp" alt="" :style="secondStyle" />
           <span class="product-caption">THOUGHTFULLY MADE<br />FOR YOUR HAIR</span>
         </div>
       </div>
       <div v-if="!reducedMotion" class="story-footer" :class="{ 'is-light': activeSecond }"><span>SCROLL TO DISCOVER</span><span class="story-rule"></span><span>0{{ activeSecond ? '2' : '1' }} / 02</span></div>
     </div>
     <div v-if="reducedMotion" class="static-second">
-      <div><p class="story-kicker"><span>02</span> NOURISHING OIL MIX</p><h2>Step 2: Length &amp;<br /><em>Softening Care</em></h2><p class="story-description">Give your lengths some love with a nourishing oil mix made for a softer-feeling finish.</p><RouterLink :to="{ path: '/catalog', query: { search: 'Nourishing Oil Mix' } }" class="story-button">Shop Nourishing Oil <span aria-hidden="true">↗</span></RouterLink></div><img src="/images/products/nourishingoilmix.png" alt="Nourishing Oil Mix" />
+      <div><p class="story-kicker"><span>02</span> NOURISHING OIL MIX</p><h2>Step 2: Length &amp;<br /><em>Softening Care</em></h2><p class="story-description">Give your lengths some love with a nourishing oil mix made for a softer-feeling finish.</p><RouterLink :to="{ path: '/catalog', query: { search: 'Nourishing Oil Mix' } }" class="story-button">Shop Nourishing Oil <span aria-hidden="true">↗</span></RouterLink></div><img src="/images/products/nourishingoilmix.webp" alt="Nourishing Oil Mix" />
     </div>
   </section>
 </template>

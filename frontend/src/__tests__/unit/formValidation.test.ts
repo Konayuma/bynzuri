@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { isEmail, isZambianPhone, normalizeZambianPhone } from '@/utils/formValidation'
+import { isEmail, isZambianPhone, isZambianMobileMoneyPhone, normalizeZambianPhone } from '@/utils/formValidation'
 
 describe('form validation', () => {
   it('checks complete email addresses', () => {
@@ -13,5 +13,9 @@ describe('form validation', () => {
     }
     expect(isZambianPhone('260')).toBe(false)
     expect(isZambianPhone('1234567890')).toBe(false)
+  })
+  it('aligns mobile-money validation with the payment API', () => {
+    for (const phone of ['0571234567', '0771234567', '0971234567', '+260 571 234 567']) expect(isZambianMobileMoneyPhone(phone)).toBe(true)
+    for (const phone of ['0111234567', '097123456', '+2600971234567', '09712345678']) expect(isZambianMobileMoneyPhone(phone)).toBe(false)
   })
 })

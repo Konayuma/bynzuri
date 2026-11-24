@@ -1,18 +1,3 @@
-<script setup lang="ts">
-import { ref } from 'vue'
-
-const email = ref('')
-const subscribed = ref(false)
-
-function handleSubscribe() {
-  if (email.value.trim()) {
-    localStorage.setItem('bynzuri_newsletter', email.value.trim())
-    subscribed.value = true
-    email.value = ''
-  }
-}
-</script>
-
 <template>
   <footer class="bg-dark text-background">
     <div class="max-w-7xl mx-auto px-4 py-12">
@@ -47,26 +32,9 @@ function handleSubscribe() {
         </div>
 
         <div>
-          <h4 class="font-body text-sm font-semibold uppercase tracking-wider mb-4">Stay Updated</h4>
-          <p class="text-xs text-muted mb-3">Get notified about new products and deals.</p>
-          <div v-if="!subscribed">
-            <form @submit.prevent="handleSubscribe" class="flex gap-2">
-              <input
-                v-model="email"
-                type="email"
-                placeholder="Your email"
-                required
-                class="flex-1 px-3 py-2 bg-white/10 border border-white/10 rounded-lg text-sm text-background placeholder:text-muted/60 focus:outline-none focus:border-gold transition-colors"
-              />
-              <button
-                type="submit"
-                class="px-3 py-2 bg-gold text-dark text-sm font-medium rounded-lg hover:bg-gold/80 transition-colors"
-              >
-                Join
-              </button>
-            </form>
-          </div>
-          <p v-else class="text-sm text-success">You're in! Watch your inbox for updates.</p>
+          <h4 class="font-body text-sm font-semibold uppercase tracking-wider mb-4">Need help?</h4>
+          <p class="text-sm text-muted mb-3">Questions about a product or an order?</p>
+          <router-link to="/help" class="text-sm underline text-background">Contact our team</router-link>
         </div>
       </div>
 

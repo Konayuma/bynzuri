@@ -41,7 +41,8 @@ def apply_provider_result(payment_id, data, expected_status=None):
         payment.lenco_reference = data.get('lencoReference') or payment.lenco_reference
         payment.transaction_reference = data.get('reference') or payment.transaction_reference
         payment.fee = data.get('fee')
-        payment.account_name = (data.get('mobileMoneyDetails') or {}).get('accountName') or ''
+        mobile_details = data.get('mobileMoneyDetails')
+        payment.account_name = (mobile_details.get('accountName') or '') if isinstance(mobile_details, dict) else ''
         if provider_status == 'successful':
             payment.status = 'success'
             if order.status == 'awaiting_payment':
@@ -106,12 +107,18 @@ class PaymentStatusView(views.APIView):
         payment = Payment.objects.filter(order_id=order_id, user=request.user).order_by('-created_at').first()
         if payment is None:
             return Response({'detail': 'No payment found for this order.'}, status=404)
+        verification_unavailable = False
         if payment.status in ('pending', 'processing'):
             result = lenco_service.get_collection_status(payment.idempotency_key)
             if result.get('status') and isinstance(result.get('data'), dict):
-                apply_provider_result(payment.id, result['data'])
+                verification_unavailable = not apply_provider_result(payment.id, result['data'])
                 payment.refresh_from_db()
-        return Response(PaymentSerializer(payment).data)
+            else:
+                verification_unavailable = True
+        response = dict(PaymentSerializer(payment).data)
+        if verification_unavailable:
+            response['verification_unavailable'] = True
+        return Response(response)
 
 
 class PaymentWebhookView(views.APIView):

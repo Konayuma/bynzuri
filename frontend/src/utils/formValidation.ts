@@ -4,6 +4,10 @@ export function isZambianPhone(value: string): boolean {
   return /^(?:\+?260|0)\d{9}$/.test(compact)
 }
 
+export function isZambianMobileMoneyPhone(value: string): boolean {
+  return /^(?:\+?260|0)[5679][0-9]{8}$/.test(value.replace(/[\s()-]/g, ''))
+}
+
 export function isEmail(value: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim())
 }

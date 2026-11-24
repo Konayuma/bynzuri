@@ -229,7 +229,8 @@ watch(product, (p) => {
           <div v-if="inStock" class="flex items-center gap-3 mb-6">
             <div class="flex items-center border border-primary/40 rounded-[14px] overflow-hidden">
               <button
-                class="p-3 hover:bg-primary/30 transition-colors"
+                class="p-3.5 hover:bg-primary/30 transition-colors"
+                aria-label="Decrease quantity"
                 @click="decrementQty"
                 :disabled="quantity <= 1"
               >
@@ -237,7 +238,8 @@ watch(product, (p) => {
               </button>
               <span class="px-4 text-sm font-medium min-w-[40px] text-center">{{ quantity }}</span>
               <button
-                class="p-3 hover:bg-primary/30 transition-colors"
+                class="p-3.5 hover:bg-primary/30 transition-colors"
+                aria-label="Increase quantity"
                 @click="incrementQty"
                 :disabled="quantity >= product.stock"
               >
@@ -282,7 +284,7 @@ watch(product, (p) => {
               <ShieldCheck class="w-4 h-4 text-gold mt-0.5 shrink-0" />
               <div>
                 <p class="text-sm font-medium text-dark">Secure Payments</p>
-                <p class="text-xs text-muted">MTN MoMo, Airtel Money, Visa &amp; Mastercard accepted</p>
+                <p class="text-xs text-muted">MTN Mobile Money and Airtel Money</p>
               </div>
             </div>
           </div>
@@ -296,12 +298,14 @@ watch(product, (p) => {
         <!-- Review Form -->
         <div v-if="userStore.isAuthenticated" class="bg-white rounded-[16px] p-5 border border-primary/20 mb-6">
           <h3 class="text-sm font-medium text-dark mb-3">Write a Review</h3>
-          <div class="flex items-center gap-1 mb-3">
+          <div class="flex items-center gap-1 mb-3" role="group" aria-label="Your rating">
             <button
               v-for="i in 5"
               :key="i"
               type="button"
-              class="p-0.5"
+              class="p-2"
+              :aria-label="`${i} ${i === 1 ? 'star' : 'stars'}`"
+              :aria-pressed="reviewRating === i"
               @click="reviewRating = i"
             >
               <Star
@@ -310,7 +314,8 @@ watch(product, (p) => {
               />
             </button>
           </div>
-          <textarea
+          <label for="review-comment" class="block text-sm font-medium text-dark mb-2">Your review</label>
+          <textarea id="review-comment"
             v-model="reviewComment"
             class="w-full px-4 py-3 bg-white border border-primary/40 rounded-[14px] text-sm text-dark placeholder:text-muted/60 focus:outline-none focus:border-gold transition-colors"
             rows="3"

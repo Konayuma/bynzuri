@@ -7,12 +7,13 @@ import BaseButton from '@/components/base/BaseButton.vue'
 import BaseSelect from '@/components/base/BaseSelect.vue'
 import type { Order } from '@/types'
 import { paymentService, type Payment } from '@/services/payment.service'
-import { isZambianPhone, normalizeZambianPhone } from '@/utils/formValidation'
+import { isZambianMobileMoneyPhone, normalizeZambianPhone } from '@/utils/formValidation'
 
 const route = useRoute()
 const router = useRouter()
 const order = ref<Order | null>(null)
 const loading = ref(true)
+const orderError = ref('')
 const payment = ref<Payment | null>(null)
 const paymentLoading = ref(false)
 const paymentError = ref('')
@@ -26,14 +27,14 @@ const paymentMethodOptions = [
 ]
 
 async function checkPayment() {
-  if (!order.value) return
+  if (!order.value || paymentLoading.value) return
   paymentLoading.value = true
   paymentError.value = ''
   paymentStatusChecked.value = false
   try {
     payment.value = await paymentService.getPaymentStatus(order.value.id)
     paymentStatusChecked.value = true
-    order.value = await orderService.getOrder(order.value.id)
+    try { order.value = await orderService.getOrder(order.value.id) } catch { /* Keep the last loaded order and payment. */ }
   } catch (e: unknown) {
     if ((e as { response?: { status?: number } }).response?.status === 404) { payment.value = null; paymentStatusChecked.value = true }
     else paymentError.value = 'Unable to check payment status. Please try again.'
@@ -41,15 +42,16 @@ async function checkPayment() {
 }
 
 async function retryPayment() {
-  if (!order.value) return
-  if (!isZambianPhone(paymentPhone.value)) { paymentError.value = 'Enter a valid Zambian mobile number.'; return }
+  if (!order.value || paymentLoading.value) return
+  if (!isZambianMobileMoneyPhone(paymentPhone.value)) { paymentError.value = 'Enter a valid Zambian mobile number, for example 0971234567 or +260971234567.'; return }
   paymentLoading.value = true
   paymentError.value = ''
   try {
     payment.value = await paymentService.initiatePayment(order.value.id, paymentMethod.value, normalizeZambianPhone(paymentPhone.value))
     if (payment.value.status === 'success') order.value = await orderService.getOrder(order.value.id)
   } catch (e: unknown) {
-    paymentError.value = (e as { response?: { data?: { detail?: string } } }).response?.data?.detail || 'Could not start payment. Please try again.'
+    paymentStatusChecked.value = false
+    paymentError.value = 'We could not confirm whether the payment request was sent. Check payment status before trying again.'
   } finally { paymentLoading.value = false }
 }
 
@@ -58,8 +60,10 @@ onMounted(async () => {
     const id = route.params.id as string
     order.value = await orderService.getOrder(id)
     await checkPayment()
-  } catch {
-    // order not found
+  } catch (e: unknown) {
+    orderError.value = (e as { response?: { status?: number } }).response?.status === 404
+      ? "We couldn't find this order. Check your order history."
+      : 'Unable to load your order. Check your connection and try again.'
   } finally {
     loading.value = false
   }
@@ -116,13 +120,13 @@ onMounted(async () => {
           <h2 id="receipt-title" class="text-sm text-muted">Payment receipt</h2>
           <span class="text-sm font-medium text-success">Paid</span>
         </div>
-        <div class="space-y-2 text-sm text-dark">
+        <div class="space-y-2 text-sm text-dark break-words [overflow-wrap:anywhere]">
           <p>Order: {{ order.id }}</p>
           <p>Payment reference: {{ payment.lenco_reference || payment.transaction_reference || payment.id }}</p>
           <p>Payment initiated: {{ new Date(payment.created_at).toLocaleString() }}</p>
           <p>Method: {{ payment.method === 'mtn_momo' ? 'MTN Mobile Money' : payment.method === 'airtel_money' ? 'Airtel Money' : payment.method }}</p>
           <div class="border-t border-primary/20 pt-3 mt-3 space-y-2">
-            <div v-for="item in order.items" :key="item.id" class="flex justify-between gap-4"><span>{{ item.product_title }} × {{ item.quantity }}</span><span>{{ payment.currency }} {{ (Number(item.price_at_purchase) * item.quantity).toFixed(2) }}</span></div>
+            <div v-for="item in order.items" :key="item.id" class="flex justify-between gap-4"><span class="min-w-0">{{ item.product_title }} × {{ item.quantity }}</span><span class="shrink-0">{{ payment.currency }} {{ (Number(item.price_at_purchase) * item.quantity).toFixed(2) }}</span></div>
             <div class="flex justify-between gap-4"><span>Delivery</span><span>{{ payment.currency }} {{ order.delivery_fee }}</span></div>
             <div class="flex justify-between gap-4 font-semibold border-t border-primary/20 pt-3"><span>Amount paid</span><span>{{ payment.currency }} {{ payment.amount }}</span></div>
           </div>
@@ -132,7 +136,8 @@ onMounted(async () => {
 
       <div v-if="order.status === 'awaiting_payment'" class="bg-white rounded-[20px] p-6 shadow-[0_8px_30px_rgba(0,0,0,0.06)] text-left mb-6 space-y-3">
         <h2 class="font-semibold text-dark">Mobile money payment</h2>
-        <p v-if="payment && ['pending', 'processing'].includes(payment.status)" class="text-sm text-muted">Your payment is pending. Check your phone for the prompt, then check the status here.</p>
+        <p v-if="payment?.verification_unavailable" role="status" class="text-sm text-muted">We could not verify this payment with the provider. Check its status again later; do not submit another payment.</p>
+        <p v-else-if="payment && ['pending', 'processing'].includes(payment.status)" class="text-sm text-muted">Your payment is pending. Check your phone for the prompt, then check the status here.</p>
         <template v-else-if="paymentStatusChecked && !paymentLoading">
           <p class="text-sm text-muted">{{ payment?.status === 'failed' ? 'The previous payment failed. You can try again.' : 'Choose a network and enter your mobile money number.' }}</p>
           <BaseSelect
@@ -148,6 +153,11 @@ onMounted(async () => {
         <p v-if="paymentLoading" role="status" class="text-sm text-muted">Checking payment status…</p>
         <p v-if="paymentError" role="alert" class="text-sm text-red-600">{{ paymentError }}</p>
         <button type="button" class="block text-sm underline text-dark" :disabled="paymentLoading" @click="checkPayment">Check payment status</button>
+      </div>
+
+      <div v-if="order.status !== 'awaiting_payment' && paymentError" class="text-left mb-6" role="alert">
+        <p class="text-sm text-red-600">{{ paymentError }}</p>
+        <button type="button" class="mt-2 text-sm underline text-dark" :disabled="paymentLoading" @click="checkPayment">Try checking payment again</button>
       </div>
 
       <div class="bg-white rounded-[20px] p-6 shadow-[0_8px_30px_rgba(0,0,0,0.06)] text-left mb-6">
@@ -167,8 +177,8 @@ onMounted(async () => {
     </template>
 
     <div v-else>
-      <p class="text-muted mb-2">We couldn't find this order.</p>
-      <p class="text-sm text-muted mb-4">It may take a moment to appear. Try refreshing, or check your order history.</p>
+      <p class="text-muted mb-2" role="alert">{{ orderError || "We couldn't find this order." }}</p>
+      <button type="button" class="text-sm underline text-dark mb-4" @click="router.go(0)">Try again</button>
       <BaseButton class="mt-2" @click="router.push('/')">
         Go Home
       </BaseButton>

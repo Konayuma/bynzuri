@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, computed, watch } from 'vue'
+import { ref, onMounted, computed, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { useCartStore } from '@/stores/cart'
 import { useUserStore } from '@/stores/user'
@@ -11,7 +11,8 @@ import BaseInput from '@/components/base/BaseInput.vue'
 import BaseSelect from '@/components/base/BaseSelect.vue'
 import { ChevronLeft, ChevronRight, MapPin, Loader2, CheckCircle2, XCircle, Smartphone } from '@lucide/vue'
 import type { Province, Town, DeliveryMethod, Address, Order } from '@/types'
-import { isEmail, isZambianPhone, normalizeZambianPhone } from '@/utils/formValidation'
+import { isEmail, isZambianPhone, isZambianMobileMoneyPhone, normalizeZambianPhone } from '@/utils/formValidation'
+import { useDialogFocus } from '@/composables/useDialogFocus'
 
 const router = useRouter()
 const cartStore = useCartStore()
@@ -22,6 +23,14 @@ const error = ref('')
 const fieldErrors = ref<Record<string, string>>({})
 
 const paymentStatus = ref<'idle' | 'processing' | 'success' | 'failed' | 'unknown'>('idle')
+const paymentOverlay = ref<HTMLElement | null>(null)
+useDialogFocus(() => paymentStatus.value !== 'idle', paymentOverlay, () => {})
+watch(paymentStatus, async (state, previous) => {
+  if (state !== 'idle' && previous !== 'idle') {
+    await nextTick()
+    paymentOverlay.value?.focus()
+  }
+})
 const paymentMessage = ref('')
 const pendingKey = 'bynzuri_checkout_attempt'
 const createdOrderId = ref<string | null>(null)
@@ -116,7 +125,7 @@ function validateStep(step: number): boolean {
     if (!deliveryMethods.value.some(m => m.id === data.delivery_method)) errors.delivery_method = 'Select a delivery method.'
   } else {
     if (!paymentMethods.some(m => m.value === data.payment_method)) errors.payment_method = 'Select a payment method.'
-    if (isMobileMoney.value && !isZambianPhone(data.payment_phone)) errors.payment_phone = 'Enter a valid Zambian mobile number.'
+    if (isMobileMoney.value && !isZambianMobileMoneyPhone(data.payment_phone)) errors.payment_phone = 'Enter a valid Zambian mobile number, for example 0971234567 or +260971234567.'
   }
   fieldErrors.value = errors
   return Object.keys(errors).length === 0
@@ -315,8 +324,9 @@ onMounted(async () => {
 <template>
   <div class="max-w-2xl mx-auto px-4 py-8">
     <!-- Payment Processing Overlay -->
-    <div v-if="paymentStatus !== 'idle'" class="fixed inset-0 bg-white/90 backdrop-blur-sm z-50 flex items-center justify-center">
+    <div v-if="paymentStatus !== 'idle'" ref="paymentOverlay" tabindex="-1" role="dialog" aria-modal="true" aria-label="Payment status" class="fixed inset-0 bg-white/90 backdrop-blur-sm z-50 flex items-center justify-center">
       <div class="text-center max-w-sm px-4">
+        <div role="status" aria-live="polite" class="sr-only">{{ paymentMessage }}</div>
         <div v-if="paymentStatus === 'processing'" class="space-y-4">
           <Loader2 class="w-12 h-12 text-gold animate-spin mx-auto" />
           <h2 class="font-heading text-xl font-semibold text-dark">Processing Payment</h2>

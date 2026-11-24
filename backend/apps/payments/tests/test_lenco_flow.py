@@ -85,6 +85,28 @@ def test_status_reconciles_latest_attempt_without_regressing_order(user, order):
     order.refresh_from_db(); assert order.status == 'paid'
 
 
+def test_status_reports_provider_lookup_failure_without_marking_payment_failed(user, order):
+    payment = Payment.objects.create(order=order, user=user, method='mtn_momo', amount=order.grand_total, idempotency_key='unknown')
+    client = APIClient(); client.force_authenticate(user)
+    with patch('apps.payments.views.lenco_service.get_collection_status', return_value={'status': False, 'access_denied': True}):
+        response = client.get(f'/api/payments/status/{order.id}/')
+    assert response.status_code == 200
+    assert response.data['status'] == 'pending'
+    assert response.data['verification_unavailable'] is True
+    payment.refresh_from_db()
+    assert payment.status == 'pending'
+
+
+def test_webhook_handles_malformed_mobile_details(user, order):
+    payment = Payment.objects.create(order=order, user=user, method='mtn_momo', amount=order.grand_total, idempotency_key='details')
+    client = APIClient()
+    response = signed(client, {'event': 'collection.successful', 'data': result(payment, mobileMoneyDetails='unavailable')})
+    assert response.status_code == 200
+    payment.refresh_from_db()
+    assert payment.status == 'success'
+    assert payment.account_name == ''
+
+
 def test_failed_attempt_can_retry_but_other_users_cannot_access(user, order):
     failed = Payment.objects.create(order=order, user=user, method='mtn_momo', amount=order.grand_total, idempotency_key='failed-attempt', status='failed')
     client = APIClient(); client.force_authenticate(user)

@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from 'vitest'
-import { mount, VueWrapper } from '@vue/test-utils'
+import { mount } from '@vue/test-utils'
 import BaseSelect from '@/components/base/BaseSelect.vue'
 
 const options = [
@@ -8,7 +8,7 @@ const options = [
   { value: 'southern', label: 'Southern' },
 ]
 
-let wrapper: VueWrapper | null = null
+let wrapper: ReturnType<typeof mount<typeof BaseSelect>> | null = null
 
 afterEach(() => {
   wrapper?.unmount()

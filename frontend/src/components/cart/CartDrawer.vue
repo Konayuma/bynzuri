@@ -64,14 +64,16 @@ function formatPrice(price: string | number, quantity: number): string {
             <p class="text-sm font-semibold text-dark mt-1">K{{ item.product.price }}</p>
             <div class="flex items-center gap-2 mt-2">
               <button
-                class="w-7 h-7 rounded-full border border-primary/40 flex items-center justify-center hover:bg-primary/30 transition-colors"
+                class="w-11 h-11 rounded-full border border-primary/40 flex items-center justify-center hover:bg-primary/30 transition-colors"
+                :aria-label="`Decrease quantity of ${item.product.title}`"
                 @click="cartStore.updateQuantity(item.id, Math.max(1, item.quantity - 1))"
               >
                 <Minus class="w-3 h-3" />
               </button>
               <span class="text-sm font-medium w-6 text-center">{{ item.quantity }}</span>
               <button
-                class="w-7 h-7 rounded-full border border-primary/40 flex items-center justify-center hover:bg-primary/30 transition-colors"
+                class="w-11 h-11 rounded-full border border-primary/40 flex items-center justify-center hover:bg-primary/30 transition-colors"
+                :aria-label="`Increase quantity of ${item.product.title}`"
                 @click="cartStore.updateQuantity(item.id, item.quantity + 1)"
               >
                 <Plus class="w-3 h-3" />
@@ -81,9 +83,9 @@ function formatPrice(price: string | number, quantity: number): string {
           <div class="flex flex-col items-end justify-between">
             <p class="text-sm font-semibold text-dark">K{{ formatPrice(item.product.price, item.quantity) }}</p>
             <button
-              class="p-1 hover:text-red-500 transition-colors"
+              class="w-11 h-11 flex items-center justify-center hover:text-red-500 transition-colors"
               @click="cartStore.removeItem(item.id)"
-              aria-label="Remove item"
+              :aria-label="`Remove ${item.product.title} from cart`"
             >
               <Trash2 class="w-4 h-4" />
             </button>

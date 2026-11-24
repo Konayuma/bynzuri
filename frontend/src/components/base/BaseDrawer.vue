@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { watch } from 'vue'
+import { ref } from 'vue'
+import { useDialogFocus } from '@/composables/useDialogFocus'
 import { X } from '@lucide/vue'
 
 const props = defineProps<{
@@ -12,9 +13,8 @@ const emit = defineEmits<{
   close: []
 }>()
 
-watch(() => props.open, (val) => {
-  document.body.style.overflow = val ? 'hidden' : ''
-})
+const panel = ref<HTMLElement | null>(null)
+useDialogFocus(() => props.open, panel, () => emit('close'))
 </script>
 
 <template>
@@ -32,6 +32,7 @@ watch(() => props.open, (val) => {
           @click="emit('close')"
         />
         <div
+          ref="panel" tabindex="-1"
           :class="[
             'fixed top-0 bottom-0 w-full max-w-md bg-background shadow-xl flex flex-col drawer-panel',
             position === 'left' ? 'left-0 drawer-panel-left' : 'right-0 drawer-panel-right'

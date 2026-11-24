@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { mount, RouterLinkStub } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import ProductCard from '@/components/product/ProductCard.vue'
 
@@ -24,6 +24,7 @@ function createWrapper(product = mockProduct) {
   return mount(ProductCard, {
     props: { product },
     global: {
+      stubs: { RouterLink: RouterLinkStub },
       mocks: {
         $router: { push: vi.fn() }
       }
@@ -35,6 +36,15 @@ describe('ProductCard', () => {
   it('renders product title', () => {
     const wrapper = createWrapper()
     expect(wrapper.text()).toContain('Growth Oil')
+  })
+
+  it('provides a product link and falls back after a broken image', async () => {
+    const wrapper = createWrapper({ ...mockProduct, slug: 'growth-elixir' })
+    expect(wrapper.getComponent(RouterLinkStub).props('to')).toBe('/product/growth-elixir')
+    await wrapper.get('img').trigger('error')
+    expect(wrapper.get('img').attributes('src')).toContain('growthelixir')
+    await wrapper.get('img').trigger('error')
+    expect(wrapper.find('img').exists()).toBe(false)
   })
 
   it('renders category name', () => {

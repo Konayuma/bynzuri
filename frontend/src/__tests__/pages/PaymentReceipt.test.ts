@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 import OrderConfirmationPage from '@/pages/order/OrderConfirmationPage.vue'
 import { paymentService } from '@/services/payment.service'
+import { orderService } from '@/services/order.service'
 
 vi.mock('vue-router', () => ({ useRoute: () => ({ params: { id: 'order-1' } }), useRouter: () => ({ push: vi.fn() }) }))
 vi.mock('@/services/order.service', () => ({ orderService: { getOrder: vi.fn().mockResolvedValue({ id: 'order-1', status: 'paid', payment_method: 'airtel_money', grand_total: '150.00', delivery_fee: '30.00', items: [{ id: 'item-1', product_title: 'Body Butter', quantity: 1, price_at_purchase: '120.00' }] }) } }))
@@ -22,5 +23,27 @@ describe('payment receipt', () => {
     expect(wrapper.get('.receipt').text()).toContain('Body Butter')
     expect(wrapper.get('.receipt img').attributes('alt')).toBe('By Nzuri')
     expect(wrapper.get('.receipt-action').text()).toContain('save receipt as PDF')
+  })
+  it('warns when provider status cannot be verified and does not offer a retry', async () => {
+    vi.mocked(orderService.getOrder).mockResolvedValue({ id: 'order-1', status: 'awaiting_payment', payment_method: 'airtel_money', grand_total: '150', items: [] } as never)
+    vi.mocked(paymentService.getPaymentStatus).mockResolvedValue({ status: 'pending', verification_unavailable: true } as never)
+    const wrapper = mount(OrderConfirmationPage)
+    await flushPromises()
+    expect(wrapper.text()).toContain('could not verify this payment')
+    expect(wrapper.text()).not.toContain('Request payment')
+  })
+  it('blocks another request after an uncertain initiation until status is checked', async () => {
+    vi.mocked(orderService.getOrder).mockResolvedValue({ id: 'order-1', status: 'awaiting_payment', payment_method: 'airtel_money', grand_total: '150', items: [] } as never)
+    vi.mocked(paymentService.getPaymentStatus).mockResolvedValue({ status: 'failed' } as never)
+    vi.mocked(paymentService.initiatePayment).mockRejectedValue(new Error('network'))
+    const wrapper = mount(OrderConfirmationPage)
+    await flushPromises()
+    await wrapper.get('#retry-phone').setValue('0971234567')
+    const button = wrapper.findAll('button').find(b => b.text().includes('Request payment'))!
+    await button.trigger('click')
+    await flushPromises()
+    expect(wrapper.text()).toContain('could not confirm whether the payment request was sent')
+    expect(wrapper.text()).not.toContain('Request payment')
+    expect(wrapper.text()).toContain('Check payment status')
   })
 })

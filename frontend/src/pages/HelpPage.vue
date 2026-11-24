@@ -25,7 +25,7 @@ const faqs = [
     id: 'payments',
     icon: CreditCard,
     question: 'What payment methods do you accept?',
-    answer: 'We accept MTN Mobile Money, Airtel Money, and Zamtel Kwacha. After placing your order, you\'ll receive a payment request via mobile money (SMS or USSD prompt).',
+    answer: 'We accept MTN Mobile Money and Airtel Money. After placing your order, you\'ll receive a payment request via mobile money (SMS or USSD prompt).',
   },
   {
     id: 'account',
