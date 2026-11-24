@@ -17,6 +17,7 @@ test('relays only the fixed Lenco endpoint and preserves upstream status', async
   globalThis.fetch = async (url, options) => {
     assert.equal(url, 'https://api.lenco.co/access/v2/collections/mobile-money');
     assert.equal(options.headers.Authorization, 'Bearer provider-token');
+    assert.equal(options.headers['User-Agent'], 'bynzurisite-backend/1.0');
     assert.equal(options.redirect, 'error');
     return new Response('{"errorCode":"13"}', { status: 403 });
   };

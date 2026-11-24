@@ -31,7 +31,7 @@ export default {
     try {
       const response = await fetch(`https://api.lenco.co/access/v2${url.pathname}`, {
         method: request.method,
-        headers: { Authorization: authorization, 'Content-Type': 'application/json', Accept: 'application/json' },
+        headers: { Authorization: authorization, 'Content-Type': 'application/json', Accept: 'application/json', 'User-Agent': 'bynzurisite-backend/1.0' },
         body,
         redirect: 'error',
         signal: AbortSignal.timeout(20000),

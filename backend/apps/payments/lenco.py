@@ -22,7 +22,8 @@ class LencoService:
             logger.error('Lenco relay configuration is incomplete or not HTTPS')
             return {'status': False, 'uncertain': True}
         try:
-            headers = {'Authorization': f'Bearer {settings.LENCO_API_KEY}', 'Content-Type': 'application/json'}
+            headers = {'Authorization': f'Bearer {settings.LENCO_API_KEY}', 'Content-Type': 'application/json',
+                       'User-Agent': 'bynzurisite-backend/1.0'}
             if relay:
                 headers['X-Relay-Secret'] = settings.LENCO_RELAY_SECRET
             response = requests.request(
