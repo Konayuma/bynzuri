@@ -4,6 +4,7 @@ import { fileURLToPath, URL } from 'node:url'
 
 export default defineConfig({
   plugins: [vue()],
+  define: { __PAGES_SESSION_PROXY__: 'false' },
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url))

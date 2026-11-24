@@ -3,6 +3,7 @@ import type { AxiosInstance, InternalAxiosRequestConfig } from 'axios'
 import { sessionExpired, sessionUnavailable } from './session'
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api').replace(/\/+$/, '')
+declare const __PAGES_SESSION_PROXY__: boolean
 const REQUEST_TIMEOUT = 30000
 const SESSION_HINT = 'bynzuri_session'
 let accessToken: string | null = null
@@ -14,7 +15,7 @@ localStorage.removeItem('access_token')
 localStorage.removeItem('refresh_token')
 
 export const publicApi: AxiosInstance = axios.create({ baseURL: API_BASE_URL, timeout: REQUEST_TIMEOUT })
-export const sessionApi: AxiosInstance = axios.create({ baseURL: API_BASE_URL, timeout: REQUEST_TIMEOUT, withCredentials: true })
+export const sessionApi: AxiosInstance = axios.create({ baseURL: __PAGES_SESSION_PROXY__ ? '/api' : API_BASE_URL, timeout: REQUEST_TIMEOUT, withCredentials: true })
 const api: AxiosInstance = axios.create({ baseURL: API_BASE_URL, timeout: REQUEST_TIMEOUT, headers: { 'Content-Type': 'application/json' } })
 
 export function getAccessToken() { return accessToken }

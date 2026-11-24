@@ -52,16 +52,30 @@ async function handleRegister() {
       last_name: form.value.last_name.trim(),
       phone: form.value.phone
     })
-    await userStore.login(form.value.email.trim(), form.value.password)
-    await cartStore.mergeGuestCart()
-    await cartStore.fetchCart()
-    const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : ''
-    router.push(redirect.startsWith('/') && !redirect.startsWith('//') ? redirect : '/')
   } catch {
     error.value = 'Could not create your account. The email may already be in use.'
+    loading.value = false
+    return
+  }
+
+  try {
+    await userStore.login(form.value.email.trim(), form.value.password)
+  } catch {
+    loading.value = false
+    await router.push({ path: '/auth/login', query: { ...route.query, created: '1' } })
+    return
+  }
+
+  try {
+    await cartStore.mergeGuestCart()
+    await cartStore.fetchCart()
+  } catch {
+    cartStore.error = 'Signed in, but your cart could not be restored. Please try again.'
   } finally {
     loading.value = false
   }
+  const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : ''
+  await router.push(redirect.startsWith('/') && !redirect.startsWith('//') ? redirect : '/')
 }
 </script>
 
