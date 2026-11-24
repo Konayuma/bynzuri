@@ -6,7 +6,7 @@ import { fileURLToPath, URL } from 'node:url'
 export default defineConfig({
   plugins: [vue(), tailwindcss()],
   define: {
-    __PAGES_SESSION_PROXY__: JSON.stringify(process.env.CF_PAGES === '1')
+    __PAGES_SESSION_PROXY__: JSON.stringify(process.env.CF_PAGES === '1' || process.env.VITE_SESSION_PROXY === '1')
   },
   resolve: {
     alias: {
