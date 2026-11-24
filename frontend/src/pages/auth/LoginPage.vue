@@ -4,6 +4,7 @@ import axios from 'axios'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { useCartStore } from '@/stores/cart'
+import { hasSession } from '@/services/api'
 import BaseButton from '@/components/base/BaseButton.vue'
 import BaseInput from '@/components/base/BaseInput.vue'
 
@@ -28,7 +29,7 @@ async function handleLogin() {
   try {
     await userStore.login(email.value, password.value)
   } catch (cause) {
-    if (localStorage.getItem('access_token')) {
+    if (hasSession()) {
       error.value = 'Signed in, but we could not load your account. Check your connection and try again.'
     } else if (axios.isAxiosError(cause) && [400, 401].includes(cause.response?.status ?? 0)) {
       error.value = 'Email or password is incorrect. Please try again.'

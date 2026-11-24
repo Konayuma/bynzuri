@@ -161,6 +161,12 @@ CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL', 'redis://localhost:6379/
 CELERY_RESULT_BACKEND = os.environ.get('CELERY_RESULT_BACKEND', 'redis://localhost:6379/0')
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
+CELERY_BEAT_SCHEDULE = {
+    'expire-unpaid-orders-hourly': {
+        'task': 'apps.orders.tasks.expire_unpaid_orders',
+        'schedule': 3600.0,
+    },
+}
 
 r2_keys = ('R2_ACCESS_KEY_ID', 'R2_SECRET_ACCESS_KEY', 'R2_BUCKET_NAME', 'R2_ENDPOINT_URL', 'R2_PUBLIC_DOMAIN')
 r2_values = {key: os.environ.get(key, '').strip() for key in r2_keys}
@@ -203,6 +209,7 @@ SECURE_BROWSER_XSS_FILTER = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = 'DENY'
 CSRF_COOKIE_HTTPONLY = True
+CSRF_COOKIE_SAMESITE = 'Lax' if DEBUG else 'None'
 SESSION_COOKIE_HTTPONLY = True
 
 MICHOWAPI_API_KEY = os.environ.get('MICHOWAPI_API_KEY', '')

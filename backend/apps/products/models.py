@@ -1,8 +1,11 @@
+import logging
 import uuid
 from django.db import models
 from django.db.models.signals import pre_save
 from django.dispatch import receiver
 from apps.categories.models import Category
+
+logger = logging.getLogger(__name__)
 
 
 class Product(models.Model):
@@ -26,6 +29,11 @@ class Product(models.Model):
     class Meta:
         db_table = 'products'
         ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['is_active', '-created_at'], name='products_active_created_idx'),
+            models.Index(fields=['price'], name='products_price_idx'),
+            models.Index(fields=['-rating'], name='products_rating_idx'),
+        ]
 
     def __str__(self):
         return self.title
@@ -57,11 +65,20 @@ class ProductImage(models.Model):
 
 @receiver(pre_save, sender=ProductImage)
 def optimize_product_image(sender, instance, **kwargs):
-    if not instance.image:
+    if kwargs.get('raw') or not instance.image:
+        return
+    # Skip already-committed files so metadata-only updates (alt_text, sort_order, etc.)
+    # do not repeatedly re-encode existing images.
+    if getattr(instance.image, '_committed', True):
         return
     from apps.products.signals import optimize_image
     try:
         optimized, filename = optimize_image(instance.image)
         instance.image.save(filename, optimized, save=False)
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.warning(
+            'Failed to optimize product image for product %s: %s',
+            instance.product_id,
+            exc,
+            exc_info=True,
+        )

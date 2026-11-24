@@ -1,9 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { authService } from '@/services/auth.service'
-import api, { publicApi } from '@/services/api'
+import api, { publicApi, sessionApi } from '@/services/api'
 
 vi.mock('@/services/api', () => ({
   publicApi: { post: vi.fn(), get: vi.fn() },
+  sessionApi: { post: vi.fn() },
+  csrfHeaders: vi.fn().mockResolvedValue({ 'X-CSRFToken': 'csrf' }),
+  withSessionLock: (operation: () => Promise<unknown>) => operation(),
   default: {
     post: vi.fn(),
     get: vi.fn(),
@@ -17,10 +20,10 @@ describe('authService', () => {
   })
 
   it('calls login endpoint', async () => {
-    vi.mocked(publicApi.post).mockResolvedValue({ data: { access: 'token', refresh: 'refresh' } })
+    vi.mocked(sessionApi.post).mockResolvedValue({ data: { access: 'token' } })
     const result = await authService.login('test@example.com', 'password123')
-    expect(publicApi.post).toHaveBeenCalledWith('/auth/token/', { email: 'test@example.com', password: 'password123' })
-    expect(result).toEqual({ access: 'token', refresh: 'refresh' })
+    expect(sessionApi.post).toHaveBeenCalledWith('/auth/token/', { email: 'test@example.com', password: 'password123' }, { headers: { 'X-CSRFToken': 'csrf' } })
+    expect(result).toEqual({ access: 'token' })
   })
 
   it('calls register endpoint', async () => {

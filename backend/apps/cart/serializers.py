@@ -19,6 +19,7 @@ class CartItemCreateSerializer(serializers.Serializer):
 
 
 class CartItemUpdateSerializer(serializers.ModelSerializer):
+    quantity = serializers.IntegerField(min_value=1)
     class Meta:
         model = CartItem
         fields = ['quantity']
@@ -48,4 +49,4 @@ class CartSerializer(serializers.ModelSerializer):
 
 
 class CartMergeSerializer(serializers.Serializer):
-    items = CartItemCreateSerializer(many=True)
+    items = serializers.ListField(child=serializers.DictField(), max_length=200)

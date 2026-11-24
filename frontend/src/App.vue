@@ -7,6 +7,7 @@ import { useUserStore } from '@/stores/user'
 import { useCartStore } from '@/stores/cart'
 import { useUIStore } from '@/stores/ui'
 import { sessionState, sessionUnavailable } from '@/services/session'
+import { hasSession } from '@/services/api'
 
 const CartDrawer = defineAsyncComponent(() => import('@/components/cart/CartDrawer.vue'))
 
@@ -43,7 +44,7 @@ async function retrySession() {
   retryingSession.value = true
   try {
     await userStore.fetchProfile()
-    if (!userStore.isAuthenticated && localStorage.getItem('access_token')) sessionUnavailable()
+    if (!userStore.isAuthenticated && hasSession()) sessionUnavailable()
     if (userStore.isAuthenticated && router.currentRoute.value.name === 'session-unavailable') {
       const target = router.currentRoute.value.query.redirect
       await router.replace(typeof target === 'string' && target.startsWith('/') && !target.startsWith('//') ? target : '/')
@@ -59,7 +60,7 @@ onMounted(async () => {
   window.addEventListener('bynzuri:session-expired', resetDisplayedCart)
   window.addEventListener('vite:preloadError', handlePreloadError)
   cartStore.initGuestCart()
-  if (localStorage.getItem('access_token')) {
+  if (hasSession()) {
     const profilePromise = userStore.fetchProfile()
     try { await profilePromise } catch { return }
     if (userStore.isAuthenticated) {

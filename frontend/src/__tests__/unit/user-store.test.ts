@@ -3,11 +3,13 @@ import { setActivePinia, createPinia } from 'pinia'
 import { useUserStore } from '@/stores/user'
 import { authService } from '@/services/auth.service'
 import { sessionState } from '@/services/session'
+import { clearSession, getAccessToken, setAccessToken } from '@/services/api'
 
 describe('UserStore', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
     localStorage.clear()
+    clearSession()
     sessionState.notice = null
   })
   afterEach(() => vi.restoreAllMocks())
@@ -32,14 +34,15 @@ describe('UserStore', () => {
     expect(store.isAdmin).toBe(true)
   })
 
-  it('stores tokens in localStorage', () => {
-    localStorage.setItem('access_token', 'test-access')
-    localStorage.setItem('refresh_token', 'test-refresh')
-    expect(localStorage.getItem('access_token')).toBe('test-access')
-    expect(localStorage.getItem('refresh_token')).toBe('test-refresh')
+  it('keeps access tokens in memory rather than localStorage', () => {
+    setAccessToken('test-access')
+    expect(getAccessToken()).toBe('test-access')
+    expect(localStorage.getItem('access_token')).toBeNull()
+    expect(localStorage.getItem('refresh_token')).toBeNull()
   })
 
   it('clears user state on logout', () => {
+    vi.spyOn(authService, 'logout').mockResolvedValue()
     const store = useUserStore()
     store.logout()
     expect(store.user).toBeNull()
@@ -50,12 +53,11 @@ describe('UserStore', () => {
   it('retains the signed-in identity and credentials when the profile service is unavailable', async () => {
     const store = useUserStore()
     store.user = { id: '1', email: 'a@example.com', first_name: '', last_name: '', phone: '', role: 'customer', is_staff: false }
-    localStorage.setItem('access_token', 'access')
-    localStorage.setItem('refresh_token', 'refresh')
+    setAccessToken('access')
     vi.spyOn(authService, 'getProfile').mockRejectedValue(new Error('network unavailable'))
     await expect(store.fetchProfile()).rejects.toThrow('network unavailable')
     expect(store.isAuthenticated).toBe(true)
-    expect(localStorage.getItem('refresh_token')).toBe('refresh')
+    expect(getAccessToken()).toBe('access')
     expect(sessionState.notice).toBe('unavailable')
   })
 

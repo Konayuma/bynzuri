@@ -2,6 +2,7 @@ import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { useCartStore } from '@/stores/cart'
 import { cartService } from '@/services/cart.service'
+import { clearSession, setAccessToken } from '@/services/api'
 import type { Cart, Product } from '@/types'
 
 const product: Product = { id: 'p', category: 'c', category_name: 'Care', title: 'Oil', slug: 'oil', description: '', price: '10.00', stock: 5, is_in_stock: true, images: [], rating: 0, review_count: 0, created_at: '' }
@@ -9,8 +10,8 @@ const empty: Cart = { id: 'c', items: [], subtotal: '0.00', total: '0.00', item_
 const filled: Cart = { ...empty, items: [{ id: 'i', product, quantity: 1, total_price: '10.00' }], item_count: 1, subtotal: '10.00', total: '10.00' }
 
 describe('cart recovery', () => {
-  beforeEach(() => { setActivePinia(createPinia()); localStorage.clear(); localStorage.setItem('access_token', 'token') })
-  afterEach(() => vi.restoreAllMocks())
+  beforeEach(() => { setActivePinia(createPinia()); localStorage.clear(); setAccessToken('token') })
+  afterEach(() => { clearSession(); vi.restoreAllMocks() })
   it('does not replace a successful add with an older cart response', async () => {
     let resolveFetch!: (cart: Cart) => void
     vi.spyOn(cartService, 'getCart').mockReturnValue(new Promise(resolve => { resolveFetch = resolve }))

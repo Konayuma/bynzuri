@@ -2,6 +2,7 @@ from rest_framework import views, status
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django.shortcuts import get_object_or_404
+from django.db import transaction
 from .models import Cart, CartItem
 from apps.products.models import Product
 from .serializers import (
@@ -32,12 +33,18 @@ class CartDetailView(views.APIView):
 class CartAddItemView(views.APIView):
     permission_classes = [IsAuthenticated]
 
+    @transaction.atomic
     def post(self, request):
         serializer = CartItemCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        product = get_object_or_404(Product, id=serializer.validated_data['product'])
         cart = get_or_create_cart(request.user)
+        cart = Cart.objects.select_for_update().get(pk=cart.pk)
+        product = get_object_or_404(Product.objects.select_for_update(), id=serializer.validated_data['product'])
+        existing = CartItem.objects.filter(cart=cart, product=product).first()
+        desired = serializer.validated_data['quantity'] + (existing.quantity if existing else 0)
+        if not product.is_active or desired > product.stock:
+            return Response({'detail': 'This product is unavailable in the requested quantity.'}, status=400)
 
         item, created = CartItem.objects.get_or_create(
             cart=cart,
@@ -61,12 +68,17 @@ class CartAddItemView(views.APIView):
 class CartItemDetailView(views.APIView):
     permission_classes = [IsAuthenticated]
 
+    @transaction.atomic
     def patch(self, request, item_id):
         cart = get_or_create_cart(request.user)
+        cart = Cart.objects.select_for_update().get(pk=cart.pk)
         item = get_object_or_404(CartItem, id=item_id, cart=cart)
 
         serializer = CartItemUpdateSerializer(item, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
+        product = Product.objects.select_for_update().get(pk=item.product_id)
+        if not product.is_active or serializer.validated_data.get('quantity', item.quantity) > product.stock:
+            return Response({'detail': 'This product is unavailable in the requested quantity.'}, status=400)
         serializer.save()
 
         cart_serializer = CartSerializer(cart)
@@ -84,14 +96,31 @@ class CartItemDetailView(views.APIView):
 class CartMergeView(views.APIView):
     permission_classes = [IsAuthenticated]
 
+    @transaction.atomic
     def post(self, request):
         serializer = CartMergeSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
         cart = get_or_create_cart(request.user)
+        cart = Cart.objects.select_for_update().get(pk=cart.pk)
+        skipped = []
 
-        for item_data in serializer.validated_data['items']:
-            product = get_object_or_404(Product, id=item_data['product'])
+        indexed_items = list(enumerate(serializer.validated_data['items']))
+        for index, raw_item in sorted(indexed_items, key=lambda entry: str(entry[1].get('product', ''))):
+            item_serializer = CartItemCreateSerializer(data=raw_item)
+            if not item_serializer.is_valid():
+                skipped.append({'index': index, 'reason': 'Invalid product or quantity.'})
+                continue
+            item_data = item_serializer.validated_data
+            product = Product.objects.select_for_update().filter(id=item_data['product']).first()
+            if not product:
+                skipped.append({'index': index, 'reason': 'Product no longer exists.'})
+                continue
+            existing = CartItem.objects.filter(cart=cart, product=product).first()
+            desired = max(item_data['quantity'], existing.quantity if existing else 0)
+            if not product.is_active or desired > product.stock:
+                skipped.append({'index': index, 'reason': 'Product is unavailable in the requested quantity.'})
+                continue
             item, created = CartItem.objects.get_or_create(
                 cart=cart,
                 product=product,
@@ -102,4 +131,4 @@ class CartMergeView(views.APIView):
                 item.save()
 
         cart_serializer = CartSerializer(cart)
-        return Response(cart_serializer.data)
+        return Response({**cart_serializer.data, 'skipped': skipped})

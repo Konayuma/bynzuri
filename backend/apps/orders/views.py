@@ -5,10 +5,12 @@ from django.core.exceptions import ValidationError
 from django.shortcuts import get_object_or_404
 from rest_framework import views, status, permissions
 from rest_framework.response import Response
+from rest_framework.pagination import PageNumberPagination
 from .models import Order, OrderItem
 from apps.cart.models import Cart
 from apps.products.models import Product
 from .serializers import OrderListSerializer, OrderCreateSerializer, AdminOrderSerializer, OrderStatusUpdateSerializer
+from .services import OrderTransitionError, transition_order
 
 
 class OrderListCreateView(views.APIView):
@@ -99,32 +101,26 @@ class AdminOrderListView(views.APIView):
         if status_filter:
             orders = orders.filter(status=status_filter)
 
-        page = int(request.query_params.get('page', 1))
-        page_size = 20
-        start = (page - 1) * page_size
-        end = start + page_size
-
-        total = orders.count()
-        page_orders = orders[start:end]
+        paginator = PageNumberPagination()
+        paginator.page_size = 20
+        page_orders = paginator.paginate_queryset(orders, request, view=self)
         serializer = AdminOrderSerializer(page_orders, many=True)
-
-        return Response({
-            'count': total,
-            'next': f'?page={page + 1}' if end < total else None,
-            'previous': f'?page={page - 1}' if page > 1 else None,
-            'results': serializer.data,
-        })
+        return paginator.get_paginated_response(serializer.data)
 
 
 class AdminOrderStatusUpdateView(views.APIView):
     permission_classes = [permissions.IsAdminUser]
 
     def patch(self, request, pk):
-        order = get_object_or_404(Order, id=pk)
+        get_object_or_404(Order, id=pk)
         serializer = OrderStatusUpdateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        order.status = serializer.validated_data['status']
-        order.save(update_fields=['status'])
+        try:
+            order = transition_order(pk, serializer.validated_data['status'])
+        except Order.DoesNotExist:
+            return Response({'detail': 'Order not found.'}, status=status.HTTP_404_NOT_FOUND)
+        except OrderTransitionError as error:
+            return Response({'detail': str(error)}, status=status.HTTP_400_BAD_REQUEST)
 
         return Response(AdminOrderSerializer(order).data)

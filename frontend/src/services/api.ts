@@ -4,78 +4,78 @@ import { sessionExpired, sessionUnavailable } from './session'
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api').replace(/\/+$/, '')
 const REQUEST_TIMEOUT = 30000
-
-// Public storefront reads must not inherit an expired or unrelated login token.
-export const publicApi: AxiosInstance = axios.create({ baseURL: API_BASE_URL, timeout: REQUEST_TIMEOUT })
-
-const api: AxiosInstance = axios.create({
-  baseURL: API_BASE_URL,
-  timeout: REQUEST_TIMEOUT,
-  headers: { 'Content-Type': 'application/json' }
-})
-
-api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
-  const token = localStorage.getItem('access_token')
-  if (token && config.headers) config.headers.Authorization = `Bearer ${token}`
-  return config
-})
-
-// One refresh for simultaneous expired requests prevents rotating the same token twice.
+const SESSION_HINT = 'bynzuri_session'
+let accessToken: string | null = null
+let generation = 0
 let refreshInFlight: Promise<string> | null = null
-async function refreshAccessToken(): Promise<string> {
+
+// Credentials from older versions are deliberately discarded on upgrade.
+localStorage.removeItem('access_token')
+localStorage.removeItem('refresh_token')
+
+export const publicApi: AxiosInstance = axios.create({ baseURL: API_BASE_URL, timeout: REQUEST_TIMEOUT })
+export const sessionApi: AxiosInstance = axios.create({ baseURL: API_BASE_URL, timeout: REQUEST_TIMEOUT, withCredentials: true })
+const api: AxiosInstance = axios.create({ baseURL: API_BASE_URL, timeout: REQUEST_TIMEOUT, headers: { 'Content-Type': 'application/json' } })
+
+export function getAccessToken() { return accessToken }
+export function hasSession() { return !!accessToken || localStorage.getItem(SESSION_HINT) === '1' }
+export function setAccessToken(token: string) { generation++; accessToken = token; localStorage.setItem(SESSION_HINT, '1') }
+export function clearSession() { generation++; accessToken = null; localStorage.removeItem(SESSION_HINT) }
+export function withSessionLock<T>(operation: () => Promise<T>): Promise<T> {
+  return typeof navigator !== 'undefined' && navigator.locks
+    ? navigator.locks.request('bynzuri-token-refresh', operation)
+    : operation()
+}
+
+export async function csrfHeaders() {
+  const response = await sessionApi.get('/auth/csrf/')
+  if (typeof response.data?.csrfToken !== 'string') throw new Error('Invalid CSRF response')
+  return { 'X-CSRFToken': response.data.csrfToken }
+}
+
+export async function refreshAccessToken(): Promise<string> {
   if (refreshInFlight) return refreshInFlight
-  const refresh = localStorage.getItem('refresh_token')
-  if (!refresh) throw new Error('No refresh token')
-  refreshInFlight = (async () => {
-    const response = await axios.post(`${API_BASE_URL}/auth/token/refresh/`, { refresh }, { timeout: REQUEST_TIMEOUT })
+  const currentGeneration = generation
+  const performRefresh = async () => {
+    const headers = await csrfHeaders()
+    const response = await sessionApi.post('/auth/token/refresh/', {}, { headers })
     const access = response.data?.access
     if (typeof access !== 'string' || !access) throw new Error('Invalid refresh response')
-    // Do not overwrite credentials if the user signed out or signed in again meanwhile.
-    if (localStorage.getItem('refresh_token') !== refresh) throw new Error('Session changed')
-    localStorage.setItem('access_token', access)
-    if (typeof response.data.refresh === 'string' && response.data.refresh) {
-      localStorage.setItem('refresh_token', response.data.refresh)
-    }
+    if (generation !== currentGeneration) throw new Error('Session changed')
+    accessToken = access
+    localStorage.setItem(SESSION_HINT, '1')
     return access
-  })().finally(() => { refreshInFlight = null })
+  }
+  refreshInFlight = withSessionLock(performRefresh).finally(() => { refreshInFlight = null })
   return refreshInFlight
 }
 
-api.interceptors.response.use(
-  response => response,
-  async error => {
-    const originalRequest = error.config
-    if (!error.response && originalRequest?.headers?.Authorization) sessionUnavailable()
-    if (error.response?.status !== 401 || !originalRequest) return Promise.reject(error)
-    if (originalRequest._retry) {
-      const token = localStorage.getItem('access_token')
-      if (token && originalRequest.headers?.Authorization === `Bearer ${token}`) {
-        localStorage.removeItem('access_token')
-        localStorage.removeItem('refresh_token')
-        sessionExpired()
-      }
-      return Promise.reject(error)
-    }
-    const hadCredentials = !!localStorage.getItem('access_token') || !!localStorage.getItem('refresh_token')
-    if (!hadCredentials) return Promise.reject(error)
-    originalRequest._retry = true
-    const oldRefresh = localStorage.getItem('refresh_token')
-    try {
-      const access = await refreshAccessToken()
-      originalRequest.headers.Authorization = `Bearer ${access}`
-      return api(originalRequest)
-    } catch (refreshError) {
-      // A timeout or network failure does not prove the session is invalid.
-      if ((!oldRefresh || (axios.isAxiosError(refreshError) && [400, 401, 403].includes(refreshError.response?.status ?? 0))) && localStorage.getItem('refresh_token') === oldRefresh) {
-        localStorage.removeItem('access_token')
-        localStorage.removeItem('refresh_token')
-        sessionExpired()
-      } else if (localStorage.getItem('refresh_token') === oldRefresh && (!axios.isAxiosError(refreshError) || !refreshError.response || refreshError.response.status >= 500)) {
-        sessionUnavailable()
-      }
-      return Promise.reject(refreshError)
-    }
+api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
+  if (accessToken && config.headers) config.headers.Authorization = `Bearer ${accessToken}`
+  return config
+})
+
+api.interceptors.response.use(response => response, async error => {
+  const original = error.config
+  if (!error.response && original?.headers?.Authorization) sessionUnavailable()
+  if (error.response?.status !== 401 || !original || !hasSession()) return Promise.reject(error)
+  if (original._retry) {
+    if (accessToken && original.headers?.Authorization === `Bearer ${accessToken}`) { clearSession(); sessionExpired() }
+    return Promise.reject(error)
   }
-)
+  original._retry = true
+  const currentGeneration = generation
+  try {
+    const access = await refreshAccessToken()
+    original.headers.Authorization = `Bearer ${access}`
+    return api(original)
+  } catch (cause) {
+    if (generation === currentGeneration) {
+      if (axios.isAxiosError(cause) && [400, 401].includes(cause.response?.status ?? 0)) { clearSession(); sessionExpired() }
+      else sessionUnavailable()
+    }
+    return Promise.reject(cause)
+  }
+})
 
 export default api

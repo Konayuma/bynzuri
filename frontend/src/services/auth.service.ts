@@ -1,10 +1,16 @@
-import api, { publicApi } from './api'
+import api, { publicApi, sessionApi, csrfHeaders, withSessionLock } from './api'
 import type { User, AuthTokens } from '@/types'
 
 export const authService = {
   async login(email: string, password: string): Promise<AuthTokens> {
-    const response = await publicApi.post('/auth/token/', { email, password })
-    return response.data
+    return withSessionLock(async () => {
+      const response = await sessionApi.post('/auth/token/', { email, password }, { headers: await csrfHeaders() })
+      return response.data
+    })
+  },
+
+  async logout(): Promise<void> {
+    await withSessionLock(async () => { await sessionApi.post('/auth/logout/', {}, { headers: await csrfHeaders() }) })
   },
 
   async register(data: {

@@ -3,6 +3,7 @@ import type { RouteRecordRaw } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { adminRoutes } from './admin'
 import axios from 'axios'
+import { hasSession } from '@/services/api'
 
 let userStore: ReturnType<typeof useUserStore> | null = null
 
@@ -39,7 +40,8 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/order/confirmation/:id',
     name: 'order-confirmation',
-    component: () => import('@/pages/order/OrderConfirmationPage.vue')
+    component: () => import('@/pages/order/OrderConfirmationPage.vue'),
+    meta: { requiresAuth: true }
   },
   {
     path: '/account',
@@ -98,6 +100,11 @@ const routes: RouteRecordRaw[] = [
     path: '/help',
     name: 'help',
     component: () => import('@/pages/HelpPage.vue')
+  },
+  {
+    path: '/:pathMatch(.*)*',
+    name: 'not-found',
+    component: () => import('@/pages/NotFoundPage.vue')
   }
 ]
 
@@ -114,7 +121,7 @@ router.beforeEach(async (to, from, next) => {
   const store = getUserStore()
 
   if (to.meta.requiresAuth) {
-    const token = localStorage.getItem('access_token')
+    const token = hasSession()
     if (!token) {
       return next({ name: 'login', query: { redirect: to.fullPath } })
     }
@@ -122,7 +129,7 @@ router.beforeEach(async (to, from, next) => {
       try {
         await store.fetchProfile()
       } catch (error) {
-        if (!localStorage.getItem('access_token')) return next({ name: 'login', query: { redirect: to.fullPath, reason: 'expired' } })
+        if (!hasSession()) return next({ name: 'login', query: { redirect: to.fullPath, reason: 'expired' } })
         if (axios.isAxiosError(error) && error.response?.status === 403) return next({ name: 'access-denied' })
         return next({ name: 'session-unavailable', query: { redirect: to.fullPath } })
       }

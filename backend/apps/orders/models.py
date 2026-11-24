@@ -45,6 +45,10 @@ class Order(models.Model):
     class Meta:
         db_table = 'orders'
         ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['status', '-created_at'], name='orders_status_created_idx'),
+            models.Index(fields=['user', '-created_at'], name='orders_user_created_idx'),
+        ]
 
     def __str__(self):
         return f"Order {self.id}"

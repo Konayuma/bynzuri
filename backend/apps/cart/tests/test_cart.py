@@ -72,3 +72,20 @@ class TestCartAPI:
         }, format='json')
         assert response.status_code == status.HTTP_200_OK
         assert response.data['items'][0]['quantity'] == 3
+
+    def test_stock_and_partial_merge(self, user):
+        import uuid
+        self.client.force_authenticate(user=user)
+        assert self.client.post('/api/cart/add/', {'product': str(self.product.id), 'quantity': 11}, format='json').status_code == 400
+        response = self.client.post('/api/cart/merge/', {'items': [
+            {'product': str(uuid.uuid4()), 'quantity': 1},
+            {'product': 'not-a-uuid', 'quantity': 1},
+            {'product': str(self.product.id), 'quantity': 2},
+        ]}, format='json')
+        assert response.status_code == 200
+        assert len(response.data['skipped']) == 2
+        assert response.data['items'][0]['quantity'] == 2
+        item = CartItem.objects.get(cart__user=user, product=self.product)
+        assert self.client.patch(f'/api/cart/items/{item.id}/', {'quantity': 11}, format='json').status_code == 400
+        self.product.is_active = False; self.product.save()
+        assert self.client.post('/api/cart/add/', {'product': str(self.product.id), 'quantity': 1}, format='json').status_code == 400

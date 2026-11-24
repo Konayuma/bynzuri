@@ -9,6 +9,7 @@ const orders = ref<AdminOrder[]>([])
 const loading = ref(true)
 const statusFilter = ref('')
 const updatingId = ref<string | null>(null)
+const errorMessage = ref('')
 
 const statusLabels: Record<string, string> = {
   awaiting_payment: 'Awaiting Payment',
@@ -31,16 +32,13 @@ const statusOptions = [
 
 const transitionOptions: Record<string, { value: string; label: string }[]> = {
   awaiting_payment: [
-    { value: 'paid', label: 'Mark Paid' },
     { value: 'cancelled', label: 'Cancel' },
   ],
   paid: [
     { value: 'processing', label: 'Start Processing' },
-    { value: 'cancelled', label: 'Cancel' },
   ],
   processing: [
     { value: 'dispatched', label: 'Mark Dispatched' },
-    { value: 'cancelled', label: 'Cancel' },
   ],
   dispatched: [
     { value: 'delivered', label: 'Mark Delivered' },
@@ -51,6 +49,7 @@ const transitionOptions: Record<string, { value: string; label: string }[]> = {
 
 async function loadOrders() {
   loading.value = true
+  errorMessage.value = ''
   try {
     const params: { page?: number; status?: string } = {}
     if (statusFilter.value) params.status = statusFilter.value
@@ -58,6 +57,7 @@ async function loadOrders() {
     orders.value = data.results
   } catch {
     orders.value = []
+    errorMessage.value = 'Could not load orders. Please try again.'
   } finally {
     loading.value = false
   }
@@ -65,12 +65,14 @@ async function loadOrders() {
 
 async function updateStatus(order: AdminOrder, newStatus: string) {
   updatingId.value = order.id
+  errorMessage.value = ''
   try {
     const updated = await orderService.updateOrderStatus(order.id, newStatus)
     const idx = orders.value.findIndex(o => o.id === order.id)
     if (idx !== -1) orders.value[idx] = updated
-  } catch {
-    // ignore
+  } catch (e: unknown) {
+    errorMessage.value = (e as { response?: { data?: { detail?: string } } }).response?.data?.detail
+      || 'Could not update order status. Please try again.'
   } finally {
     updatingId.value = null
   }
@@ -92,6 +94,21 @@ onMounted(loadOrders)
             @update:model-value="loadOrders"
           />
         </div>
+      </div>
+
+      <div
+        v-if="errorMessage"
+        role="alert"
+        class="mb-4 flex items-center justify-between gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+      >
+        <span>{{ errorMessage }}</span>
+        <button
+          type="button"
+          class="shrink-0 font-semibold underline underline-offset-2 hover:text-red-900"
+          @click="errorMessage = ''"
+        >
+          Dismiss
+        </button>
       </div>
 
       <div v-if="loading" class="bg-white rounded-[16px] border border-gray-100 overflow-hidden">

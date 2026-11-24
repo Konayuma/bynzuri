@@ -4,6 +4,7 @@ import type { User } from '@/types'
 import { authService } from '@/services/auth.service'
 import { sessionExpired, sessionRestored, sessionUnavailable } from '@/services/session'
 import axios from 'axios'
+import { clearSession, getAccessToken, hasSession, refreshAccessToken, setAccessToken } from '@/services/api'
 
 export const useUserStore = defineStore('user', () => {
   const user = ref<User | null>(null)
@@ -13,15 +14,16 @@ export const useUserStore = defineStore('user', () => {
   const isAdmin = computed(() => user.value?.is_staff === true)
 
   async function fetchProfile() {
-    const token = localStorage.getItem('access_token')
-    if (!token) return
+    if (!hasSession()) return
 
     loading.value = true
     try {
+      if (!getAccessToken()) await refreshAccessToken()
       user.value = await authService.getProfile()
       sessionRestored()
     } catch (error) {
-      if (!localStorage.getItem('access_token')) user.value = null
+      if (axios.isAxiosError(error) && [400, 401].includes(error.response?.status ?? 0)) { clearSession(); user.value = null; sessionExpired() }
+      else if (!hasSession()) user.value = null
       else if (!axios.isAxiosError(error) || !error.response || error.response.status >= 500) sessionUnavailable()
       throw error
     } finally {
@@ -31,8 +33,7 @@ export const useUserStore = defineStore('user', () => {
 
   async function login(email: string, password: string) {
     const tokens = await authService.login(email, password)
-    localStorage.setItem('access_token', tokens.access)
-    localStorage.setItem('refresh_token', tokens.refresh)
+    setAccessToken(tokens.access)
     await fetchProfile()
   }
 
@@ -57,17 +58,18 @@ export const useUserStore = defineStore('user', () => {
 
   function logout() {
     user.value = null
-    localStorage.removeItem('access_token')
-    localStorage.removeItem('refresh_token')
+    clearSession()
+    void authService.logout().catch(() => sessionUnavailable())
     sessionRestored()
   }
 
   if (typeof window !== 'undefined') {
     window.addEventListener('bynzuri:session-expired', () => { user.value = null })
     window.addEventListener('storage', event => {
-      if (event.key === 'refresh_token' && event.oldValue && !event.newValue) {
+      if (event.key === 'bynzuri_session' && event.oldValue && !event.newValue) {
+        clearSession()
         user.value = null
-        if (!localStorage.getItem('access_token')) sessionExpired()
+        sessionExpired()
       }
     })
   }

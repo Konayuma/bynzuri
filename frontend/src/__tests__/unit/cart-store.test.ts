@@ -1,6 +1,8 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
 import { useCartStore } from '@/stores/cart'
+import { cartService } from '@/services/cart.service'
+import { clearSession, setAccessToken } from '@/services/api'
 
 function createMockProduct(id: string = 'p-1') {
   return {
@@ -75,7 +77,33 @@ describe('CartStore', () => {
     store.updateQuantity(itemId, 5)
 
     expect(store.items[0].quantity).toBe(5)
+    expect(store.items[0].total_price).toBe('499.95')
     expect(store.itemCount).toBe(5)
+  })
+
+  it('uses unique identifiers for guest items created together', async () => {
+    const store = useCartStore()
+    await store.addToCart(createMockProduct('p-1'))
+    await store.addToCart(createMockProduct('p-2'))
+    expect(store.items[0].id).not.toBe(store.items[1].id)
+  })
+
+  it('rejects guest quantities above stock', async () => {
+    const store = useCartStore()
+    await expect(store.addToCart(createMockProduct(), 11)).rejects.toThrow('unavailable')
+    expect(store.items).toHaveLength(0)
+  })
+
+  it('retains guest lines skipped by a partial server merge', async () => {
+    const store = useCartStore()
+    await store.addToCart(createMockProduct('p-1'))
+    await store.addToCart(createMockProduct('p-2'))
+    vi.spyOn(cartService, 'mergeCart').mockResolvedValue({ id: 'server', items: [], subtotal: '0.00', total: '0.00', item_count: 0, skipped: [{ index: 1, reason: 'Unavailable' }] } as never)
+    await store.mergeGuestCart()
+    const remaining = JSON.parse(localStorage.getItem('guest_cart')!)
+    expect(remaining.items.map((item: { product: { id: string } }) => item.product.id)).toEqual(['p-2'])
+    expect(store.error).toContain('Some items could not be added')
+    vi.restoreAllMocks()
   })
 
   it('calculates subtotal correctly', () => {
@@ -122,5 +150,23 @@ describe('CartStore', () => {
 
     expect(store.itemCount).toBe(3)
     expect(store.items[0].quantity).toBe(3)
+  })
+
+  it('uses the cart returned by DELETE without triggering a second fetchCart call', async () => {
+    setAccessToken('tok-123')
+    const updatedCart = { id: 'cart-1', items: [], subtotal: '0.00', total: '0.00', item_count: 0 }
+    const removeSpy = vi.spyOn(cartService, 'removeItem').mockResolvedValue(updatedCart)
+    const getSpy = vi.spyOn(cartService, 'getCart')
+
+    const store = useCartStore()
+    await store.removeItem('item-1')
+
+    expect(removeSpy).toHaveBeenCalledWith('item-1')
+    expect(getSpy).not.toHaveBeenCalled()
+    expect(store.cart).toEqual(updatedCart)
+
+    clearSession()
+    removeSpy.mockRestore()
+    getSpy.mockRestore()
   })
 })

@@ -1,60 +1,55 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import axios, { AxiosError, AxiosHeaders } from 'axios'
-import api from '@/services/api'
+import { AxiosError, AxiosHeaders } from 'axios'
+import type { InternalAxiosRequestConfig } from 'axios'
+import api, { sessionApi, setAccessToken, getAccessToken, clearSession } from '@/services/api'
 import { sessionState } from '@/services/session'
 
 const originalAdapter = api.defaults.adapter
+const unauthorized = (config: InternalAxiosRequestConfig) => new AxiosError('unauthorized', 'ERR_BAD_REQUEST', config, undefined, { data: {}, status: 401, statusText: 'Unauthorized', headers: new AxiosHeaders(), config })
 
 describe('expired access tokens', () => {
   beforeEach(() => {
-    localStorage.clear()
-    sessionState.notice = null
-    localStorage.setItem('access_token', 'expired')
-    localStorage.setItem('refresh_token', 'old-refresh')
+    localStorage.clear(); clearSession(); sessionState.notice = null; setAccessToken('expired')
+    vi.spyOn(sessionApi, 'get').mockResolvedValue({ data: { csrfToken: 'csrf' } })
   })
-  afterEach(() => { api.defaults.adapter = originalAdapter; vi.restoreAllMocks() })
+  afterEach(() => { api.defaults.adapter = originalAdapter; clearSession(); vi.restoreAllMocks() })
 
-  it('shares a refresh between concurrent requests and stores rotated credentials', async () => {
-    const refresh = vi.spyOn(axios, 'post').mockResolvedValue({ data: { access: 'new-access', refresh: 'new-refresh' } })
+  it('shares a cookie refresh between concurrent requests without storing tokens', async () => {
+    const refresh = vi.spyOn(sessionApi, 'post').mockResolvedValue({ data: { access: 'new-access' } })
     api.defaults.adapter = async config => {
-      if (config.headers.get('Authorization') === 'Bearer expired') {
-        throw new AxiosError('unauthorized', 'ERR_BAD_REQUEST', config, undefined, { data: {}, status: 401, statusText: 'Unauthorized', headers: new AxiosHeaders(), config })
-      }
+      if (config.headers.get('Authorization') === 'Bearer expired') throw unauthorized(config)
       return { data: 'ok', status: 200, statusText: 'OK', headers: new AxiosHeaders(), config }
     }
     const responses = await Promise.all([api.patch('/products/a/', {}), api.get('/auth/profile/')])
     expect(responses.map(r => r.data)).toEqual(['ok', 'ok'])
     expect(refresh).toHaveBeenCalledTimes(1)
-    expect(localStorage.getItem('access_token')).toBe('new-access')
-    expect(localStorage.getItem('refresh_token')).toBe('new-refresh')
+    expect(refresh).toHaveBeenCalledWith('/auth/token/refresh/', {}, { headers: { 'X-CSRFToken': 'csrf' } })
+    expect(getAccessToken()).toBe('new-access')
+    expect(localStorage.getItem('access_token')).toBeNull()
+    expect(localStorage.getItem('refresh_token')).toBeNull()
   })
-
-  it('keeps credentials when refresh fails due to a network outage', async () => {
-    vi.spyOn(axios, 'post').mockRejectedValue(new AxiosError('Network error', 'ERR_NETWORK'))
-    api.defaults.adapter = async config => { throw new AxiosError('unauthorized', 'ERR_BAD_REQUEST', config, undefined, { data: {}, status: 401, statusText: 'Unauthorized', headers: new AxiosHeaders(), config }) }
-    await expect(api.patch('/products/a/', {})).rejects.toThrow('Network error')
-    expect(localStorage.getItem('refresh_token')).toBe('old-refresh')
+  it('retains session when refresh has a network outage', async () => {
+    vi.spyOn(sessionApi, 'post').mockRejectedValue(new AxiosError('Network error', 'ERR_NETWORK'))
+    api.defaults.adapter = async config => { throw unauthorized(config) }
+    await expect(api.get('/auth/profile/')).rejects.toThrow('Network error')
+    expect(getAccessToken()).toBe('expired')
     expect(sessionState.notice).toBe('unavailable')
   })
-
-  it('clears invalid credentials and announces expiry only once for concurrent failures', async () => {
-    const listener = vi.fn()
-    window.addEventListener('bynzuri:session-expired', listener)
-    vi.spyOn(axios, 'post').mockRejectedValue(new AxiosError('invalid refresh', 'ERR_BAD_REQUEST', undefined, undefined, { data: {}, status: 401, statusText: 'Unauthorized', headers: new AxiosHeaders(), config: {} as never }))
-    api.defaults.adapter = async config => { throw new AxiosError('unauthorized', 'ERR_BAD_REQUEST', config, undefined, { data: {}, status: 401, statusText: 'Unauthorized', headers: new AxiosHeaders(), config }) }
+  it('clears a rejected refresh and announces expiry once', async () => {
+    const listener = vi.fn(); window.addEventListener('bynzuri:session-expired', listener)
+    vi.spyOn(sessionApi, 'post').mockRejectedValue(unauthorized({} as never))
+    api.defaults.adapter = async config => { throw unauthorized(config) }
     await Promise.allSettled([api.get('/auth/profile/'), api.get('/orders/')])
-    expect(localStorage.getItem('refresh_token')).toBeNull()
-    expect(localStorage.getItem('access_token')).toBeNull()
+    expect(getAccessToken()).toBeNull()
     expect(sessionState.notice).toBe('expired')
     expect(listener).toHaveBeenCalledTimes(1)
     window.removeEventListener('bynzuri:session-expired', listener)
   })
-
-  it('announces expiry if a freshly refreshed access token is also rejected', async () => {
-    vi.spyOn(axios, 'post').mockResolvedValue({ data: { access: 'new-access', refresh: 'new-refresh' } })
-    api.defaults.adapter = async config => { throw new AxiosError('unauthorized', 'ERR_BAD_REQUEST', config, undefined, { data: {}, status: 401, statusText: 'Unauthorized', headers: new AxiosHeaders(), config }) }
+  it('announces expiry if the refreshed access token is rejected', async () => {
+    vi.spyOn(sessionApi, 'post').mockResolvedValue({ data: { access: 'new-access' } })
+    api.defaults.adapter = async config => { throw unauthorized(config) }
     await expect(api.get('/auth/profile/')).rejects.toThrow('unauthorized')
     expect(sessionState.notice).toBe('expired')
-    expect(localStorage.getItem('refresh_token')).toBeNull()
+    expect(getAccessToken()).toBeNull()
   })
 })

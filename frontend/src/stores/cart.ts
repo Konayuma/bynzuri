@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { Cart, CartItem, Product } from '@/types'
 import { cartService } from '@/services/cart.service'
+import { hasSession } from '@/services/api'
 
 export const useCartStore = defineStore('cart', () => {
   const cart = ref<Cart | null>(null)
@@ -30,10 +31,11 @@ export const useCartStore = defineStore('cart', () => {
   async function fetchCart() {
     const revision = cartRevision
     loading.value = true
+    const previousError = error.value.startsWith('Some items could not be added') ? error.value : ''
     error.value = ''
     try {
       const data = await cartService.getCart()
-      if (revision === cartRevision) cart.value = data
+      if (revision === cartRevision) { cart.value = data; error.value = previousError }
     } catch {
       if (revision === cartRevision) error.value = 'Could not load your cart. Please check your connection and try again.'
     } finally {
@@ -44,7 +46,12 @@ export const useCartStore = defineStore('cart', () => {
   async function addToCart(product: Product, quantity: number = 1) {
     cartRevision++
     error.value = ''
-    const token = localStorage.getItem('access_token')
+    const existingQuantity = items.value.find(item => item.product.id === product.id)?.quantity || 0
+    if (!product.is_in_stock || !Number.isInteger(quantity) || quantity < 1 || existingQuantity + quantity > product.stock) {
+      error.value = 'This product is unavailable in the requested quantity.'
+      throw new Error(error.value)
+    }
+    const token = hasSession()
     if (token) {
       loading.value = true
       try {
@@ -71,7 +78,7 @@ export const useCartStore = defineStore('cart', () => {
       existing.quantity += quantity
     } else {
       cart.value.items.push({
-        id: `guest_${Date.now()}`,
+        id: `guest_${crypto.randomUUID()}`,
         product,
         quantity,
         total_price: (parseFloat(product.price) * quantity).toFixed(2)
@@ -83,7 +90,7 @@ export const useCartStore = defineStore('cart', () => {
   }
 
   async function updateQuantity(itemId: string, quantity: number) {
-    const token = localStorage.getItem('access_token')
+    const token = hasSession()
     if (token) {
       loading.value = true
       try {
@@ -95,6 +102,10 @@ export const useCartStore = defineStore('cart', () => {
     } else {
       const item = cart.value?.items.find(i => i.id === itemId)
       if (item) {
+        if (!Number.isInteger(quantity) || quantity < 1 || !item.product.is_in_stock || quantity > item.product.stock) {
+          error.value = 'This product is unavailable in the requested quantity.'
+          throw new Error(error.value)
+        }
         item.quantity = quantity
         recalculateGuestCart()
         saveGuestCart()
@@ -103,12 +114,13 @@ export const useCartStore = defineStore('cart', () => {
   }
 
   async function removeItem(itemId: string) {
-    const token = localStorage.getItem('access_token')
+    cartRevision++
+    const token = hasSession()
     if (token) {
       loading.value = true
       try {
-        await cartService.removeItem(itemId)
-        await fetchCart()
+        const data = await cartService.removeItem(itemId)
+        cart.value = data
       } finally {
         loading.value = false
       }
@@ -123,6 +135,7 @@ export const useCartStore = defineStore('cart', () => {
 
   function recalculateGuestCart() {
     if (!cart.value) return
+    for (const item of cart.value.items) item.total_price = (parseFloat(item.product.price) * item.quantity).toFixed(2)
     const subtotal = cart.value.items.reduce(
       (sum, item) => sum + parseFloat(item.product.price) * item.quantity, 0
     )
@@ -148,7 +161,12 @@ export const useCartStore = defineStore('cart', () => {
       }))
       const data = await cartService.mergeCart(items)
       cart.value = data
-      localStorage.removeItem('guest_cart')
+      const skipped = (data as Cart & { skipped?: { index: number; reason: string }[] }).skipped || []
+      if (skipped.length) {
+        guestCart.items = skipped.map(entry => guestCart.items[entry.index]).filter(Boolean)
+        localStorage.setItem('guest_cart', JSON.stringify(guestCart))
+        error.value = 'Some items could not be added because they are unavailable or exceed available stock.'
+      } else localStorage.removeItem('guest_cart')
     }
   }
 

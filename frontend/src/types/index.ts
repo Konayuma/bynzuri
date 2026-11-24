@@ -10,7 +10,6 @@ export interface User {
 
 export interface AuthTokens {
   access: string
-  refresh: string
 }
 
 export interface Category {
@@ -85,6 +84,7 @@ export interface Order {
   id: string
   user: string
   items: OrderItem[]
+  item_count?: number
   total_amount: string
   delivery_fee: string
   grand_total: string

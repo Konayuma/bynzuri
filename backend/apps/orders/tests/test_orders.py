@@ -147,3 +147,42 @@ class TestOrderCreation:
         response = self.client.get(f'/api/orders/{order_id}/')
         assert response.status_code == status.HTTP_200_OK
         assert response.data['id'] == order_id
+
+    def test_cancel_restores_stock_once_and_rejects_invalid_transition(self, user):
+        from apps.orders.services import transition_order, OrderTransitionError
+        self.client.force_authenticate(user=user); self._setup_cart(user)
+        response = self.client.post('/api/orders/', {'province':'Lusaka','town':'Lusaka','street_address':'123','phone':'260977000000','delivery_method':str(self.delivery.id),'payment_method':'mtn_momo'}, format='json')
+        order_id = response.data['id']
+        transition_order(order_id, 'cancelled'); transition_order(order_id, 'cancelled')
+        self.product.refresh_from_db(); assert self.product.stock == 5
+        with pytest.raises(OrderTransitionError): transition_order(order_id, 'awaiting_payment')
+
+    def test_expiry_skips_pending_payment(self, user):
+        from datetime import timedelta
+        from django.core.management import call_command
+        from django.utils import timezone
+        from apps.payments.models import Payment
+        self.client.force_authenticate(user=user); self._setup_cart(user)
+        response = self.client.post('/api/orders/', {'province':'Lusaka','town':'Lusaka','street_address':'123','phone':'260977000000','delivery_method':str(self.delivery.id),'payment_method':'mtn_momo'}, format='json')
+        order = Order.objects.get(id=response.data['id']); Order.objects.filter(id=order.id).update(created_at=timezone.now()-timedelta(hours=25))
+        Payment.objects.create(order=order, user=user, method='mtn_momo', amount=order.grand_total, idempotency_key='pending-expiry')
+        call_command('expire_unpaid_orders')
+        order.refresh_from_db(); self.product.refresh_from_db()
+        assert order.status == 'awaiting_payment' and self.product.stock == 3
+
+    def test_expiry_releases_stock_only_once(self, user):
+        from datetime import timedelta
+        from django.core.management import call_command
+        from django.utils import timezone
+        self.client.force_authenticate(user=user); self._setup_cart(user)
+        response = self.client.post('/api/orders/', {'province':'Lusaka','town':'Lusaka','street_address':'123','phone':'260977000000','delivery_method':str(self.delivery.id),'payment_method':'mtn_momo'}, format='json')
+        order = Order.objects.get(id=response.data['id'])
+        Order.objects.filter(pk=order.pk).update(created_at=timezone.now() - timedelta(hours=25))
+        call_command('expire_unpaid_orders'); call_command('expire_unpaid_orders')
+        order.refresh_from_db(); self.product.refresh_from_db()
+        assert order.status == 'cancelled' and self.product.stock == 5
+
+    def test_admin_invalid_pagination_is_not_server_error(self, user):
+        user.is_staff = True; user.save(); self.client.force_authenticate(user=user)
+        for page in ['abc', '0', '-1']:
+            assert self.client.get('/api/orders/admin/', {'page': page}).status_code == 404

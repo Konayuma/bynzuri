@@ -17,8 +17,9 @@ export const cartService = {
     return response.data
   },
 
-  async removeItem(itemId: string): Promise<void> {
-    await api.delete(`/cart/items/${itemId}/`)
+  async removeItem(itemId: string): Promise<Cart> {
+    const response = await api.delete(`/cart/items/${itemId}/`)
+    return response.data
   },
 
   async mergeCart(items: { product: string; quantity: number }[]): Promise<Cart> {

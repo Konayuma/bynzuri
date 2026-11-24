@@ -235,7 +235,7 @@ async function saveProduct() {
     showModal.value = false
     await loadProducts()
   } catch (e: any) {
-    if (!localStorage.getItem('refresh_token') || e.response?.status === 401) {
+    if (e.response?.status === 401) {
       sessionExpired.value = true
       formError.value = 'Your session has expired. Sign in again in another tab, then return here and retry; your changes are still in this form.'
     } else if (!e.response) {
