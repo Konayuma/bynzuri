@@ -19,6 +19,7 @@ const paymentError = ref('')
 const paymentStatusChecked = ref(false)
 const paymentPhone = ref('')
 const paymentMethod = ref('mtn_momo')
+const printReceipt = () => window.print()
 const paymentMethodOptions = [
   { value: 'mtn_momo', label: 'MTN Mobile Money' },
   { value: 'airtel_money', label: 'Airtel Money' },
@@ -56,7 +57,7 @@ onMounted(async () => {
   try {
     const id = route.params.id as string
     order.value = await orderService.getOrder(id)
-    if (order.value.status === 'awaiting_payment') await checkPayment()
+    await checkPayment()
   } catch {
     // order not found
   } finally {
@@ -109,6 +110,26 @@ onMounted(async () => {
         </div>
       </div>
 
+      <section v-if="payment?.status === 'success'" class="receipt bg-white rounded-[20px] p-6 text-left mb-6 shadow-[0_8px_30px_rgba(0,0,0,0.06)]" aria-labelledby="receipt-title">
+        <img src="/By%20Nzuri%20Vector%20Logo%20-01.svg" alt="By Nzuri" class="mx-auto h-40 w-64 max-w-full object-contain" />
+        <div class="flex items-center justify-between gap-4 border-b border-primary/20 pb-4 mb-4">
+          <h2 id="receipt-title" class="text-sm text-muted">Payment receipt</h2>
+          <span class="text-sm font-medium text-success">Paid</span>
+        </div>
+        <div class="space-y-2 text-sm text-dark">
+          <p>Order: {{ order.id }}</p>
+          <p>Payment reference: {{ payment.lenco_reference || payment.transaction_reference || payment.id }}</p>
+          <p>Payment initiated: {{ new Date(payment.created_at).toLocaleString() }}</p>
+          <p>Method: {{ payment.method === 'mtn_momo' ? 'MTN Mobile Money' : payment.method === 'airtel_money' ? 'Airtel Money' : payment.method }}</p>
+          <div class="border-t border-primary/20 pt-3 mt-3 space-y-2">
+            <div v-for="item in order.items" :key="item.id" class="flex justify-between gap-4"><span>{{ item.product_title }} × {{ item.quantity }}</span><span>{{ payment.currency }} {{ (Number(item.price_at_purchase) * item.quantity).toFixed(2) }}</span></div>
+            <div class="flex justify-between gap-4"><span>Delivery</span><span>{{ payment.currency }} {{ order.delivery_fee }}</span></div>
+            <div class="flex justify-between gap-4 font-semibold border-t border-primary/20 pt-3"><span>Amount paid</span><span>{{ payment.currency }} {{ payment.amount }}</span></div>
+          </div>
+        </div>
+        <button type="button" class="receipt-action mt-5 text-sm font-medium underline text-dark" @click="printReceipt">Print or save receipt as PDF</button>
+      </section>
+
       <div v-if="order.status === 'awaiting_payment'" class="bg-white rounded-[20px] p-6 shadow-[0_8px_30px_rgba(0,0,0,0.06)] text-left mb-6 space-y-3">
         <h2 class="font-semibold text-dark">Mobile money payment</h2>
         <p v-if="payment && ['pending', 'processing'].includes(payment.status)" class="text-sm text-muted">Your payment is pending. Check your phone for the prompt, then check the status here.</p>
@@ -154,3 +175,12 @@ onMounted(async () => {
     </div>
   </div>
 </template>
+
+<style>
+@media print {
+  body * { visibility: hidden !important; }
+  .receipt, .receipt * { visibility: visible !important; }
+  .receipt { position: absolute; inset: 0 auto auto 0; width: 100%; box-shadow: none; }
+  .receipt .receipt-action { display: none; }
+}
+</style>

@@ -8,8 +8,20 @@ import pytest
 from django.test import override_settings
 from rest_framework.test import APIClient
 from apps.payments.models import Payment
+from apps.payments.serializers import PaymentInitiateSerializer
 
 pytestmark = pytest.mark.django_db
+
+@pytest.mark.parametrize(('phone', 'expected'), [
+    ('0571234567', '260571234567'), ('0771234567', '260771234567'),
+    ('0971234567', '260971234567'), ('+260 571 234 567', '260571234567'),
+    ('260771234567', '260771234567'),
+])
+def test_payment_phone_formats(phone, expected):
+    serializer = PaymentInitiateSerializer(data={'order_id': '00000000-0000-0000-0000-000000000001', 'method': 'airtel_money', 'phone': phone})
+    assert serializer.is_valid(), serializer.errors
+    assert serializer.validated_data['phone'] == expected
+
 
 @pytest.fixture(autouse=True)
 def lenco_settings():

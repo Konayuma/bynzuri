@@ -23,9 +23,9 @@ class PaymentInitiateSerializer(serializers.Serializer):
         cleaned = re.sub(r'[\s()-]', '', value)
         if cleaned.startswith('+'):
             cleaned = cleaned[1:]
-        if re.fullmatch(r'0[679]\d{8}', cleaned):
+        if re.fullmatch(r'0[5679]\d{8}', cleaned):
             cleaned = '260' + cleaned[1:]
-        if not re.fullmatch(r'260[679]\d{8}', cleaned):
+        if not re.fullmatch(r'260[5679]\d{8}', cleaned):
             raise serializers.ValidationError('Enter a valid Zambian mobile number.')
         return cleaned
 
