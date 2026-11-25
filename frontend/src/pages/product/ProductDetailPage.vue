@@ -6,6 +6,7 @@ import { useCartStore } from '@/stores/cart'
 import { useWishlistStore } from '@/stores/wishlist'
 import { useUserStore } from '@/stores/user'
 import ProductGallery from '@/components/product/ProductGallery.vue'
+import DescriptionInline from '@/components/product/DescriptionInline.vue'
 import ProductCard from '@/components/product/ProductCard.vue'
 import BaseButton from '@/components/base/BaseButton.vue'
 import { Heart, Minus, Plus, Star, Truck, ShieldCheck, Send } from '@lucide/vue'
@@ -226,9 +227,9 @@ watch(product, (p) => {
 
           <div v-if="descriptionBlocks.length" class="mb-7 max-w-prose space-y-4 text-sm leading-7 text-muted break-words">
             <template v-for="(block, index) in descriptionBlocks" :key="index">
-              <p v-if="block.type === 'paragraph'">{{ block.text }}</p>
-              <h2 v-else-if="block.type === 'heading'" class="pt-1 text-sm font-semibold text-dark">{{ block.text }}</h2>
-              <ul v-else class="list-disc space-y-1 pl-5 marker:text-gold"><li v-for="(item, itemIndex) in block.items" :key="itemIndex">{{ item }}</li></ul>
+              <p v-if="block.type === 'paragraph'"><DescriptionInline :text="block.text" /></p>
+              <h2 v-else-if="block.type === 'heading'" class="pt-1 text-sm font-semibold text-dark"><DescriptionInline :text="block.text" /></h2>
+              <component :is="block.ordered ? 'ol' : 'ul'" v-else :class="block.ordered ? 'list-decimal' : 'list-disc'" class="space-y-1 pl-5 marker:text-gold"><li v-for="(item, itemIndex) in block.items" :key="itemIndex"><DescriptionInline :text="item" /></li></component>
             </template>
           </div>
 

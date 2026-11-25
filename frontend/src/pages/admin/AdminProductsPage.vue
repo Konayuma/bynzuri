@@ -382,8 +382,10 @@ onMounted(async () => {
             <textarea
               v-model="form.description"
               class="w-full px-4 py-3 bg-white border border-primary/40 rounded-[14px] text-sm text-dark placeholder:text-muted/60 focus:outline-none focus:border-gold transition-colors"
-              rows="3"
+              rows="6"
+              placeholder="Write paragraphs separated by blank lines, ## Headings, and - bullet points..."
             />
+            <p class="mt-1 text-xs text-muted">Supports blank-line paragraphs, headings (## Heading), and bullet lists (- Item).</p>
           </div>
           <div class="flex items-center gap-2">
             <input id="is_active" v-model="form.is_active" type="checkbox" class="rounded" />
