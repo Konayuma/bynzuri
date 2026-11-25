@@ -14,6 +14,10 @@ withDefaults(defineProps<{ count?: number; message?: string; catalog?: boolean }
         <div class="h-3 w-1/3 rounded bg-primary/30 motion-safe:animate-pulse" />
         <div class="h-4 w-3/4 rounded bg-primary/30 motion-safe:animate-pulse" />
         <div class="h-4 w-1/4 rounded bg-primary/30 motion-safe:animate-pulse" />
+        <div class="flex items-center gap-2 pt-1">
+          <div class="h-10 flex-1 rounded-full bg-primary/30 motion-safe:animate-pulse" />
+          <div class="h-10 w-10 rounded-full bg-primary/30 motion-safe:animate-pulse shrink-0" />
+        </div>
       </div>
     </div>
   </div>

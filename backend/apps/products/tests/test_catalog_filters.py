@@ -23,3 +23,10 @@ class CatalogFilterTests(TestCase):
         self.assertEqual([p['title'] for p in response.data['results']], ['Oil', 'Shampoo'])
         self.assertEqual(self.client.get('/api/products/', {'min_price': '-1'}).status_code, 400)
         self.assertEqual(self.client.get('/api/products/', {'max_price': 'invalid'}).status_code, 400)
+
+    def test_price_filter_and_sort_use_discounted_price(self):
+        Product.objects.filter(slug='oil').update(discount_percent=Decimal('60'))
+        response = self.client.get('/api/products/', {'max_price': '45', 'ordering': 'price'})
+        self.assertEqual([p['title'] for p in response.data['results']], ['Oil'])
+        response = self.client.get('/api/products/', {'in_stock': 'true', 'ordering': 'price'})
+        self.assertEqual([p['title'] for p in response.data['results']], ['Oil', 'Shampoo'])

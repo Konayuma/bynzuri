@@ -196,7 +196,7 @@ watch(product, (p) => {
             {{ product.title }}
           </h1>
 
-          <p class="font-bold text-2xl text-dark mb-4">K{{ product.price }}</p>
+          <p class="font-bold text-2xl text-dark mb-4"><span v-if="Number(product.discount_percent) > 0" class="mr-3 text-base font-normal text-muted line-through">K{{ product.price }}</span>K{{ product.sale_price ?? product.price }}</p>
 
           <div class="flex items-center gap-2 mb-4">
             <div class="flex items-center gap-0.5">

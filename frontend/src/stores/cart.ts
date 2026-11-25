@@ -81,7 +81,7 @@ export const useCartStore = defineStore('cart', () => {
         id: `guest_${crypto.randomUUID()}`,
         product,
         quantity,
-        total_price: (parseFloat(product.price) * quantity).toFixed(2)
+        total_price: (parseFloat(product.sale_price ?? product.price) * quantity).toFixed(2)
       })
     }
 
@@ -143,9 +143,9 @@ export const useCartStore = defineStore('cart', () => {
 
   function recalculateGuestCart() {
     if (!cart.value) return
-    for (const item of cart.value.items) item.total_price = (parseFloat(item.product.price) * item.quantity).toFixed(2)
+    for (const item of cart.value.items) item.total_price = (parseFloat(item.product.sale_price ?? item.product.price) * item.quantity).toFixed(2)
     const subtotal = cart.value.items.reduce(
-      (sum, item) => sum + parseFloat(item.product.price) * item.quantity, 0
+      (sum, item) => sum + parseFloat(item.product.sale_price ?? item.product.price) * item.quantity, 0
     )
     cart.value.subtotal = subtotal.toFixed(2)
     cart.value.total = subtotal.toFixed(2)

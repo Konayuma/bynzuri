@@ -63,9 +63,9 @@ class OrderListCreateView(views.APIView):
                 product = products[item.product_id]
                 product.stock -= item.quantity
                 product.save(update_fields=['stock'])
-                total_amount += product.price * item.quantity
+                total_amount += product.sale_price * item.quantity
                 order_items_data.append({'product': product, 'product_title': product.title,
-                                         'quantity': item.quantity, 'price_at_purchase': product.price})
+                                         'quantity': item.quantity, 'price_at_purchase': product.sale_price})
 
             order = Order.objects.create(
                 user=request.user, idempotency_key=idempotency_key, total_amount=total_amount,

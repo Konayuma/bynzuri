@@ -36,6 +36,8 @@ export interface Product {
   slug: string
   description: string
   price: string
+  sale_price?: string
+  discount_percent?: string
   stock: number
   is_in_stock: boolean
   is_active?: boolean
@@ -202,6 +204,7 @@ export interface ProductCreateData {
   slug: string
   description: string
   price: string
+  discount_percent: string
   stock: number
   is_active: boolean
   is_featured: boolean

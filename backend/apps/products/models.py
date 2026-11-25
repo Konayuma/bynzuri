@@ -1,5 +1,6 @@
 import logging
 import uuid
+from decimal import Decimal, ROUND_HALF_UP
 from django.db import models
 from django.db.models.signals import pre_save
 from django.dispatch import receiver
@@ -18,6 +19,7 @@ class Product(models.Model):
     slug = models.SlugField(max_length=250, unique=True)
     description = models.TextField()
     price = models.DecimalField(max_digits=10, decimal_places=2)
+    discount_percent = models.DecimalField(max_digits=5, decimal_places=2, default=0)
     stock = models.IntegerField(default=0)
     is_active = models.BooleanField(default=True)
     is_featured = models.BooleanField(default=False)
@@ -41,6 +43,10 @@ class Product(models.Model):
     @property
     def is_in_stock(self):
         return self.stock > 0
+
+    @property
+    def sale_price(self):
+        return (self.price * (Decimal('1') - self.discount_percent / Decimal('100'))).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
 
 
 class ProductImage(models.Model):

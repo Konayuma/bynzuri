@@ -18,7 +18,7 @@ class ProductListSerializer(serializers.ModelSerializer):
         model = Product
         fields = [
             'id', 'category', 'category_name', 'category_slug', 'title', 'slug',
-            'price', 'stock', 'is_in_stock', 'images',
+            'price', 'discount_percent', 'sale_price', 'stock', 'is_in_stock', 'images',
             'rating', 'review_count', 'created_at'
         ]
 
@@ -32,12 +32,13 @@ class ProductDetailSerializer(serializers.ModelSerializer):
         model = Product
         fields = [
             'id', 'category', 'category_name', 'category_slug', 'title', 'slug',
-            'description', 'price', 'stock', 'is_in_stock', 'is_active', 'is_featured', 'images',
+            'description', 'price', 'discount_percent', 'sale_price', 'stock', 'is_in_stock', 'is_active', 'is_featured', 'images',
             'rating', 'review_count', 'created_at', 'updated_at'
         ]
 
 
 class ProductCreateSerializer(serializers.ModelSerializer):
+    discount_percent = serializers.DecimalField(max_digits=5, decimal_places=2, min_value=0, max_value=100, required=False)
     slug = serializers.SlugField(required=False, allow_blank=True, max_length=250)
     description = serializers.CharField(required=False, allow_blank=True)
     images = ProductImageSerializer(many=True, read_only=True, required=False)
@@ -45,7 +46,7 @@ class ProductCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
         fields = [
-            'category', 'title', 'slug', 'description', 'price', 'stock',
+            'category', 'title', 'slug', 'description', 'price', 'discount_percent', 'stock',
             'is_active', 'is_featured', 'images',
         ]
 

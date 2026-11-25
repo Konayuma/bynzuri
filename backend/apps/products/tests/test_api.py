@@ -61,6 +61,18 @@ class TestProductAPI:
         assert response.data['title'] == 'Test Oil'
         assert response.data['price'] == '99.99'
 
+    def test_only_staff_can_set_valid_discount(self, django_user_model):
+        endpoint = f'{self.list_url}{self.product.slug}/'
+        user = django_user_model.objects.create_user(username='discount-test', email='discount@example.com', password='test-password')
+        self.client.force_authenticate(user=user)
+        assert self.client.patch(endpoint, {'discount_percent': '20.00'}, format='json').status_code == 403
+        user.is_staff = True
+        user.save()
+        assert self.client.patch(endpoint, {'discount_percent': '101'}, format='json').status_code == 400
+        assert self.client.patch(endpoint, {'discount_percent': '20.00'}, format='json').status_code == 200
+        response = self.client.get(endpoint)
+        assert Decimal(str(response.data['sale_price'])) == Decimal('79.99')
+
     def test_best_sellers(self):
         response = self.client.get(f'{self.list_url}best-sellers/')
         assert response.status_code == status.HTTP_200_OK

@@ -1,7 +1,14 @@
-import { describe, it, expect, vi } from 'vitest'
-import { mount, RouterLinkStub } from '@vue/test-utils'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { flushPromises, mount, RouterLinkStub } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import ProductCard from '@/components/product/ProductCard.vue'
+import { useCartStore } from '@/stores/cart'
+import { useWishlistStore } from '@/stores/wishlist'
+
+const pushMock = vi.fn()
+vi.mock('vue-router', () => ({
+  useRouter: () => ({ push: pushMock })
+}))
 
 const mockProduct = {
   id: 'p-1',
@@ -24,15 +31,17 @@ function createWrapper(product = mockProduct) {
   return mount(ProductCard, {
     props: { product },
     global: {
-      stubs: { RouterLink: RouterLinkStub },
-      mocks: {
-        $router: { push: vi.fn() }
-      }
+      stubs: { RouterLink: RouterLinkStub }
     }
   })
 }
 
 describe('ProductCard', () => {
+  beforeEach(() => {
+    pushMock.mockReset()
+    localStorage.clear()
+  })
+
   it('renders product title', () => {
     const wrapper = createWrapper()
     expect(wrapper.text()).toContain('Growth Oil')
@@ -57,10 +66,19 @@ describe('ProductCard', () => {
     expect(wrapper.text()).toContain('K149.99')
   })
 
-  it('shows out of stock overlay when stock is 0', () => {
+  it('keeps action buttons off the product image container', () => {
+    const wrapper = createWrapper()
+    const imageContainer = wrapper.get('div.aspect-\\[3\\/4\\]')
+    expect(imageContainer.findAll('button')).toHaveLength(0)
+  })
+
+  it('shows out of stock overlay and disables Buy Now when stock is 0', () => {
     const outOfStock = { ...mockProduct, stock: 0, is_in_stock: false }
     const wrapper = createWrapper(outOfStock)
     expect(wrapper.text()).toContain('Out of Stock')
+    expect(wrapper.find('button[aria-label="Add to cart"]').exists()).toBe(false)
+    const buyBtn = wrapper.findAll('button').find(b => b.text().includes('Out of Stock'))
+    expect(buyBtn?.attributes('disabled')).toBeDefined()
   })
 
   it('renders product image when available', () => {
@@ -84,11 +102,31 @@ describe('ProductCard', () => {
     expect(img.exists()).toBe(false)
   })
 
-  it('emits add-to-cart event on button click', async () => {
+  it('adds product to cart on add-to-cart button click', async () => {
     const wrapper = createWrapper()
-    const addBtn = wrapper.find('button')
+    const cartStore = useCartStore()
+    const addBtn = wrapper.get('button[aria-label="Add to cart"]')
     await addBtn.trigger('click')
-    // Button click triggers store action, should not throw
-    expect(wrapper.find('button[aria-label="Add to cart"]')).toBeTruthy()
+    await flushPromises()
+    expect(cartStore.itemCount).toBe(1)
+  })
+
+  it('adds product to cart and navigates to checkout on Buy Now click', async () => {
+    const wrapper = createWrapper()
+    const cartStore = useCartStore()
+    const buyBtn = wrapper.findAll('button').find(b => b.text().includes('Buy Now'))!
+    await buyBtn.trigger('click')
+    await flushPromises()
+    expect(cartStore.itemCount).toBe(1)
+    expect(pushMock).toHaveBeenCalledWith('/checkout')
+  })
+
+  it('toggles wishlist state from the metadata row heart button', async () => {
+    const wrapper = createWrapper()
+    const wishlistStore = useWishlistStore()
+    const favBtn = wrapper.get('button[aria-label="Add to wishlist"]')
+    await favBtn.trigger('click')
+    expect(wishlistStore.isWishlisted(mockProduct.id)).toBe(true)
+    expect(wrapper.find('button[aria-label="Remove from wishlist"]').exists()).toBe(true)
   })
 })

@@ -34,6 +34,7 @@ const form = ref<ProductCreateData>({
   slug: '',
   description: '',
   price: '',
+  discount_percent: '0',
   stock: 0,
   is_active: true,
   is_featured: false,
@@ -123,6 +124,7 @@ function openCreateModal() {
     slug: '',
     description: '',
     price: '',
+    discount_percent: '0',
     stock: 0,
     is_active: true,
     is_featured: false,
@@ -146,6 +148,7 @@ function openEditModal(product: Product) {
     slug: product.slug,
     description: product.description,
     price: product.price,
+    discount_percent: product.discount_percent ?? '0',
     stock: product.stock,
     is_active: product.is_active ?? true,
     is_featured: product.is_featured ?? false,
@@ -213,11 +216,16 @@ async function saveProduct() {
     formError.value = 'Enter a valid price of zero or more.'
     return
   }
+  if (!Number.isFinite(Number(form.value.discount_percent ?? 0)) || Number(form.value.discount_percent ?? 0) < 0 || Number(form.value.discount_percent ?? 0) > 100) {
+    formError.value = 'Discount must be between 0 and 100 percent.'
+    return
+  }
   if (!/^\d+$/.test(stockStr.value) || !Number.isSafeInteger(Number(stockStr.value))) {
     formError.value = 'Stock must be a whole number of zero or more.'
     return
   }
   saving.value = true
+  form.value.discount_percent = form.value.discount_percent.trim() || '0'
   sessionExpired.value = false
   formError.value = ''
   form.value.stock = Number(stockStr.value)
@@ -303,7 +311,7 @@ onMounted(async () => {
             <tr v-for="product in products" :key="product.id" class="border-b border-gray-50 hover:bg-gray-50">
               <td class="px-4 py-3">{{ product.title }}</td>
               <td class="px-4 py-3 hidden md:table-cell text-gray-500">{{ product.category_name }}</td>
-              <td class="px-4 py-3">K{{ product.price }}</td>
+              <td class="px-4 py-3"><span v-if="Number(product.discount_percent) > 0" class="mr-2 text-gray-500 line-through">K{{ product.price }}</span>K{{ product.sale_price ?? product.price }}<span v-if="Number(product.discount_percent) > 0" class="ml-2 text-xs font-medium text-rose-700">{{ Number(product.discount_percent) }}% off</span></td>
               <td class="px-4 py-3 hidden md:table-cell">
                 <span :class="product.stock <= 5 ? 'text-red-500 font-medium' : ''">
                   {{ product.stock }}
@@ -361,6 +369,12 @@ onMounted(async () => {
           </div>
           <div class="grid grid-cols-2 gap-4">
             <BaseInput v-model="form.price" label="Price (ZMW)" type="number" required />
+            <div class="rounded-xl border border-rose-200 bg-rose-50/60 p-4 sm:col-span-2">
+              <p class="font-semibold text-gray-900">Create a discount</p>
+              <p class="mt-1 mb-3 text-sm text-gray-600">Set a percentage off the regular price. Enter 0 to remove the discount.</p>
+              <BaseInput v-model="form.discount_percent" label="Discount (%)" type="number" min="0" max="100" step="0.01" />
+              <p v-if="Number(form.discount_percent) > 0 && Number(form.discount_percent) <= 100 && Number(form.price) >= 0" class="mt-3 text-sm text-gray-700">Sale price: <strong>K{{ (Number(form.price) * (1 - Number(form.discount_percent) / 100)).toFixed(2) }}</strong> <span class="ml-2 text-gray-500 line-through">K{{ Number(form.price).toFixed(2) }}</span></p>
+            </div>
             <BaseInput v-model="stockStr" label="Stock" type="number" />
           </div>
           <div>

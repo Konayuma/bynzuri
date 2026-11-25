@@ -2,6 +2,8 @@ from rest_framework import viewsets, filters, decorators, permissions, views, st
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
+from django.db.models import DecimalField, ExpressionWrapper, F, Value
+from django.db.models.functions import Round
 from .models import Product, ProductImage
 from .filters import ProductFilter
 from .serializers import (
@@ -10,9 +12,15 @@ from .serializers import (
 )
 
 
+class SalePriceOrderingFilter(filters.OrderingFilter):
+    def get_ordering(self, request, queryset, view):
+        ordering = super().get_ordering(request, queryset, view)
+        return [('effective_price' if field == 'price' else '-effective_price' if field == '-price' else field) for field in ordering] if ordering else ordering
+
+
 class ProductViewSet(viewsets.ModelViewSet):
     queryset = Product.objects.filter(is_active=True).select_related('category').prefetch_related('images')
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, SalePriceOrderingFilter]
     filterset_class = ProductFilter
     search_fields = ['title', 'description', 'category__name']
     ordering_fields = ['price', 'created_at', 'rating', 'title']
@@ -33,8 +41,11 @@ class ProductViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         if self.action in ('create', 'update', 'partial_update', 'destroy', 'admin_list'):
-            return Product.objects.all().select_related('category').prefetch_related('images')
-        return super().get_queryset()
+            queryset = Product.objects.all().select_related('category').prefetch_related('images')
+        else:
+            queryset = super().get_queryset()
+        amount = ExpressionWrapper(F('price') * (Value(100) - F('discount_percent')) / Value(100), output_field=DecimalField(max_digits=12, decimal_places=4))
+        return queryset.annotate(effective_price=Round(amount, 2))
 
     def admin_list(self, request):
         return self.list(request)

@@ -63,6 +63,24 @@ class TestOrderCreation:
         self.product.refresh_from_db()
         assert self.product.stock == 3  # 5 - 2
 
+    def test_discount_is_reflected_in_cart_and_order(self, user):
+        self.product.discount_percent = Decimal('15.00')
+        self.product.save()
+        self.client.force_authenticate(user=user)
+        self._setup_cart(user)
+        cart = self.client.get('/api/cart/')
+        assert Decimal(str(cart.data['subtotal'])) == Decimal('170.00')
+        assert Decimal(str(cart.data['items'][0]['product']['sale_price'])) == Decimal('85.00')
+        response = self.client.post('/api/orders/', {
+            'province': 'Lusaka', 'town': 'Lusaka', 'street_address': '123',
+            'phone': '260977000000', 'delivery_method': str(self.delivery.id),
+            'payment_method': 'mtn_momo',
+        }, format='json')
+        assert response.status_code == 201
+        order = Order.objects.get(pk=response.data['id'])
+        assert order.total_amount == Decimal('170.00')
+        assert order.items.get().price_at_purchase == Decimal('85.00')
+
     def test_order_with_insufficient_stock(self, user):
         self.client.force_authenticate(user=user)
         self.product.stock = 1

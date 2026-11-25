@@ -37,7 +37,7 @@ class CartSerializer(serializers.ModelSerializer):
 
     def get_subtotal(self, obj):
         return sum(
-            item.product.price * item.quantity
+            item.product.sale_price * item.quantity
             for item in obj.items.all()
         )
 
