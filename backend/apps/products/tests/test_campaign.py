@@ -21,6 +21,9 @@ def test_campaign_is_scheduled_and_does_not_stack():
     with patch('django.utils.timezone.localdate', return_value=date(2026, 11, 26)):
         assert Decimal(str(client.get('/api/products/serum/').data['sale_price'])) == Decimal('70')
         assert client.get('/api/products/', {'max_price': 70}).data['count'] == 1
+        SaleCampaign.objects.filter(pk=1).update(show_banner=False)
+        assert client.get('/api/products/campaign/').data is None
+        assert Decimal(str(client.get('/api/products/serum/').data['sale_price'])) == Decimal('70')
     with patch('django.utils.timezone.localdate', return_value=date(2026, 11, 29)):
         assert Decimal(str(client.get('/api/products/serum/').data['sale_price'])) == Decimal('90')
         assert client.get('/api/products/campaign/').data is None

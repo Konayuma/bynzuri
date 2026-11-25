@@ -8,6 +8,7 @@ export interface SaleCampaign {
   ends_on: string
   fulfilment: string
   enabled: boolean
+  show_banner: boolean
 }
 
 export const productService = {

@@ -21,6 +21,7 @@ class SaleCampaign(models.Model):
     ends_on = models.DateField()
     fulfilment = models.CharField(max_length=160, default='Orders fulfilled 3rd December')
     enabled = models.BooleanField(default=True)
+    show_banner = models.BooleanField(default=True)
 
 
 class Product(models.Model):

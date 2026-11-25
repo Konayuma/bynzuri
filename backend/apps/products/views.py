@@ -90,7 +90,7 @@ class SaleCampaignSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = SaleCampaign
-        fields = ['title', 'percent', 'starts_on', 'ends_on', 'fulfilment', 'enabled']
+        fields = ['title', 'percent', 'starts_on', 'ends_on', 'fulfilment', 'enabled', 'show_banner']
 
     def validate(self, data):
         if data['ends_on'] < data['starts_on']:
@@ -104,7 +104,7 @@ class SaleCampaignView(views.APIView):
 
     def get(self, request):
         campaign = SaleCampaign.objects.filter(pk=1).first()
-        if not campaign or (request.query_params.get('admin') != '1' and (not campaign.enabled or campaign.ends_on < timezone.localdate())):
+        if not campaign or (request.query_params.get('admin') != '1' and (not campaign.enabled or not campaign.show_banner or campaign.ends_on < timezone.localdate())):
             return Response(None)
         return Response(SaleCampaignSerializer(campaign).data)
 
