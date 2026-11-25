@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 
 interface HeroStep {
   number: string
@@ -39,15 +39,80 @@ const steps: HeroStep[] = [
     imageAlt: 'By Nzuri Nourishing Oil Mix',
     tabLabel: 'Nourishing Oil',
   },
+  {
+    number: '03',
+    kicker: 'DEEP CONDITIONER',
+    headingLine: 'Step 3: Moisture &',
+    headingAccent: 'Strength Repair',
+    description: 'Rich botanical hydration crafted to restore softness, detangle gently, and strengthen dry curls.',
+    ctaLabel: 'Shop Conditioner',
+    to: '/product/deep-conditioner',
+    image: '/images/products/deepconditioner.webp',
+    imageAlt: 'By Nzuri Deep Conditioner',
+    tabLabel: 'Deep Conditioner',
+  },
 ]
 
+const CYCLE_MS = 5500
 const activeStep = ref(0)
+const paused = ref(false)
 const current = computed(() => steps[activeStep.value]!)
+let cycleTimer: ReturnType<typeof setInterval> | undefined
+let reducedMotionMedia: MediaQueryList | undefined
+
+function stopCycle() {
+  if (cycleTimer) {
+    clearInterval(cycleTimer)
+    cycleTimer = undefined
+  }
+}
+
+function startCycle() {
+  stopCycle()
+  if (reducedMotionMedia?.matches || paused.value) return
+  cycleTimer = setInterval(() => {
+    activeStep.value = (activeStep.value + 1) % steps.length
+  }, CYCLE_MS)
+}
+
+function selectStep(index: number) {
+  activeStep.value = index
+  startCycle()
+}
+
+function setPaused(value: boolean) {
+  paused.value = value
+  if (value) stopCycle()
+  else startCycle()
+}
+
+function onMotionPreferenceChange() {
+  if (reducedMotionMedia?.matches) stopCycle()
+  else startCycle()
+}
+
+onMounted(() => {
+  reducedMotionMedia = window.matchMedia('(prefers-reduced-motion: reduce)')
+  reducedMotionMedia.addEventListener('change', onMotionPreferenceChange)
+  startCycle()
+})
+
+onUnmounted(() => {
+  stopCycle()
+  reducedMotionMedia?.removeEventListener('change', onMotionPreferenceChange)
+})
 </script>
 
 <template>
-  <section class="product-story" aria-label="Discover our hair care products">
-    <div class="story-stage" :class="{ 'is-second': activeStep === 1 }">
+  <section
+    class="product-story"
+    aria-label="Discover our hair care products"
+    @mouseenter="setPaused(true)"
+    @mouseleave="setPaused(false)"
+    @focusin="setPaused(true)"
+    @focusout="setPaused(false)"
+  >
+    <div class="story-stage" :class="{ 'is-second': activeStep === 1, 'is-third': activeStep === 2 }">
       <div class="story-line" aria-hidden="true">BY NZURI <span> / </span> HAIR CARE</div>
       <div class="story-layout">
         <div class="story-copy">
@@ -94,14 +159,14 @@ const current = computed(() => steps[activeStep.value]!)
             class="story-tab"
             :class="{ 'is-active': activeStep === idx }"
             :aria-pressed="activeStep === idx"
-            @click="activeStep = idx"
+            @click="selectStep(idx)"
           >
             <span class="story-tab-num">{{ step.number }}</span>
             <span>{{ step.tabLabel }}</span>
           </button>
         </div>
         <span class="story-rule" aria-hidden="true"></span>
-        <span class="story-counter" aria-hidden="true">{{ current.number }} / 02</span>
+        <span class="story-counter" aria-hidden="true">{{ current.number }} / 0{{ steps.length }}</span>
       </div>
     </div>
   </section>
@@ -120,6 +185,9 @@ const current = computed(() => steps[activeStep.value]!)
 }
 .story-stage.is-second {
   background: radial-gradient(ellipse at 70% 45%, #fffaf5 0%, #f5e8e2 48%, #ead4cf 100%);
+}
+.story-stage.is-third {
+  background: radial-gradient(ellipse at 70% 48%, #fffaf7 0%, #f2e4e6 48%, #e4cbd0 100%);
 }
 .story-layout {
   position: relative;
@@ -217,6 +285,7 @@ const current = computed(() => steps[activeStep.value]!)
   position: relative;
   display: grid;
   place-items: center;
+  overflow: hidden;
 }
 .story-orbit {
   position: absolute;
@@ -233,17 +302,20 @@ const current = computed(() => steps[activeStep.value]!)
   opacity: 0.09;
 }
 .product-image {
-  position: relative;
+  position: absolute;
+  inset: 0;
   z-index: 1;
   width: 100%;
   height: 100%;
   object-fit: contain;
   filter: drop-shadow(0 26px 26px rgba(0, 0, 0, 0.2));
+  pointer-events: none;
 }
 .product-caption {
   position: absolute;
   bottom: 2%;
   right: 0;
+  z-index: 2;
   font: 10px/1.7 'Cinzel', serif;
   letter-spacing: 0.12em;
   opacity: 0.65;
@@ -259,9 +331,11 @@ const current = computed(() => steps[activeStep.value]!)
   opacity: 0.6;
 }
 .story-footer {
+  position: relative;
+  z-index: 2;
   max-width: 1280px;
   margin: auto;
-  padding: 0 48px 28px;
+  padding: 8px 48px 28px;
   display: flex;
   align-items: center;
   gap: 18px;
@@ -352,19 +426,17 @@ const current = computed(() => steps[activeStep.value]!)
     line-height: 1.55;
   }
   .story-product {
-    height: min(34svh, 280px);
+    height: min(32svh, 250px);
   }
   .story-orbit {
-    width: min(72%, 240px);
+    width: min(68%, 220px);
   }
-  .story-line {
+  .story-line,
+  .product-caption {
     display: none;
   }
-  .product-caption {
-    font-size: 9px;
-  }
   .story-footer {
-    padding: 0 20px 22px;
+    padding: 4px 20px 24px;
     gap: 12px;
   }
   .story-rule,
