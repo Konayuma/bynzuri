@@ -48,6 +48,17 @@ class ProductImageOptimizationTests(TestCase):
             img.save()
             mock_opt.assert_not_called()
 
+    def test_transparent_upload_remains_transparent_after_optimization(self):
+        buf = io.BytesIO()
+        Image.new('RGBA', (20, 20), (0, 0, 0, 0)).save(buf, format='PNG')
+        image = ProductImage.objects.create(
+            product=self.product,
+            image=SimpleUploadedFile('transparent.png', buf.getvalue(), content_type='image/png'),
+        )
+        with image.image.open('rb') as saved:
+            optimized = Image.open(saved)
+            self.assertEqual(optimized.getpixel((0, 0))[3], 0)
+
     def test_optimization_failure_logs_warning_instead_of_silent_pass(self):
         with patch('apps.products.signals.optimize_image', side_effect=RuntimeError('corrupt image')):
             with self.assertLogs('apps.products.models', level=logging.WARNING) as cm:
