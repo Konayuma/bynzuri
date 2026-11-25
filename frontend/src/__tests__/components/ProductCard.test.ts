@@ -4,6 +4,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import ProductCard from '@/components/product/ProductCard.vue'
 import { useCartStore } from '@/stores/cart'
 import { useWishlistStore } from '@/stores/wishlist'
+import { useUIStore } from '@/stores/ui'
 
 const pushMock = vi.fn()
 vi.mock('vue-router', () => ({
@@ -72,13 +73,12 @@ describe('ProductCard', () => {
     expect(imageContainer.findAll('button')).toHaveLength(0)
   })
 
-  it('shows out of stock overlay and disables Buy Now when stock is 0', () => {
+  it('shows out of stock overlay and disables Add to Cart when stock is 0', () => {
     const outOfStock = { ...mockProduct, stock: 0, is_in_stock: false }
     const wrapper = createWrapper(outOfStock)
     expect(wrapper.text()).toContain('Out of Stock')
-    expect(wrapper.find('button[aria-label="Add to cart"]').exists()).toBe(false)
-    const buyBtn = wrapper.findAll('button').find(b => b.text().includes('Out of Stock'))
-    expect(buyBtn?.attributes('disabled')).toBeDefined()
+    const outBtn = wrapper.findAll('button').find(b => b.text().includes('Out of Stock'))
+    expect(outBtn?.attributes('disabled')).toBeDefined()
   })
 
   it('renders product image when available', () => {
@@ -102,23 +102,16 @@ describe('ProductCard', () => {
     expect(img.exists()).toBe(false)
   })
 
-  it('adds product to cart on add-to-cart button click', async () => {
+  it('adds product to cart and triggers bag toast on Add to Cart click', async () => {
     const wrapper = createWrapper()
     const cartStore = useCartStore()
-    const addBtn = wrapper.get('button[aria-label="Add to cart"]')
+    const uiStore = useUIStore()
+    const addBtn = wrapper.findAll('button').find(b => b.text().includes('Add to Cart'))!
     await addBtn.trigger('click')
     await flushPromises()
     expect(cartStore.itemCount).toBe(1)
-  })
-
-  it('adds product to cart and navigates to checkout on Buy Now click', async () => {
-    const wrapper = createWrapper()
-    const cartStore = useCartStore()
-    const buyBtn = wrapper.findAll('button').find(b => b.text().includes('Buy Now'))!
-    await buyBtn.trigger('click')
-    await flushPromises()
-    expect(cartStore.itemCount).toBe(1)
-    expect(pushMock).toHaveBeenCalledWith('/checkout')
+    expect(wrapper.text()).toContain('Added to Cart')
+    expect(uiStore.toast?.message).toContain('Growth Oil')
   })
 
   it('toggles wishlist state from the metadata row heart button', async () => {

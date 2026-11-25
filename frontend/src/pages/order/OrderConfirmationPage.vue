@@ -2,7 +2,7 @@
 import { onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { orderService } from '@/services/order.service'
-import { CheckCircle } from '@lucide/vue'
+import { CheckCircle, Clock, XCircle } from '@lucide/vue'
 import BaseButton from '@/components/base/BaseButton.vue'
 import BaseSelect from '@/components/base/BaseSelect.vue'
 import type { Order } from '@/types'
@@ -78,10 +78,17 @@ onMounted(async () => {
     </div>
 
     <template v-else-if="order">
-      <div class="w-16 h-16 rounded-full bg-success/10 flex items-center justify-center mx-auto mb-4">
-        <CheckCircle class="w-8 h-8 text-success" />
+      <div
+        class="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
+        :class="order.status === 'awaiting_payment' ? 'bg-amber-50' : order.status === 'cancelled' ? 'bg-red-50' : 'bg-success/10'"
+      >
+        <Clock v-if="order.status === 'awaiting_payment'" class="w-8 h-8 text-amber-600" aria-hidden="true" />
+        <XCircle v-else-if="order.status === 'cancelled'" class="w-8 h-8 text-red-600" aria-hidden="true" />
+        <CheckCircle v-else class="w-8 h-8 text-success" aria-hidden="true" />
       </div>
-      <h1 class="font-heading text-2xl font-semibold text-dark mb-2">{{ order.status === 'awaiting_payment' ? 'Order awaiting payment' : 'Order details' }}</h1>
+      <h1 class="font-heading text-2xl font-semibold text-dark mb-2">
+        {{ order.status === 'awaiting_payment' ? 'Order awaiting payment' : order.status === 'cancelled' ? 'Order cancelled' : 'Order confirmed' }}
+      </h1>
       <p class="text-sm text-muted mb-2">
         Thank you for your order. Your order reference is
         <span class="font-medium text-dark">#{{ order.id.slice(0, 8).toUpperCase() }}</span>.

@@ -23,6 +23,9 @@ const showModal = ref(false)
 const editingAddress = ref<Address | null>(null)
 const saving = ref(false)
 const formError = ref('')
+const addressError = ref('')
+const confirmDeleteId = ref<string | null>(null)
+const deletingId = ref<string | null>(null)
 
 const provinces = ref<Province[]>([])
 const towns = ref<Town[]>([])
@@ -121,21 +124,26 @@ async function saveAddress() {
 }
 
 async function deleteAddress(address: Address) {
-  if (!confirm('Delete this address? It will be removed from your saved addresses.')) return
+  deletingId.value = address.id
+  addressError.value = ''
   try {
     await addressService.deleteAddress(address.id)
+    confirmDeleteId.value = null
     await loadAddresses()
   } catch {
-    /* ignore */
+    addressError.value = 'Could not delete this address. Please try again.'
+  } finally {
+    deletingId.value = null
   }
 }
 
 async function setDefault(address: Address) {
+  addressError.value = ''
   try {
     await addressService.updateAddress(address.id, { is_default: true })
     await loadAddresses()
   } catch {
-    /* ignore */
+    addressError.value = 'Could not update your default address. Please try again.'
   }
 }
 
@@ -192,6 +200,8 @@ onMounted(async () => {
         </BaseButton>
       </div>
 
+      <p v-if="addressError" role="alert" class="mb-4 text-sm text-red-700">{{ addressError }}</p>
+
       <div v-if="loadingAddresses" class="text-center py-6 text-muted text-sm">Loading...</div>
 
       <div v-else-if="addresses.length === 0" class="text-center py-6 text-muted text-sm">
@@ -219,28 +229,43 @@ onMounted(async () => {
               <p class="text-xs text-muted">{{ address.town_name || address.town }}, {{ address.province_name || address.province }}</p>
               <p class="text-xs text-muted mt-0.5">Phone: {{ address.phone }}</p>
             </div>
-            <div class="flex items-center gap-1">
+            <div class="flex items-center gap-1 shrink-0">
               <button
                 v-if="!address.is_default"
-                class="p-1.5 hover:bg-primary/20 rounded-lg transition-colors text-xs text-muted"
+                type="button"
+                class="grid h-10 w-10 place-items-center hover:bg-primary/20 rounded-lg transition-colors text-muted focus-visible:outline-2 focus-visible:outline-gold"
+                aria-label="Set as default address"
                 title="Set as default"
                 @click="setDefault(address)"
               >
-                <Star class="w-3.5 h-3.5" />
+                <Star class="w-4 h-4" />
               </button>
               <button
-                class="p-1.5 hover:bg-primary/20 rounded-lg transition-colors"
+                type="button"
+                class="grid h-10 w-10 place-items-center hover:bg-primary/20 rounded-lg transition-colors focus-visible:outline-2 focus-visible:outline-gold"
+                aria-label="Edit address"
                 title="Edit"
                 @click="openEditModal(address)"
               >
-                <Pencil class="w-3.5 h-3.5 text-muted" />
+                <Pencil class="w-4 h-4 text-muted" />
               </button>
               <button
-                class="p-1.5 hover:bg-red-50 rounded-lg transition-colors"
+                type="button"
+                class="grid h-10 w-10 place-items-center hover:bg-red-50 rounded-lg transition-colors focus-visible:outline-2 focus-visible:outline-gold"
+                aria-label="Delete address"
                 title="Delete"
-                @click="deleteAddress(address)"
+                @click="confirmDeleteId = confirmDeleteId === address.id ? null : address.id"
               >
-                <Trash2 class="w-3.5 h-3.5 text-red-400" />
+                <Trash2 class="w-4 h-4 text-red-500" />
+              </button>
+            </div>
+          </div>
+          <div v-if="confirmDeleteId === address.id" class="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-primary/20 pt-3 text-xs">
+            <span class="text-dark">Remove this saved address?</span>
+            <div class="flex items-center gap-2">
+              <button type="button" class="min-h-9 px-3 rounded-lg border border-primary/40 text-dark hover:bg-primary/15" @click="confirmDeleteId = null">Cancel</button>
+              <button type="button" class="min-h-9 px-3 rounded-lg bg-red-600 text-white font-medium hover:bg-red-700 disabled:opacity-50" :disabled="deletingId === address.id" @click="deleteAddress(address)">
+                {{ deletingId === address.id ? 'Removing…' : 'Remove' }}
               </button>
             </div>
           </div>

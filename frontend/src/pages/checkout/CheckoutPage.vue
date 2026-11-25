@@ -9,9 +9,10 @@ import { paymentService } from '@/services/payment.service'
 import BaseButton from '@/components/base/BaseButton.vue'
 import BaseInput from '@/components/base/BaseInput.vue'
 import BaseSelect from '@/components/base/BaseSelect.vue'
-import { ChevronLeft, ChevronRight, MapPin, Loader2, CheckCircle2, XCircle, Smartphone } from '@lucide/vue'
+import { ChevronLeft, ChevronRight, ChevronDown, MapPin, Loader2, CheckCircle2, XCircle, Smartphone, ShoppingBag } from '@lucide/vue'
 import type { Province, Town, DeliveryMethod, Address, Order } from '@/types'
 import { isEmail, isZambianPhone, isZambianMobileMoneyPhone, normalizeZambianPhone } from '@/utils/formValidation'
+import { signatureImage } from '@/utils/productImage'
 import { useDialogFocus } from '@/composables/useDialogFocus'
 
 const router = useRouter()
@@ -83,11 +84,42 @@ const form = ref({
 })
 
 const totalSteps = 4
+const stepLabels = ['Details', 'Location', 'Delivery', 'Payment']
+const mobileSummaryOpen = ref(false)
 
 const stepTitle = computed(() => {
   const titles = ['', 'Your Details', 'Delivery Location', 'Delivery Method', 'Review & Pay']
   return titles[currentStep.value]
 })
+
+const summaryItems = computed(() => {
+  if (createdOrder.value?.items?.length) {
+    return createdOrder.value.items.map(item => ({
+      id: item.id,
+      title: item.product_title,
+      quantity: item.quantity,
+      lineTotal: (Number(item.price_at_purchase) * item.quantity).toFixed(2),
+      image: '',
+    }))
+  }
+  return cartStore.items.map(item => ({
+    id: item.id,
+    title: item.product.title,
+    quantity: item.quantity,
+    lineTotal: (Number(item.product.sale_price ?? item.product.price) * item.quantity).toFixed(2),
+    image: item.product.images?.[0]?.image ?? signatureImage(item.product.slug) ?? '',
+  }))
+})
+
+const summaryItemCount = computed(() =>
+  summaryItems.value.reduce((sum, item) => sum + item.quantity, 0)
+)
+
+function goToStep(step: number) {
+  if (step < currentStep.value && step >= 1) {
+    currentStep.value = step
+  }
+}
 
 const selectedDeliveryMethod = computed(() =>
   deliveryMethods.value.find(m => m.id === form.value.delivery_method)
@@ -163,7 +195,9 @@ async function selectSavedAddress(address: Address) {
   form.value.province = address.province
   form.value.town = address.town
   form.value.street_address = address.street_address
-  form.value.phone = address.phone
+  if (!form.value.phone || form.value.phone === '260') {
+    form.value.phone = address.phone
+  }
   if (address.province) {
     towns.value = await orderService.getTowns(address.province)
   }
@@ -174,7 +208,6 @@ function useCustomAddress() {
   form.value.province = ''
   form.value.town = ''
   form.value.street_address = ''
-  form.value.phone = '260'
   towns.value = []
 }
 
@@ -322,7 +355,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="max-w-2xl mx-auto px-4 py-8">
+  <div class="max-w-5xl mx-auto px-4 py-8">
     <!-- Payment Processing Overlay -->
     <div v-if="paymentStatus !== 'idle'" ref="paymentOverlay" tabindex="-1" role="dialog" aria-modal="true" aria-label="Payment status" class="fixed inset-0 bg-white/90 backdrop-blur-sm z-50 flex items-center justify-center">
       <div class="text-center max-w-sm px-4">
@@ -374,21 +407,76 @@ onMounted(async () => {
     <div v-else-if="!createdOrderId && cartStore.items.length === 0" role="alert" class="mb-4 text-sm text-red-700">
       Your cart is empty. <router-link class="underline" to="/catalog">Add a product</router-link> before placing an order.
     </div>
-    <!-- Progress -->
-    <div class="mb-8">
-      <div class="flex items-center justify-between mb-2">
-        <span class="text-xs text-muted">Step {{ currentStep }} of {{ totalSteps }}</span>
-        <span class="text-sm font-medium text-dark">{{ stepTitle }}</span>
-      </div>
-      <div class="flex gap-2">
-        <div
-          v-for="i in totalSteps"
-          :key="i"
-          class="h-1 flex-1 rounded-full transition-colors"
-          :class="i <= currentStep ? 'bg-dark' : 'bg-primary/40'"
-        />
-      </div>
-    </div>
+    <div class="lg:grid lg:grid-cols-12 lg:gap-8 lg:items-start">
+      <div class="lg:col-span-7">
+        <!-- Mobile collapsible order summary -->
+        <div v-if="summaryItems.length > 0" class="mb-6 rounded-[16px] border border-primary/40 bg-white lg:hidden">
+          <button
+            type="button"
+            class="flex w-full min-h-12 items-center justify-between px-4 py-3 text-sm font-medium text-dark"
+            :aria-expanded="mobileSummaryOpen"
+            aria-controls="mobile-order-summary"
+            @click="mobileSummaryOpen = !mobileSummaryOpen"
+          >
+            <span class="flex items-center gap-2">
+              <ShoppingBag class="w-4 h-4 text-gold" aria-hidden="true" />
+              <span>Order summary ({{ summaryItemCount }} {{ summaryItemCount === 1 ? 'item' : 'items' }})</span>
+            </span>
+            <span class="flex items-center gap-2 font-semibold tabular-nums">
+              K{{ grandTotal }}
+              <ChevronDown class="w-4 h-4 text-muted transition-transform" :class="{ 'rotate-180': mobileSummaryOpen }" aria-hidden="true" />
+            </span>
+          </button>
+          <div v-show="mobileSummaryOpen" id="mobile-order-summary" class="border-t border-primary/20 px-4 py-3 space-y-3">
+            <ul class="space-y-2.5">
+              <li v-for="item in summaryItems" :key="item.id" class="flex items-center gap-3 text-sm">
+                <div class="h-12 w-10 shrink-0 overflow-hidden rounded-lg bg-primary/20">
+                  <img v-if="item.image" :src="item.image" :alt="item.title" class="h-full w-full object-cover" />
+                </div>
+                <div class="min-w-0 flex-1">
+                  <p class="truncate font-medium text-dark">{{ item.title }}</p>
+                  <p class="text-xs text-muted">Qty {{ item.quantity }}</p>
+                </div>
+                <span class="shrink-0 font-medium text-dark tabular-nums">K{{ item.lineTotal }}</span>
+              </li>
+            </ul>
+            <div class="border-t border-primary/20 pt-2.5 space-y-1 text-sm">
+              <div class="flex justify-between"><span class="text-muted">Subtotal</span><span class="tabular-nums">K{{ checkoutSubtotal }}</span></div>
+              <div class="flex justify-between"><span class="text-muted">Delivery</span><span class="tabular-nums">K{{ checkoutDelivery }}</span></div>
+              <div class="flex justify-between font-semibold text-dark pt-1"><span>Total</span><span class="tabular-nums">K{{ grandTotal }}</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Progress -->
+        <nav class="mb-8" aria-label="Checkout steps">
+          <div class="flex items-center justify-between mb-3">
+            <span class="text-xs text-muted">Step {{ currentStep }} of {{ totalSteps }}</span>
+            <span class="text-sm font-medium text-dark">{{ stepTitle }}</span>
+          </div>
+          <ol class="grid grid-cols-4 gap-2">
+            <li v-for="(label, idx) in stepLabels" :key="label">
+              <button
+                type="button"
+                class="w-full text-left group focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold rounded"
+                :disabled="idx + 1 >= currentStep"
+                :aria-current="idx + 1 === currentStep ? 'step' : undefined"
+                @click="goToStep(idx + 1)"
+              >
+                <span
+                  class="block h-1.5 w-full rounded-full transition-colors"
+                  :class="idx + 1 <= currentStep ? 'bg-dark' : 'bg-primary/40'"
+                />
+                <span
+                  class="mt-1.5 block text-[11px] font-medium truncate"
+                  :class="idx + 1 === currentStep ? 'text-dark' : idx + 1 < currentStep ? 'text-gold group-hover:underline' : 'text-muted'"
+                >
+                  {{ idx + 1 }}. {{ label }}
+                </span>
+              </button>
+            </li>
+          </ol>
+        </nav>
 
     <form novalidate @submit.prevent="currentStep === totalSteps ? handleSubmit() : nextStep()">
       <!-- Step 1: Customer Details -->
@@ -595,30 +683,48 @@ onMounted(async () => {
           <p class="text-xs text-muted">Enter the phone number registered with your {{ operatorLabel }} Money account</p>
         </div>
 
-        <div class="rounded-[16px] border border-primary/50 bg-white p-4 text-sm space-y-2">
-          <div class="flex items-center justify-between"><h3 class="font-semibold text-dark">Delivery details</h3><button type="button" class="text-gold underline underline-offset-2" @click="currentStep = 2">Edit</button></div>
-          <p class="text-dark">{{ form.first_name }} {{ form.last_name }} · {{ form.phone }}</p>
-          <p class="text-muted">{{ form.street_address }}, {{ towns.find(t => t.id === form.town)?.name }}, {{ provinces.find(p => p.id === form.province)?.name }}</p>
-          <p class="text-muted">{{ selectedDeliveryMethod?.name }}</p>
+        <div class="rounded-[16px] border border-primary/50 bg-white p-4 text-sm space-y-3">
+          <h3 class="font-semibold text-dark">Delivery details</h3>
+          <div class="flex items-start justify-between gap-3">
+            <div class="min-w-0">
+              <p class="text-xs text-muted">Contact</p>
+              <p class="text-dark">{{ form.first_name }} {{ form.last_name }} · {{ form.phone }}</p>
+            </div>
+            <button type="button" class="text-xs font-medium text-gold underline underline-offset-2 shrink-0" @click="currentStep = 1">Edit</button>
+          </div>
+          <div class="flex items-start justify-between gap-3 border-t border-primary/15 pt-2.5">
+            <div class="min-w-0">
+              <p class="text-xs text-muted">Address</p>
+              <p class="text-dark">{{ form.street_address }}, {{ towns.find(t => t.id === form.town)?.name }}, {{ provinces.find(p => p.id === form.province)?.name }}</p>
+            </div>
+            <button type="button" class="text-xs font-medium text-gold underline underline-offset-2 shrink-0" @click="currentStep = 2">Edit</button>
+          </div>
+          <div class="flex items-start justify-between gap-3 border-t border-primary/15 pt-2.5">
+            <div class="min-w-0">
+              <p class="text-xs text-muted">Delivery method</p>
+              <p class="text-dark">{{ selectedDeliveryMethod?.name }}</p>
+            </div>
+            <button type="button" class="text-xs font-medium text-gold underline underline-offset-2 shrink-0" @click="currentStep = 3">Edit</button>
+          </div>
         </div>
 
-        <!-- Order Summary -->
-        <div class="bg-white p-4 rounded-[16px] mt-6 space-y-2">
+        <!-- Order Summary (mobile/inline on Review step) -->
+        <div class="bg-white p-4 rounded-[16px] border border-primary/30 mt-6 space-y-2 lg:hidden">
           <div class="flex justify-between text-sm">
             <span class="text-muted">Subtotal</span>
-            <span class="font-medium">K{{ checkoutSubtotal }}</span>
+            <span class="font-medium tabular-nums">K{{ checkoutSubtotal }}</span>
           </div>
           <div class="flex justify-between text-sm">
             <span class="text-muted">Delivery</span>
-            <span class="font-medium">K{{ checkoutDelivery }}</span>
+            <span class="font-medium tabular-nums">K{{ checkoutDelivery }}</span>
           </div>
           <div class="flex justify-between text-sm font-semibold pt-2 border-t border-primary/20">
             <span class="text-dark">Total</span>
-            <span class="text-dark">K{{ grandTotal }}</span>
+            <span class="text-dark tabular-nums">K{{ grandTotal }}</span>
           </div>
         </div>
 
-        <p v-if="error" class="text-xs text-red-500">{{ error }}</p>
+        <p v-if="error" role="alert" class="text-sm text-red-700">{{ error }}</p>
       </div>
 
       <!-- Navigation -->
@@ -626,7 +732,7 @@ onMounted(async () => {
         <button
           v-if="currentStep > 1"
           type="button"
-          class="flex items-center gap-1 text-sm text-muted hover:text-dark transition-colors"
+          class="flex items-center gap-1 min-h-11 px-2 text-sm text-muted hover:text-dark transition-colors"
           @click="prevStep"
         >
           <ChevronLeft class="w-4 h-4" /> Back
@@ -645,6 +751,44 @@ onMounted(async () => {
         </BaseButton>
       </div>
     </form>
+      </div>
+
+      <!-- Desktop sticky order summary sidebar -->
+      <aside v-if="summaryItems.length > 0" aria-label="Order summary" class="hidden lg:block lg:col-span-5 lg:sticky lg:top-24">
+        <div class="rounded-[20px] border border-primary/40 bg-white p-6 space-y-4">
+          <div class="flex items-center justify-between">
+            <h2 class="font-heading text-base font-semibold text-dark">Order Summary</h2>
+            <span class="text-xs text-muted">{{ summaryItemCount }} {{ summaryItemCount === 1 ? 'item' : 'items' }}</span>
+          </div>
+          <ul class="space-y-3 max-h-80 overflow-y-auto pr-1">
+            <li v-for="item in summaryItems" :key="item.id" class="flex items-center gap-3 text-sm">
+              <div class="h-14 w-12 shrink-0 overflow-hidden rounded-xl bg-primary/20">
+                <img v-if="item.image" :src="item.image" :alt="item.title" class="h-full w-full object-cover" />
+              </div>
+              <div class="min-w-0 flex-1">
+                <p class="truncate font-medium text-dark">{{ item.title }}</p>
+                <p class="text-xs text-muted">Qty {{ item.quantity }}</p>
+              </div>
+              <span class="shrink-0 font-medium text-dark tabular-nums">K{{ item.lineTotal }}</span>
+            </li>
+          </ul>
+          <div class="border-t border-primary/20 pt-4 space-y-2 text-sm">
+            <div class="flex justify-between">
+              <span class="text-muted">Subtotal</span>
+              <span class="font-medium text-dark tabular-nums">K{{ checkoutSubtotal }}</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-muted">Delivery</span>
+              <span class="font-medium text-dark tabular-nums">{{ selectedDeliveryMethod || createdOrder ? `K${checkoutDelivery}` : 'Calculated at step 3' }}</span>
+            </div>
+            <div class="flex justify-between text-base font-semibold pt-2 border-t border-primary/20">
+              <span class="text-dark">Total</span>
+              <span class="text-dark tabular-nums">K{{ grandTotal }}</span>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </div>
   </div>
 </template>
 

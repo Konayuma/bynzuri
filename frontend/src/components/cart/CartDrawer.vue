@@ -2,6 +2,7 @@
 import BaseDrawer from '@/components/base/BaseDrawer.vue'
 import BaseButton from '@/components/base/BaseButton.vue'
 import { useCartStore } from '@/stores/cart'
+import { useUserStore } from '@/stores/user'
 import { Minus, Plus, Trash2 } from '@lucide/vue'
 import { useRouter } from 'vue-router'
 import { reactive } from 'vue'
@@ -18,6 +19,7 @@ const emit = defineEmits<{
 }>()
 
 const cartStore = useCartStore()
+const userStore = useUserStore()
 const router = useRouter()
 const imageOverrides = reactive<Record<string, string>>({})
 const imageRetries = new Set<string>()
@@ -88,7 +90,12 @@ async function removeItem(itemId: string) {
           :key="item.id"
           class="flex gap-4 pb-4 border-b border-primary/20"
         >
-          <div class="w-20 h-24 rounded-[14px] bg-primary/30 shrink-0 overflow-hidden">
+          <router-link
+            :to="`/product/${item.product.slug}`"
+            class="w-20 h-24 rounded-[14px] bg-primary/30 shrink-0 overflow-hidden block focus-visible:outline-2 focus-visible:outline-gold"
+            :aria-label="`View ${item.product.title}`"
+            @click="emit('close')"
+          >
             <img
               v-if="cartImage(item)"
               :src="cartImage(item)"
@@ -96,10 +103,18 @@ async function removeItem(itemId: string) {
               class="w-full h-full object-cover"
               @error="recoverImage(item)"
             />
-          </div>
+          </router-link>
           <div class="flex-1 min-w-0">
-            <h3 class="text-sm font-medium text-dark truncate">{{ item.product.title }}</h3>
-            <p class="text-sm font-semibold text-dark mt-1"><span v-if="Number(item.product.effective_discount_percent ?? item.product.discount_percent) > 0" class="mr-2 font-normal text-muted line-through">K{{ item.product.price }}</span>K{{ item.product.sale_price ?? item.product.price }}</p>
+            <h3 class="text-sm font-medium text-dark truncate">
+              <router-link
+                :to="`/product/${item.product.slug}`"
+                class="hover:text-gold transition-colors focus-visible:outline-2 focus-visible:outline-gold"
+                @click="emit('close')"
+              >
+                {{ item.product.title }}
+              </router-link>
+            </h3>
+            <p class="text-sm font-semibold text-dark mt-1 tabular-nums"><span v-if="Number(item.product.effective_discount_percent ?? item.product.discount_percent) > 0" class="mr-2 font-normal text-muted line-through">K{{ item.product.price }}</span>K{{ item.product.sale_price ?? item.product.price }}</p>
             <div class="flex items-center gap-2 mt-2">
               <button
                 class="w-11 h-11 rounded-full border border-primary/40 flex items-center justify-center hover:bg-primary/30 transition-colors"
@@ -137,11 +152,14 @@ async function removeItem(itemId: string) {
       <div class="border-t border-primary/20 px-4 py-4 space-y-3 shrink-0">
         <div class="flex justify-between text-sm">
           <span class="text-muted">Subtotal</span>
-          <span class="font-semibold text-dark">K{{ cartStore.subtotal }}</span>
+          <span class="font-semibold text-dark tabular-nums">K{{ cartStore.subtotal }}</span>
         </div>
-        <p class="text-xs text-muted">Delivery fee calculated at checkout based on your location</p>
+        <p class="text-xs text-muted">Delivery fee calculated at checkout based on your location.</p>
+        <p v-if="!userStore.isAuthenticated" class="text-xs text-muted">
+          You’ll be asked to sign in or create an account to complete checkout.
+        </p>
         <BaseButton fullWidth :disabled="cartStore.loading" @click="handleCheckout">
-          Checkout
+          {{ userStore.isAuthenticated ? 'Checkout' : 'Sign in to Checkout' }}
         </BaseButton>
         <button
           class="w-full text-sm text-muted hover:text-dark transition-colors text-center"

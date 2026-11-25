@@ -17,6 +17,9 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks(id: string) {
+          if (id.includes('node_modules/vue3-apexcharts') || id.includes('node_modules/apexcharts')) {
+            return 'admin-charts'
+          }
           if (id.includes('node_modules/vue') || id.includes('node_modules/pinia') || id.includes('node_modules/vue-router')) {
             return 'vendor'
           }

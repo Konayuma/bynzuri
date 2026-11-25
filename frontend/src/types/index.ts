@@ -156,13 +156,18 @@ export interface ApiError {
 }
 
 export interface DashboardStats {
-  revenue: string
+  revenue: string | number
   orders: number
   products: number
   customers: number
   orders_by_status: { status: string; count: number }[]
   recent_orders: Order[]
   low_stock: { id: string; title: string; stock: number }[]
+  period_days: number
+  period_revenue: string | number
+  period_orders: number
+  sales_history: { date: string; revenue: string | number; orders: number }[]
+  top_products: { product_title: string; units: number; revenue: string | number }[]
 }
 
 export interface AdminProvince {

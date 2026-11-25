@@ -97,7 +97,8 @@ onUnmounted(() => {
   window.removeEventListener('vite:preloadError', handlePreloadError)
 })
 
-watch(() => router.currentRoute.value, () => {
+watch(() => router.currentRoute.value.path, (newPath, oldPath) => {
+  if (newPath === oldPath) return
   const el = routeContainer.value
   if (!el) return
   isRouteAnimating.value = false
@@ -105,6 +106,12 @@ watch(() => router.currentRoute.value, () => {
     isRouteAnimating.value = true
   })
 })
+
+function handleToastAction() {
+  const action = uiStore.toast?.onAction
+  uiStore.dismissToast()
+  action?.()
+}
 </script>
 
 <template>
@@ -142,6 +149,35 @@ watch(() => router.currentRoute.value, () => {
       :open="uiStore.isCartOpen"
       @close="uiStore.closeCart"
     />
+    <Transition name="toast-slide">
+      <div
+        v-if="uiStore.toast"
+        :key="uiStore.toast.id"
+        role="status"
+        aria-live="polite"
+        class="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-6 sm:bottom-6 z-[60] mx-auto sm:mx-0 max-w-sm rounded-2xl bg-dark text-background px-4 py-3 shadow-xl flex items-center justify-between gap-3"
+      >
+        <p class="text-sm leading-snug">{{ uiStore.toast.message }}</p>
+        <div class="flex items-center gap-2 shrink-0">
+          <button
+            v-if="uiStore.toast.actionLabel"
+            type="button"
+            class="text-xs font-semibold uppercase tracking-wider text-primary underline underline-offset-4 hover:text-white min-h-9 px-1"
+            @click="handleToastAction"
+          >
+            {{ uiStore.toast.actionLabel }}
+          </button>
+          <button
+            type="button"
+            class="text-background/70 hover:text-white p-1.5 rounded-lg"
+            aria-label="Dismiss notification"
+            @click="uiStore.dismissToast()"
+          >
+            ✕
+          </button>
+        </div>
+      </div>
+    </Transition>
   </div>
 </template>
 
@@ -151,16 +187,25 @@ watch(() => router.currentRoute.value, () => {
   transform: translateY(0);
 }
 .route-enter {
-  animation: routeFadeIn 0.4s ease-out;
+  animation: routeFadeIn 0.2s ease-out;
 }
 @keyframes routeFadeIn {
   from {
     opacity: 0;
-    transform: translateY(16px);
+    transform: translateY(6px);
   }
   to {
     opacity: 1;
     transform: translateY(0);
   }
+}
+.toast-slide-enter-active,
+.toast-slide-leave-active {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.toast-slide-enter-from,
+.toast-slide-leave-to {
+  opacity: 0;
+  transform: translateY(10px);
 }
 </style>

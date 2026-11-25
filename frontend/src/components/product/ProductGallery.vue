@@ -9,9 +9,11 @@ const props = defineProps<{
 
 const currentIndex = ref(0)
 const isZooming = ref(false)
-const zoomX = ref(0)
-const zoomY = ref(0)
+const zoomX = ref(50)
+const zoomY = ref(50)
 const imgRef = ref<HTMLElement | null>(null)
+let touchStartX = 0
+let touchStartY = 0
 
 function previous() {
   isZooming.value = false
@@ -23,13 +25,46 @@ function next() {
   currentIndex.value = currentIndex.value < props.images.length - 1 ? currentIndex.value + 1 : 0
 }
 
-function handleMouseMove(e: MouseEvent) {
+function updateZoomFromPoint(clientX: number, clientY: number) {
   const rect = imgRef.value?.getBoundingClientRect()
   if (!rect) return
-  const x = ((e.clientX - rect.left) / rect.width) * 100
-  const y = ((e.clientY - rect.top) / rect.height) * 100
-  zoomX.value = x
-  zoomY.value = y
+  zoomX.value = Math.max(0, Math.min(100, ((clientX - rect.left) / rect.width) * 100))
+  zoomY.value = Math.max(0, Math.min(100, ((clientY - rect.top) / rect.height) * 100))
+}
+
+function handleMouseMove(e: MouseEvent) {
+  if (!isZooming.value) return
+  updateZoomFromPoint(e.clientX, e.clientY)
+}
+
+function handleTouchStart(e: TouchEvent) {
+  const touch = e.touches[0]
+  if (!touch) return
+  touchStartX = touch.clientX
+  touchStartY = touch.clientY
+  if (isZooming.value) {
+    updateZoomFromPoint(touch.clientX, touch.clientY)
+  }
+}
+
+function handleTouchMove(e: TouchEvent) {
+  if (!isZooming.value) return
+  const touch = e.touches[0]
+  if (!touch) return
+  e.preventDefault()
+  updateZoomFromPoint(touch.clientX, touch.clientY)
+}
+
+function handleTouchEnd(e: TouchEvent) {
+  if (isZooming.value || props.images.length <= 1) return
+  const touch = e.changedTouches[0]
+  if (!touch) return
+  const dx = touch.clientX - touchStartX
+  const dy = touch.clientY - touchStartY
+  if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)) {
+    if (dx < 0) next()
+    else previous()
+  }
 }
 
 </script>
@@ -39,8 +74,11 @@ function handleMouseMove(e: MouseEvent) {
     <div
       ref="imgRef"
       class="relative aspect-square rounded-[20px] overflow-hidden bg-primary/20"
-      :class="isZooming ? 'cursor-crosshair' : ''"
+      :class="isZooming ? 'cursor-crosshair touch-none' : 'touch-pan-y'"
       @mousemove="handleMouseMove"
+      @touchstart.passive="handleTouchStart"
+      @touchmove="handleTouchMove"
+      @touchend.passive="handleTouchEnd"
     >
       <img
         v-for="(img, index) in images"

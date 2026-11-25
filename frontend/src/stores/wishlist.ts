@@ -8,8 +8,14 @@ export const useWishlistStore = defineStore('wishlist', () => {
   const items = ref<WishlistItem[]>([])
   let loaded = false
 
-  const itemIds = computed(() => new Set(items.value.map(i => i.product.id)))
-  const count = computed(() => items.value.length)
+  const itemIds = computed(() => {
+    ensureLoaded()
+    return new Set(items.value.map(i => i.product.id))
+  })
+  const count = computed(() => {
+    ensureLoaded()
+    return items.value.length
+  })
 
   function ensureLoaded() {
     if (loaded) return

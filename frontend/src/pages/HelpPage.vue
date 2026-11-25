@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import { Truck, RotateCcw, CreditCard, UserCircle, MessageCircle, Mail, MapPin, ChevronDown, HelpCircle, Search, Package } from '@lucide/vue'
 
 const openFaq = ref<string | null>(null)
+const whatsappNumber = (import.meta.env.VITE_WHATSAPP_NUMBER || '').replace(/[^\d]/g, '')
 
 function toggleFaq(id: string) {
   openFaq.value = openFaq.value === id ? null : id
@@ -116,23 +117,27 @@ const faqs = [
             class="bg-white rounded-[20px] shadow-[0_8px_30px_rgba(0,0,0,0.06)] overflow-hidden"
           >
             <button
-              class="w-full flex items-center gap-3 p-5 text-left transition-colors hover:bg-primary/5"
+              type="button"
+              class="w-full flex items-center gap-3 p-5 text-left transition-colors hover:bg-primary/5 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-gold"
+              :aria-expanded="openFaq === faq.id"
+              :aria-controls="`faq-panel-${faq.id}`"
               @click="toggleFaq(faq.id)"
             >
               <div class="w-9 h-9 rounded-full bg-nzuri-blush/50 flex items-center justify-center shrink-0">
-                <component :is="faq.icon" class="w-4 h-4 text-dark" />
+                <component :is="faq.icon" class="w-4 h-4 text-dark" aria-hidden="true" />
               </div>
               <span class="flex-1 text-sm font-medium text-dark">{{ faq.question }}</span>
               <ChevronDown
                 class="w-4 h-4 text-muted transition-transform duration-200 shrink-0"
                 :class="openFaq === faq.id ? 'rotate-180' : ''"
+                aria-hidden="true"
               />
             </button>
             <div
-              class="overflow-hidden transition-all duration-300"
-              :class="openFaq === faq.id ? 'max-h-60' : 'max-h-0'"
+              v-show="openFaq === faq.id"
+              :id="`faq-panel-${faq.id}`"
             >
-              <p class="px-5 pb-5 pl-[76px] text-sm text-muted leading-relaxed">
+              <p class="px-5 pb-5 sm:pl-[76px] text-sm text-muted leading-relaxed">
                 {{ faq.answer }}
               </p>
             </div>
@@ -145,7 +150,8 @@ const faqs = [
         <h2 class="font-heading text-lg font-semibold text-dark mb-4">Get in Touch</h2>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <a
-            href="https://wa.me/260770000000"
+            v-if="whatsappNumber"
+            :href="`https://wa.me/${whatsappNumber}`"
             target="_blank"
             rel="noopener noreferrer"
             class="flex items-center gap-3 bg-white rounded-[20px] p-5 shadow-[0_8px_30px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.1)] transition-shadow"

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { flushPromises, mount } from '@vue/test-utils'
+import { flushPromises, mount, RouterLinkStub } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import CartDrawer from '@/components/cart/CartDrawer.vue'
 import { useCartStore } from '@/stores/cart'
@@ -18,7 +18,7 @@ function createWrapper(pinia: ReturnType<typeof createPinia>, open = true) {
         BaseButton: {
           template: '<button class="btn-stub"><slot /></button>'
         },
-        'router-link': true
+        RouterLink: RouterLinkStub
       }
     }
   })

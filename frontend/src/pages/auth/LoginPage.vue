@@ -84,7 +84,7 @@ async function handleLogin() {
           </router-link>
         </div>
 
-        <p v-if="error" class="text-xs text-red-500">{{ error }}</p>
+        <p v-if="error" role="alert" class="text-sm text-red-700">{{ error }}</p>
 
         <BaseButton type="submit" variant="secondary" fullWidth :loading="loading">
           Sign In

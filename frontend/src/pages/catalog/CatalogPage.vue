@@ -127,7 +127,7 @@ watch(() => route.query, () => { syncRoute(); fetchProducts() }, { immediate: tr
       </div>
     </div>
 
-    <form class="mb-6 flex gap-2" role="search" @submit.prevent="handleSearch">
+    <form class="mb-6 flex gap-2 lg:hidden" role="search" @submit.prevent="handleSearch">
       <label for="catalog-search" class="sr-only">Search products</label>
       <input id="catalog-search" v-model="searchQuery" type="search" placeholder="Search products..." class="min-h-11 min-w-0 flex-1 rounded-xl border border-[#b9a8a8] bg-white px-4 text-base text-dark focus:outline-none focus:ring-2 focus:ring-gold/40" />
       <BaseButton type="submit" variant="secondary">Search</BaseButton>

@@ -88,12 +88,23 @@ onMounted(loadOrders)
           </span>
         </div>
         <div class="flex items-center justify-between text-sm">
-          <span class="text-muted">{{ new Date(order.created_at).toLocaleDateString() }}</span>
-          <span class="font-semibold text-dark">K{{ order.grand_total }}</span>
+          <span class="text-muted">{{ new Date(order.created_at).toLocaleDateString('en-ZM', { year: 'numeric', month: 'short', day: 'numeric' }) }}</span>
+          <span class="font-semibold text-dark tabular-nums">K{{ order.grand_total }}</span>
         </div>
-        <router-link :to="`/order/confirmation/${order.id}`" class="inline-block mt-3 text-sm underline text-dark">View order</router-link>
-        <div class="text-xs text-muted mt-1">
-          {{ order.items.length }} item{{ order.items.length !== 1 ? 's' : '' }}
+        <ul v-if="order.items.length > 0" class="mt-3 space-y-1 border-t border-primary/15 pt-3 text-xs text-muted">
+          <li v-for="item in order.items.slice(0, 3)" :key="item.id" class="flex justify-between gap-2">
+            <span class="truncate text-dark">{{ item.product_title }}</span>
+            <span class="shrink-0 tabular-nums">× {{ item.quantity }}</span>
+          </li>
+          <li v-if="order.items.length > 3" class="text-muted">+ {{ order.items.length - 3 }} more {{ order.items.length - 3 === 1 ? 'item' : 'items' }}</li>
+        </ul>
+        <div class="mt-3 flex items-center justify-between pt-1">
+          <span class="text-xs text-muted">
+            {{ order.items.length }} item{{ order.items.length !== 1 ? 's' : '' }}
+          </span>
+          <router-link :to="`/order/confirmation/${order.id}`" class="inline-flex min-h-10 items-center text-sm font-medium underline underline-offset-4 text-dark hover:text-gold transition-colors">
+            View order
+          </router-link>
         </div>
       </div>
     </div>

@@ -4,7 +4,8 @@ from django.contrib.auth import get_user_model
 from rest_framework import status
 from apps.categories.models import Category
 from apps.products.models import Product
-from apps.orders.models import Order
+from apps.orders.models import Order, OrderItem
+from django.utils import timezone
 
 User = get_user_model()
 
@@ -61,6 +62,25 @@ class TestDashboardAPI:
         response = self.client.get(self.url)
         assert float(response.data['revenue']) == 235.00
         assert response.data['orders'] == 1
+
+    def test_sales_history_counts_only_eligible_orders_and_fills_missing_days(self):
+        self.client.force_authenticate(user=self.admin)
+        common = dict(user=self.user, total_amount=Decimal('100.00'), delivery_fee=Decimal('10.00'),
+                      grand_total=Decimal('110.00'), province='Lusaka', town='Lusaka',
+                      street_address='123', phone='260977777777', delivery_method='courier', payment_method='mtn_momo')
+        paid = Order.objects.create(status='paid', **common)
+        Order.objects.create(status='awaiting_payment', **common)
+        Order.objects.create(status='cancelled', **common)
+        OrderItem.objects.create(order=paid, product_title='Botanical oil', quantity=2, price_at_purchase=Decimal('50.00'))
+        data = self.client.get(self.url, {'days': 7}).data
+        assert len(data['sales_history']) == 7
+        assert data['sales_history'][-1]['date'] == timezone.localdate().isoformat()
+        assert data['sales_history'][-1]['orders'] == 1
+        assert data['period_revenue'] == Decimal('110.00')
+        assert data['period_orders'] == 1
+        assert data['top_products'][0]['units'] == 2
+        assert data['top_products'][0]['revenue'] == Decimal('100.00')
+        assert self.client.get(self.url, {'days': 999}).status_code == 400
 
     def test_dashboard_low_stock(self):
         self.client.force_authenticate(user=self.admin)

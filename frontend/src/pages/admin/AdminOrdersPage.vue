@@ -10,6 +10,10 @@ const loading = ref(true)
 const statusFilter = ref('')
 const updatingId = ref<string | null>(null)
 const errorMessage = ref('')
+const page = ref(1)
+const total = ref(0)
+const hasNext = ref(false)
+const hasPrevious = ref(false)
 
 const statusLabels: Record<string, string> = {
   awaiting_payment: 'Awaiting Payment',
@@ -51,16 +55,29 @@ async function loadOrders() {
   loading.value = true
   errorMessage.value = ''
   try {
-    const params: { page?: number; status?: string } = {}
+    const params: { page?: number; status?: string } = { page: page.value }
     if (statusFilter.value) params.status = statusFilter.value
     const data = await orderService.getAllOrders(params)
     orders.value = data.results
+    total.value = data.count
+    hasNext.value = Boolean(data.next)
+    hasPrevious.value = Boolean(data.previous)
   } catch {
     orders.value = []
     errorMessage.value = 'Could not load orders. Please try again.'
   } finally {
     loading.value = false
   }
+}
+
+function changePage(next: number) {
+  page.value = next
+  loadOrders()
+}
+
+function filterOrders() {
+  page.value = 1
+  loadOrders()
 }
 
 async function updateStatus(order: AdminOrder, newStatus: string) {
@@ -91,7 +108,7 @@ onMounted(loadOrders)
             v-model="statusFilter"
             :options="statusOptions"
             placeholder="All Statuses"
-            @update:model-value="loadOrders"
+            @update:model-value="filterOrders"
           />
         </div>
       </div>
@@ -116,7 +133,7 @@ onMounted(loadOrders)
       </div>
 
       <div v-else class="bg-white rounded-[16px] border border-gray-100 overflow-hidden">
-        <table class="w-full text-sm">
+        <div class="overflow-x-auto"><table class="w-full min-w-[560px] text-sm">
           <thead>
             <tr class="border-b border-gray-100">
               <th class="text-left px-4 py-3 font-medium text-gray-500">Order</th>
@@ -163,7 +180,8 @@ onMounted(loadOrders)
               <td colspan="6" class="px-4 py-8 text-center text-gray-400">No orders found.</td>
             </tr>
           </tbody>
-        </table>
+        </table></div>
+        <div class="flex flex-wrap items-center justify-between gap-3 border-t border-gray-100 px-4 py-4 text-sm"><span class="text-gray-500">{{ total }} orders · Page {{ page }}</span><div class="flex gap-2"><button class="min-h-11 rounded-lg border border-gray-200 px-4 disabled:opacity-40" :disabled="!hasPrevious" @click="changePage(page - 1)">Previous</button><button class="min-h-11 rounded-lg border border-gray-200 px-4 disabled:opacity-40" :disabled="!hasNext" @click="changePage(page + 1)">Next</button></div></div>
       </div>
     </div>
   </AdminLayout>

@@ -2,20 +2,19 @@
 import type { Product } from '@/types'
 import { useCartStore } from '@/stores/cart'
 import { useWishlistStore } from '@/stores/wishlist'
+import { useUIStore } from '@/stores/ui'
 import { Check, Heart, ShoppingBag } from '@lucide/vue'
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
-import { useRouter } from 'vue-router'
 import { signatureImage } from '@/utils/productImage'
 
 const props = defineProps<{
   product: Product
 }>()
 
-const router = useRouter()
 const cartStore = useCartStore()
+const uiStore = useUIStore()
 const cartError = ref('')
 const adding = ref(false)
-const buying = ref(false)
 const added = ref(false)
 let addedTimer: ReturnType<typeof setTimeout> | undefined
 const wishlistStore = useWishlistStore()
@@ -34,36 +33,22 @@ function handleImageError() {
 
 async function handleAddToCart(e: Event) {
   e.stopPropagation()
-  if (adding.value || buying.value || !props.product.is_in_stock) return
+  if (adding.value || !props.product.is_in_stock) return
   adding.value = true
   cartError.value = ''
   try {
     await cartStore.addToCart(props.product)
     added.value = true
+    uiStore.showToast(`Added ${props.product.title} to your bag`, {
+      actionLabel: 'View bag',
+      onAction: () => uiStore.openCart(),
+    })
     if (addedTimer) clearTimeout(addedTimer)
     addedTimer = setTimeout(() => { added.value = false }, 1500)
   } catch {
     cartError.value = cartStore.error
   } finally {
     adding.value = false
-  }
-}
-
-async function handleBuyNow(e: Event) {
-  e.stopPropagation()
-  if (buying.value || adding.value || !props.product.is_in_stock) return
-  buying.value = true
-  cartError.value = ''
-  try {
-    const existingQty = cartStore.items.find(item => item.product.id === props.product.id)?.quantity || 0
-    if (existingQty === 0 || existingQty < props.product.stock) {
-      await cartStore.addToCart(props.product)
-    }
-    await router.push('/checkout')
-  } catch {
-    cartError.value = cartStore.error || 'Could not start checkout. Please try again.'
-  } finally {
-    buying.value = false
   }
 }
 
@@ -132,30 +117,21 @@ function handleToggleWishlist(e: Event) {
       <span v-if="Number(product.effective_discount_percent ?? product.discount_percent) > 0" class="mr-1.5 font-normal text-muted line-through">K{{ product.price }}</span>K{{ product.sale_price ?? product.price }}
     </p>
 
-    <div class="mt-auto pt-3 flex items-center gap-1.5 sm:gap-2">
+    <div class="mt-auto pt-3">
       <button
         type="button"
-        class="flex-1 min-w-0 min-h-10 sm:min-h-11 px-3 rounded-full bg-dark text-background text-xs sm:text-sm font-semibold tracking-wide flex items-center justify-center hover:bg-dark/90 transition-all active:scale-[0.97] disabled:opacity-45 disabled:cursor-not-allowed focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
-        :disabled="buying || adding || !product.is_in_stock"
-        :aria-busy="buying || undefined"
-        @click="handleBuyNow"
-      >
-        <span class="truncate">{{ !product.is_in_stock ? 'Out of Stock' : buying ? 'Buying…' : 'Buy Now' }}</span>
-      </button>
-      <button
-        v-if="product.is_in_stock"
-        type="button"
-        class="w-10 h-10 sm:w-11 sm:h-11 shrink-0 rounded-full border flex items-center justify-center transition-all active:scale-90 disabled:opacity-45 disabled:cursor-not-allowed focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
+        class="w-full min-h-10 sm:min-h-11 px-3 rounded-full text-xs sm:text-sm font-semibold tracking-wide flex items-center justify-center gap-2 transition-all active:scale-[0.97] disabled:opacity-45 disabled:cursor-not-allowed focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
         :class="added
-          ? 'border-success bg-success/10 text-success'
-          : 'border-dark/20 bg-white text-dark hover:bg-primary/25 hover:border-dark/40'"
-        :disabled="adding || buying"
+          ? 'bg-success text-white'
+          : 'bg-dark text-background hover:bg-dark/90'"
+        :disabled="adding || !product.is_in_stock"
         :aria-busy="adding || undefined"
-        aria-label="Add to cart"
+        :aria-label="!product.is_in_stock ? `${product.title} is out of stock` : `Add ${product.title} to cart`"
         @click="handleAddToCart"
       >
-        <Check v-if="added" class="w-4 h-4 motion-safe:animate-[cart-confirm_300ms_ease-out]" />
-        <ShoppingBag v-else class="w-4 h-4" />
+        <Check v-if="added" class="w-4 h-4 shrink-0 motion-safe:animate-[cart-confirm_300ms_ease-out]" aria-hidden="true" />
+        <ShoppingBag v-else-if="product.is_in_stock" class="w-4 h-4 shrink-0" aria-hidden="true" />
+        <span class="truncate">{{ !product.is_in_stock ? 'Out of Stock' : adding ? 'Adding…' : added ? 'Added to Cart' : 'Add to Cart' }}</span>
       </button>
     </div>
 

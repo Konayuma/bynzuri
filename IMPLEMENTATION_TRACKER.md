@@ -7,6 +7,7 @@ This is a source-code baseline, not a release certification. **In progress** mea
 
 ## Recent implementation
 
+- **In progress — admin analytics:** Sales history, top products and paginated orders are implemented. Sales use current paid/fulfilment statuses and the order creation date, include delivery, and are not a payment-date or refund ledger. Local API tests and frontend build validate the implementation; live data and browser verification remain outstanding.
 - **In progress — transactional order email:** A durable Resend outbox queues unpaid order confirmations, owner order alerts, confirmed-payment receipts and alerts, and delivery-status updates. Duplicate events are guarded; retries use provider idempotency. Automated tests cover local behavior, but production requires verified DNS, a configured API key and a running scheduler; live delivery and bounce handling are not yet verified. See `DEPLOYMENT.md`.
 
 ## Immediate priorities

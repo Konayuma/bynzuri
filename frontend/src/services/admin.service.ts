@@ -5,8 +5,8 @@ import type {
 } from '@/types'
 
 export const adminService = {
-  async getDashboard(): Promise<DashboardStats> {
-    const response = await api.get('/dashboard/')
+  async getDashboard(days = 30): Promise<DashboardStats> {
+    const response = await api.get('/dashboard/', { params: { days } })
     return response.data
   },
 

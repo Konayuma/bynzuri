@@ -5,6 +5,7 @@ import { ShoppingBag, User, Search, Menu, X, Heart, Package, MapPin, LogOut, Log
 import { useCartStore } from '@/stores/cart'
 import { useUserStore } from '@/stores/user'
 import { useUIStore } from '@/stores/ui'
+import { useWishlistStore } from '@/stores/wishlist'
 import ProductSearch from '@/components/search/ProductSearch.vue'
 
 const router = useRouter()
@@ -12,6 +13,13 @@ const route = useRoute()
 const cartStore = useCartStore()
 const userStore = useUserStore()
 const uiStore = useUIStore()
+const wishlistStore = useWishlistStore()
+
+function isNavActive(category?: string) {
+  if (route.path !== '/catalog') return false
+  const current = typeof route.query.category === 'string' ? route.query.category : ''
+  return category ? current === category : !current
+}
 
 const searchQuery = ref('')
 const mobileSearchOpen = ref(false)
@@ -108,17 +116,45 @@ watch(() => route.fullPath, () => { mobileSearchOpen.value = false; uiStore.clos
       </router-link>
 
       <!-- Desktop nav links -->
-      <nav class="hidden lg:flex items-center gap-8 shrink-0">
-        <router-link to="/catalog" class="text-sm font-medium text-muted hover:text-dark transition-colors relative after:absolute after:bottom-[-22px] after:left-0 after:w-full after:h-[2px] after:bg-dark after:scale-x-0 hover:after:scale-x-100 after:transition-transform after:duration-200">
+      <nav class="hidden lg:flex items-center gap-8 shrink-0" aria-label="Main navigation">
+        <router-link
+          to="/catalog"
+          :aria-current="isNavActive() ? 'page' : undefined"
+          :class="[
+            'text-sm font-medium transition-colors relative after:absolute after:bottom-[-22px] after:left-0 after:w-full after:h-[2px] after:bg-dark after:transition-transform after:duration-200',
+            isNavActive() ? 'text-dark after:scale-x-100' : 'text-muted hover:text-dark after:scale-x-0 hover:after:scale-x-100',
+          ]"
+        >
           Shop All
         </router-link>
-        <router-link to="/catalog?category=hair-care" class="text-sm font-medium text-muted hover:text-dark transition-colors relative after:absolute after:bottom-[-22px] after:left-0 after:w-full after:h-[2px] after:bg-dark after:scale-x-0 hover:after:scale-x-100 after:transition-transform after:duration-200">
+        <router-link
+          to="/catalog?category=hair-care"
+          :aria-current="isNavActive('hair-care') ? 'page' : undefined"
+          :class="[
+            'text-sm font-medium transition-colors relative after:absolute after:bottom-[-22px] after:left-0 after:w-full after:h-[2px] after:bg-dark after:transition-transform after:duration-200',
+            isNavActive('hair-care') ? 'text-dark after:scale-x-100' : 'text-muted hover:text-dark after:scale-x-0 hover:after:scale-x-100',
+          ]"
+        >
           Hair Care
         </router-link>
-        <router-link to="/catalog?category=hair-growth" class="text-sm font-medium text-muted hover:text-dark transition-colors relative after:absolute after:bottom-[-22px] after:left-0 after:w-full after:h-[2px] after:bg-dark after:scale-x-0 hover:after:scale-x-100 after:transition-transform after:duration-200">
+        <router-link
+          to="/catalog?category=hair-growth"
+          :aria-current="isNavActive('hair-growth') ? 'page' : undefined"
+          :class="[
+            'text-sm font-medium transition-colors relative after:absolute after:bottom-[-22px] after:left-0 after:w-full after:h-[2px] after:bg-dark after:transition-transform after:duration-200',
+            isNavActive('hair-growth') ? 'text-dark after:scale-x-100' : 'text-muted hover:text-dark after:scale-x-0 hover:after:scale-x-100',
+          ]"
+        >
           Hair Growth
         </router-link>
-        <router-link to="/catalog?category=oils" class="text-sm font-medium text-muted hover:text-dark transition-colors relative after:absolute after:bottom-[-22px] after:left-0 after:w-full after:h-[2px] after:bg-dark after:scale-x-0 hover:after:scale-x-100 after:transition-transform after:duration-200">
+        <router-link
+          to="/catalog?category=oils"
+          :aria-current="isNavActive('oils') ? 'page' : undefined"
+          :class="[
+            'text-sm font-medium transition-colors relative after:absolute after:bottom-[-22px] after:left-0 after:w-full after:h-[2px] after:bg-dark after:transition-transform after:duration-200',
+            isNavActive('oils') ? 'text-dark after:scale-x-100' : 'text-muted hover:text-dark after:scale-x-0 hover:after:scale-x-100',
+          ]"
+        >
           Oils
         </router-link>
       </nav>
@@ -143,10 +179,16 @@ watch(() => route.fullPath, () => { mobileSearchOpen.value = false; uiStore.clos
 
         <router-link
           to="/wishlist"
-          class="hidden sm:block p-2 hover:bg-primary/30 rounded-lg transition-colors active:scale-95"
-          aria-label="Wishlist"
+          class="hidden sm:grid h-11 w-11 place-items-center hover:bg-primary/30 rounded-lg transition-colors relative active:scale-95"
+          :aria-label="wishlistStore.count > 0 ? `Wishlist (${wishlistStore.count} items)` : 'Wishlist'"
         >
           <Heart class="w-5 h-5 text-dark" />
+          <span
+            v-if="wishlistStore.count > 0"
+            class="absolute top-1 right-1 bg-gold text-white text-[10px] font-bold min-w-4 h-4 px-1 rounded-full flex items-center justify-center tabular-nums"
+          >
+            {{ wishlistStore.count }}
+          </span>
         </router-link>
 
         <div ref="accountMenu" class="account-wrap">

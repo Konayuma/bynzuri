@@ -5,11 +5,12 @@ import { useProductStore } from '@/stores/product'
 import { useCartStore } from '@/stores/cart'
 import { useWishlistStore } from '@/stores/wishlist'
 import { useUserStore } from '@/stores/user'
+import { useUIStore } from '@/stores/ui'
 import ProductGallery from '@/components/product/ProductGallery.vue'
 import DescriptionInline from '@/components/product/DescriptionInline.vue'
 import ProductCard from '@/components/product/ProductCard.vue'
 import BaseButton from '@/components/base/BaseButton.vue'
-import { Heart, Minus, Plus, Star, Truck, ShieldCheck, Send } from '@lucide/vue'
+import { Heart, Minus, Plus, Star, Truck, ShieldCheck, Send, ChevronRight } from '@lucide/vue'
 import type { Product } from '@/types'
 import { signatureImage } from '@/utils/productImage'
 import { formatProductDescription } from '@/utils/productDescription'
@@ -19,6 +20,7 @@ const productStore = useProductStore()
 const cartStore = useCartStore()
 const wishlistStore = useWishlistStore()
 const userStore = useUserStore()
+const uiStore = useUIStore()
 
 const quantity = ref(1)
 const addedToCart = ref(false)
@@ -55,6 +57,14 @@ const ratingStars = computed(() => {
   return Array.from({ length: 5 }, (_, i) => i < Math.round(product.value!.rating))
 })
 
+const filteredRelatedProducts = computed(() =>
+  productStore.relatedProducts.filter(p => p.id !== product.value?.id).slice(0, 4)
+)
+
+const filteredRecentlyViewed = computed(() =>
+  recentlyViewed.value.filter(p => p.id !== product.value?.id).slice(0, 4)
+)
+
 function incrementQty() {
   if (product.value && quantity.value < product.value.stock) {
     quantity.value++
@@ -72,6 +82,10 @@ async function handleAddToCart() {
   try {
     await cartStore.addToCart(product.value, quantity.value)
     addedToCart.value = true
+    uiStore.showToast(`Added ${product.value.title} to your bag`, {
+      actionLabel: 'View bag',
+      onAction: () => uiStore.openCart(),
+    })
     setTimeout(() => { addedToCart.value = false }, 2000)
   } catch {
     cartError.value = cartStore.error || 'Could not add this product. Please try again.'
@@ -187,11 +201,32 @@ watch(product, (p) => {
       <router-link to="/catalog" class="mt-5 inline-block rounded-xl bg-dark px-5 py-3 text-sm font-medium text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold">Browse products</router-link>
     </div>
     <template v-else-if="product">
+      <nav aria-label="Breadcrumb" class="mb-5 flex flex-wrap items-center gap-1.5 text-xs text-muted">
+        <router-link to="/" class="hover:text-dark transition-colors">Home</router-link>
+        <ChevronRight class="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+        <router-link to="/catalog" class="hover:text-dark transition-colors">Shop</router-link>
+        <template v-if="product.category_slug">
+          <ChevronRight class="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+          <router-link :to="{ path: '/catalog', query: { category: product.category_slug } }" class="hover:text-dark transition-colors">
+            {{ product.category_name }}
+          </router-link>
+        </template>
+        <ChevronRight class="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+        <span class="text-dark font-medium truncate max-w-[200px] sm:max-w-xs" aria-current="page">{{ product.title }}</span>
+      </nav>
+
       <div class="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-10">
         <ProductGallery :key="product.slug" :images="galleryImages" />
 
         <div class="md:sticky md:top-24 md:self-start">
-          <p class="text-xs text-gold uppercase tracking-[0.2em] font-medium mb-2">
+          <router-link
+            v-if="product.category_slug"
+            :to="{ path: '/catalog', query: { category: product.category_slug } }"
+            class="inline-block text-xs text-gold uppercase tracking-[0.2em] font-medium mb-2 hover:underline"
+          >
+            {{ product.category_name }}
+          </router-link>
+          <p v-else class="text-xs text-gold uppercase tracking-[0.2em] font-medium mb-2">
             {{ product.category_name }}
           </p>
 
@@ -199,20 +234,28 @@ watch(product, (p) => {
             {{ product.title }}
           </h1>
 
-          <p class="font-bold text-2xl text-dark mb-4"><span v-if="Number(product.effective_discount_percent ?? product.discount_percent) > 0" class="mr-3 text-base font-normal text-muted line-through">K{{ product.price }}</span>K{{ product.sale_price ?? product.price }}</p>
+          <p class="font-bold text-2xl text-dark mb-4 tabular-nums"><span v-if="Number(product.effective_discount_percent ?? product.discount_percent) > 0" class="mr-3 text-base font-normal text-muted line-through">K{{ product.price }}</span>K{{ product.sale_price ?? product.price }}</p>
 
           <div class="flex items-center gap-2 mb-4">
-            <div class="flex items-center gap-0.5">
-              <Star
-                v-for="(filled, i) in ratingStars"
-                :key="i"
-                class="w-4 h-4"
-                :class="filled ? 'text-gold fill-gold' : 'text-muted/30'"
-              />
-            </div>
-            <span v-if="product.review_count > 0" class="text-xs text-muted">
-              ({{ product.review_count }} reviews)
-            </span>
+            <template v-if="product.review_count > 0">
+              <a href="#reviews" class="inline-flex items-center gap-2 hover:opacity-80 transition-opacity">
+                <div class="flex items-center gap-0.5" :aria-label="`Rated ${Number(product.rating).toFixed(1)} out of 5`">
+                  <Star
+                    v-for="(filled, i) in ratingStars"
+                    :key="i"
+                    class="w-4 h-4"
+                    :class="filled ? 'text-gold fill-gold' : 'text-muted/30'"
+                    aria-hidden="true"
+                  />
+                </div>
+                <span class="text-xs text-muted underline underline-offset-4">
+                  {{ product.review_count }} {{ product.review_count === 1 ? 'review' : 'reviews' }}
+                </span>
+              </a>
+            </template>
+            <a v-else href="#reviews" class="text-xs text-muted hover:text-dark underline underline-offset-4 transition-colors">
+              No reviews yet — be the first to review
+            </a>
           </div>
 
           <div class="flex items-center gap-2 mb-6">
@@ -258,13 +301,15 @@ watch(product, (p) => {
           </div>
           <p v-if="cartError" role="alert" class="mt-2 text-sm text-red-700">{{ cartError }}</p>
 
-          <div class="flex items-center gap-2 text-xs text-muted py-4 border-t border-primary/20">
+          <div class="flex items-center gap-2 text-xs text-muted py-2 border-t border-primary/20">
             <button
-              class="flex items-center gap-1.5 hover:text-dark transition-colors active:scale-95"
+              type="button"
+              class="inline-flex min-h-11 items-center gap-1.5 hover:text-dark transition-colors active:scale-95 focus-visible:outline-2 focus-visible:outline-gold rounded-lg px-1"
+              :aria-pressed="inWishlist"
               @click="handleToggleWishlist"
             >
               <Heart
-                class="w-3.5 h-3.5 transition-all"
+                class="w-4 h-4 transition-all"
                 :class="inWishlist ? 'text-red-500 fill-red-500' : ''"
               />
               {{ inWishlist ? 'Remove from Wishlist' : 'Add to Wishlist' }}
@@ -302,7 +347,7 @@ watch(product, (p) => {
       </div>
 
       <!-- Reviews Section -->
-      <section class="mt-16 pt-8 border-t border-primary/20">
+      <section id="reviews" class="mt-16 pt-8 border-t border-primary/20 scroll-mt-24">
         <h2 class="font-heading text-xl font-semibold text-dark mb-6">Customer Reviews</h2>
 
         <!-- Review Form -->
@@ -379,11 +424,11 @@ watch(product, (p) => {
       </section>
 
       <!-- Related Products -->
-      <section class="mt-16">
+      <section v-if="filteredRelatedProducts.length > 0" class="mt-16">
         <h2 class="font-heading text-xl font-semibold text-dark mb-6">You May Also Like</h2>
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
           <ProductCard
-            v-for="p in productStore.relatedProducts"
+            v-for="p in filteredRelatedProducts"
             :key="p.id"
             :product="p"
           />
@@ -391,16 +436,36 @@ watch(product, (p) => {
       </section>
 
       <!-- Recently Viewed -->
-      <section v-if="recentlyViewed.length > 0" class="mt-16 mb-8">
+      <section v-if="filteredRecentlyViewed.length > 0" class="mt-16 mb-8">
         <h2 class="font-heading text-xl font-semibold text-dark mb-6">Recently Viewed</h2>
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
           <ProductCard
-            v-for="p in recentlyViewed"
+            v-for="p in filteredRecentlyViewed"
             :key="p.id"
             :product="p"
           />
         </div>
       </section>
+
+      <!-- Sticky mobile add-to-cart bar -->
+      <div
+        v-if="inStock"
+        class="md:hidden fixed bottom-0 inset-x-0 z-40 border-t border-primary/30 bg-background/95 backdrop-blur-md px-4 py-3 flex items-center justify-between gap-3 shadow-[0_-4px_20px_rgba(0,0,0,0.06)]"
+      >
+        <div class="min-w-0">
+          <p class="text-xs text-muted truncate">{{ product.title }}</p>
+          <p class="text-base font-bold text-dark tabular-nums">K{{ product.sale_price ?? product.price }}</p>
+        </div>
+        <BaseButton
+          variant="secondary"
+          class="min-h-11 shrink-0"
+          :loading="addingToCart"
+          @click="handleAddToCart"
+        >
+          {{ addedToCart ? 'Added!' : 'Add to Cart' }}
+        </BaseButton>
+      </div>
+      <div v-if="inStock" class="h-16 md:hidden" aria-hidden="true" />
     </template>
   </div>
 </template>
