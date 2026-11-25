@@ -83,7 +83,7 @@ function handleToggleWishlist(e: Event) {
           v-if="localProductImage"
           :src="localProductImage"
           :alt="product.title"
-          class="relative w-full h-full object-cover transition-transform duration-[300ms] ease-[ease] group-hover:scale-[1.02]"
+          class="relative w-full h-full object-cover motion-safe:transition-transform motion-safe:duration-500 motion-safe:ease-out motion-safe:group-hover:scale-[1.03]"
           :class="{ 'opacity-0': imageLoading }"
           loading="lazy"
           decoding="async"
@@ -111,13 +111,13 @@ function handleToggleWishlist(e: Event) {
       </p>
       <button
         type="button"
-        class="shrink-0 -mt-1 -mr-1.5 w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center hover:bg-primary/25 transition-colors active:scale-90 focus-visible:outline-2 focus-visible:outline-gold"
+        class="shrink-0 -mt-1 -mr-1.5 w-11 h-11 rounded-full flex items-center justify-center hover:bg-primary/25 transition-colors motion-safe:active:scale-90 focus-visible:outline-2 focus-visible:outline-gold"
         @click="handleToggleWishlist"
         :aria-label="wishlistStore.isWishlisted(product.id) ? 'Remove from wishlist' : 'Add to wishlist'"
         :aria-pressed="wishlistStore.isWishlisted(product.id)"
       >
         <Heart
-          class="w-4 h-4 transition-all"
+          class="w-4 h-4 motion-safe:transition-transform motion-safe:duration-200"
           :class="wishlistStore.isWishlisted(product.id) ? 'text-red-500 fill-red-500 scale-110' : 'text-dark'"
         />
       </button>
@@ -154,7 +154,7 @@ function handleToggleWishlist(e: Event) {
         aria-label="Add to cart"
         @click="handleAddToCart"
       >
-        <Check v-if="added" class="w-4 h-4" />
+        <Check v-if="added" class="w-4 h-4 motion-safe:animate-[cart-confirm_300ms_ease-out]" />
         <ShoppingBag v-else class="w-4 h-4" />
       </button>
     </div>
@@ -163,3 +163,10 @@ function handleToggleWishlist(e: Event) {
     <p v-if="cartError" role="alert" class="mt-1.5 text-xs sm:text-sm text-red-700">{{ cartError }}</p>
   </div>
 </template>
+
+<style scoped>
+@keyframes cart-confirm {
+  from { opacity: 0; transform: scale(.7); }
+  to { opacity: 1; transform: scale(1); }
+}
+</style>

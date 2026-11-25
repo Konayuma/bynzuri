@@ -18,8 +18,7 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/',
     name: 'home',
-    component: () => import('@/pages/HomePage.vue'),
-    meta: { standalone: true }
+    component: () => import('@/pages/HomePage.vue')
   },
   {
     path: '/catalog',
