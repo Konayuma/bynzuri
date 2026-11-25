@@ -7,7 +7,7 @@ from apps.categories.models import Category
 from apps.products.models import Product
 from apps.cart.models import Cart, CartItem
 from apps.delivery.models import DeliveryMethod
-from apps.orders.models import Order
+from apps.orders.models import Order, OrderEmail
 
 User = get_user_model()
 
@@ -16,6 +16,8 @@ User = get_user_model()
 class TestOrderCreation:
     def setup_method(self):
         from rest_framework.test import APIClient
+        from apps.products.models import SaleCampaign
+        SaleCampaign.objects.update(enabled=False)
         self.client = APIClient()
         self.cat = Category.objects.create(name='Test', slug='test')
         self.product = Product.objects.create(
@@ -48,6 +50,9 @@ class TestOrderCreation:
         assert response.status_code == status.HTTP_201_CREATED
         assert response.data['status'] == 'awaiting_payment'
         assert response.data['payment_method'] == 'mtn_momo'
+        notifications = OrderEmail.objects.filter(order_id=response.data['id'])
+        assert set(notifications.values_list('event', flat=True)) == {'order_received', 'owner_order'}
+        assert not notifications.filter(event='payment_receipt').exists()
 
     def test_order_deducts_stock(self, user):
         self.client.force_authenticate(user=user)

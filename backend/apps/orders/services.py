@@ -36,4 +36,6 @@ def transition_order(order_id, new_status, *, expire_before=None):
             Product.objects.filter(pk=product_id).update(stock=F('stock') + quantities[product_id])
     order.status = new_status
     order.save(update_fields=['status', 'updated_at'])
+    from .email_notifications import queue_status_update
+    queue_status_update(order, new_status)
     return order

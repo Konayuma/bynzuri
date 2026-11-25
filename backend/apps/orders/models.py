@@ -70,3 +70,24 @@ class OrderItem(models.Model):
 
     def __str__(self):
         return f"{self.quantity}x {self.product_title}"
+
+
+class OrderEmail(models.Model):
+    """Durable, immutable request to send one order notification."""
+    order = models.ForeignKey(Order, on_delete=models.PROTECT, related_name='email_notifications')
+    event = models.CharField(max_length=40)
+    recipient = models.EmailField()
+    payload = models.JSONField()
+    status = models.CharField(max_length=20, default='pending', db_index=True)
+    attempts = models.PositiveIntegerField(default=0)
+    first_attempt_at = models.DateTimeField(null=True, blank=True)
+    next_attempt_at = models.DateTimeField(null=True, blank=True, db_index=True)
+    lease_until = models.DateTimeField(null=True, blank=True)
+    provider_id = models.CharField(max_length=255, blank=True)
+    last_error = models.CharField(max_length=300, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=['order', 'event'], name='unique_order_email_event')]
+        ordering = ['created_at']

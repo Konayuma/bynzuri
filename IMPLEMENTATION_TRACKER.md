@@ -1,9 +1,13 @@
 # By Nzuri implementation tracker
 
-Last reviewed: 17 November 2026  
+Last reviewed: 26 November 2026
 Source of requirements: [Software Requirements Specification](By_Nzuri_Requirements_Specification.md)
 
 This is a source-code baseline, not a release certification. **In progress** means some implementation exists but the complete requirement has not been verified. **To do** means work or evidence is still needed. Check an item only after its acceptance criteria have been demonstrated and the evidence recorded here. No tests or live integrations were run for this baseline.
+
+## Recent implementation
+
+- **In progress — transactional order email:** A durable Resend outbox queues unpaid order confirmations, owner order alerts, confirmed-payment receipts and alerts, and delivery-status updates. Duplicate events are guarded; retries use provider idempotency. Automated tests cover local behavior, but production requires verified DNS, a configured API key and a running scheduler; live delivery and bounce handling are not yet verified. See `DEPLOYMENT.md`.
 
 ## Immediate priorities
 

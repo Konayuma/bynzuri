@@ -48,6 +48,8 @@ def apply_provider_result(payment_id, data, expected_status=None):
             if order.status == 'awaiting_payment':
                 order.status = 'paid'
                 order.save(update_fields=['status', 'updated_at'])
+                from apps.orders.email_notifications import queue_payment_confirmed
+                queue_payment_confirmed(order, payment)
         elif provider_status == 'failed':
             payment.status = 'failed'
         elif provider_status == 'pay-offline':

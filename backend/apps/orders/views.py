@@ -83,6 +83,8 @@ class OrderListCreateView(views.APIView):
                 notes=serializer.validated_data.get('notes', '')
             )
             OrderItem.objects.bulk_create([OrderItem(order=order, **item) for item in order_items_data])
+            from .email_notifications import queue_order_created
+            queue_order_created(order)
             cart.items.all().delete()
 
         result_serializer = OrderListSerializer(order)

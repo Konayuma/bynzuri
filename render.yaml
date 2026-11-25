@@ -33,3 +33,31 @@ services:
         sync: false
       - key: R2_PUBLIC_DOMAIN
         sync: false
+      - key: ORDER_NOTIFICATION_EMAIL
+        value: hairskin@bynzuri.com
+
+  # Run migrations on the web service before enabling this scheduled sender.
+  - type: cron
+    name: bynzuri-order-email-sender
+    runtime: python
+    rootDir: backend
+    schedule: "*/5 * * * *"
+    buildCommand: ./render-build.sh
+    startCommand: python manage.py process_order_emails --limit 100
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.14.3
+      - key: DJANGO_DEBUG
+        value: "False"
+      - key: DJANGO_SECRET_KEY
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: RESEND_FROM_EMAIL
+        value: "HairSkin by Nzuri <hairskin@bynzuri.com>"
+      - key: RESEND_REPLY_TO
+        value: hairskin@bynzuri.com
+      - key: ORDER_NOTIFICATION_EMAIL
+        value: hairskin@bynzuri.com
