@@ -225,14 +225,6 @@ watch(product, (p) => {
             </span>
           </div>
 
-          <div v-if="descriptionBlocks.length" class="mb-7 max-w-prose space-y-4 text-sm leading-7 text-muted break-words">
-            <template v-for="(block, index) in descriptionBlocks" :key="index">
-              <p v-if="block.type === 'paragraph'"><DescriptionInline :text="block.text" /></p>
-              <h2 v-else-if="block.type === 'heading'" class="pt-1 text-sm font-semibold text-dark"><DescriptionInline :text="block.text" /></h2>
-              <component :is="block.ordered ? 'ol' : 'ul'" v-else :class="block.ordered ? 'list-decimal' : 'list-disc'" class="space-y-1 pl-5 marker:text-gold"><li v-for="(item, itemIndex) in block.items" :key="itemIndex"><DescriptionInline :text="item" /></li></component>
-            </template>
-          </div>
-
           <div v-if="inStock" class="flex flex-wrap items-stretch gap-3 mb-6">
             <div class="inline-flex shrink-0 items-center border border-primary/40 rounded-[14px] overflow-hidden" role="group" aria-label="Quantity">
               <button
@@ -295,6 +287,17 @@ watch(product, (p) => {
               </div>
             </div>
           </div>
+
+          <section v-if="descriptionBlocks.length" aria-label="Product details" class="mt-7 border-t border-primary/20 pt-6">
+            <h2 class="mb-4 font-heading text-lg font-semibold text-dark">Product details</h2>
+            <div class="max-w-prose space-y-4 text-sm leading-7 text-muted break-words">
+              <template v-for="(block, index) in descriptionBlocks" :key="index">
+                <p v-if="block.type === 'paragraph'"><DescriptionInline :text="block.text" /></p>
+                <h3 v-else-if="block.type === 'heading'" class="pt-1 text-sm font-semibold text-dark"><DescriptionInline :text="block.text" /></h3>
+                <component :is="block.ordered ? 'ol' : 'ul'" v-else :class="block.ordered ? 'list-decimal' : 'list-disc'" class="space-y-1 pl-5 marker:text-gold"><li v-for="(item, itemIndex) in block.items" :key="itemIndex"><DescriptionInline :text="item" /></li></component>
+              </template>
+            </div>
+          </section>
         </div>
       </div>
 

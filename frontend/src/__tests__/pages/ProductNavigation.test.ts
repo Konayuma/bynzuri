@@ -20,6 +20,9 @@ describe('product search navigation', () => {
     const wrapper = mount({ template: '<router-view />' }, { global: { plugins: [createPinia(), router] } })
     await flushPromises()
     const group = wrapper.get('[role="group"][aria-label="Quantity"]')
+    const purchase = wrapper.findAll('button').find(button => button.text().includes('Add to Cart'))!
+    const details = wrapper.get('section[aria-label="Product details"]')
+    expect(purchase.element.compareDocumentPosition(details.element) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     await group.get('[aria-label="Increase quantity"]').trigger('click')
     expect(group.text()).toContain('2')
     await group.get('[aria-label="Decrease quantity"]').trigger('click')
