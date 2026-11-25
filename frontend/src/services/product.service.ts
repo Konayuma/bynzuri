@@ -1,7 +1,22 @@
 import api, { publicApi } from './api'
 import type { Product, Category, PaginatedResponse, ProductCreateData, ProductImage } from '@/types'
 
+export interface SaleCampaign {
+  title: string
+  percent: string
+  starts_on: string
+  ends_on: string
+  fulfilment: string
+  enabled: boolean
+}
+
 export const productService = {
+  async getCampaign(admin = false): Promise<SaleCampaign | null> {
+    return (await (admin ? api : publicApi).get('/products/campaign/', { params: admin ? { admin: '1' } : undefined })).data
+  },
+  async saveCampaign(campaign: SaleCampaign): Promise<SaleCampaign> {
+    return (await api.put('/products/campaign/', campaign)).data
+  },
   async getStoreDiscount(): Promise<{ percent: string }> {
     return (await api.get('/products/store-discount/')).data
   },

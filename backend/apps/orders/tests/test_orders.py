@@ -97,6 +97,19 @@ class TestOrderCreation:
         assert order.total_amount == Decimal('160.00')
         assert order.items.get().price_at_purchase == Decimal('80.00')
 
+    def test_scheduled_campaign_is_charged_at_checkout(self, user):
+        from datetime import date
+        from unittest.mock import patch
+        from apps.products.models import SaleCampaign
+        SaleCampaign.objects.update_or_create(pk=1, defaults={'title': 'Sale', 'percent': 30, 'starts_on': date(2026, 11, 26), 'ends_on': date(2026, 11, 28), 'fulfilment': 'December', 'enabled': True})
+        self.client.force_authenticate(user=user)
+        self._setup_cart(user)
+        with patch('django.utils.timezone.localdate', return_value=date(2026, 11, 26)):
+            assert Decimal(str(self.client.get('/api/cart/').data['subtotal'])) == Decimal('140.00')
+            response = self.client.post('/api/orders/', {'province': 'Lusaka', 'town': 'Lusaka', 'street_address': '123', 'phone': '260977000000', 'delivery_method': str(self.delivery.id), 'payment_method': 'mtn_momo'}, format='json')
+        assert response.status_code == 201
+        assert Order.objects.get(pk=response.data['id']).items.get().price_at_purchase == Decimal('70.00')
+
     def test_order_with_insufficient_stock(self, user):
         self.client.force_authenticate(user=user)
         self.product.stock = 1

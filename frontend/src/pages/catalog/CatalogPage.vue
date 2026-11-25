@@ -6,6 +6,7 @@ import ProductCard from '@/components/product/ProductCard.vue'
 import ProductGridSkeleton from '@/components/product/ProductGridSkeleton.vue'
 import BaseButton from '@/components/base/BaseButton.vue'
 import BaseSelect from '@/components/base/BaseSelect.vue'
+import SaleBanner from '@/components/home/SaleBanner.vue'
 import { SlidersHorizontal, ChevronLeft, ChevronRight, X } from '@lucide/vue'
 
 const route = useRoute()
@@ -102,6 +103,7 @@ watch(() => route.query, () => { syncRoute(); fetchProducts() }, { immediate: tr
 
 <template>
   <main class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:py-12">
+    <SaleBanner compact />
     <div class="mb-7 flex flex-wrap items-end justify-between gap-4 border-b border-primary/50 pb-6">
       <div><p class="mb-2 text-xs font-semibold uppercase tracking-[.16em] text-gold">The Nzuri shop</p>
         <h1 class="font-heading text-2xl font-semibold text-dark sm:text-3xl">{{ selectedCategoryName }}</h1>

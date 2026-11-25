@@ -4,6 +4,7 @@ from decimal import Decimal, ROUND_HALF_UP
 from django.db import models
 from django.db.models.signals import pre_save
 from django.dispatch import receiver
+from django.utils import timezone
 from apps.categories.models import Category
 
 logger = logging.getLogger(__name__)
@@ -11,6 +12,15 @@ logger = logging.getLogger(__name__)
 
 class StoreDiscount(models.Model):
     percent = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+
+
+class SaleCampaign(models.Model):
+    title = models.CharField(max_length=100, default='Black Friday sale')
+    percent = models.DecimalField(max_digits=5, decimal_places=2, default=30)
+    starts_on = models.DateField()
+    ends_on = models.DateField()
+    fulfilment = models.CharField(max_length=160, default='Orders fulfilled 3rd December')
+    enabled = models.BooleanField(default=True)
 
 
 class Product(models.Model):
@@ -54,7 +64,12 @@ class Product(models.Model):
         if storewide is None:
             storewide = StoreDiscount.objects.filter(pk=1).values_list('percent', flat=True).first() or Decimal('0')
             self.store_discount = storewide
-        return max(self.discount_percent, storewide)
+        campaign = getattr(self, 'campaign_discount', None)
+        if campaign is None:
+            today = timezone.localdate()
+            campaign = SaleCampaign.objects.filter(pk=1, enabled=True, starts_on__lte=today, ends_on__gte=today).values_list('percent', flat=True).first() or Decimal('0')
+            self.campaign_discount = campaign
+        return max(self.discount_percent, storewide, campaign)
 
     @property
     def sale_price(self):

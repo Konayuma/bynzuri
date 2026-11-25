@@ -8,7 +8,8 @@ from rest_framework.response import Response
 from rest_framework.pagination import PageNumberPagination
 from .models import Order, OrderItem
 from apps.cart.models import Cart
-from apps.products.models import Product, StoreDiscount
+from apps.products.models import Product, StoreDiscount, SaleCampaign
+from django.utils import timezone
 from .serializers import OrderListSerializer, OrderCreateSerializer, AdminOrderSerializer, OrderStatusUpdateSerializer
 from .services import OrderTransitionError, transition_order
 
@@ -53,8 +54,11 @@ class OrderListCreateView(views.APIView):
             products = {p.id: p for p in Product.objects.select_for_update().filter(
                 id__in=[item.product_id for item in cart_items]).order_by('id')}
             store_discount = StoreDiscount.objects.filter(pk=1).values_list('percent', flat=True).first() or 0
+            today = timezone.localdate()
+            campaign_discount = SaleCampaign.objects.filter(pk=1, enabled=True, starts_on__lte=today, ends_on__gte=today).values_list('percent', flat=True).first() or 0
             for product in products.values():
                 product.store_discount = store_discount
+                product.campaign_discount = campaign_discount
             for item in cart_items:
                 product = products[item.product_id]
                 if not product.is_active or product.stock < item.quantity:

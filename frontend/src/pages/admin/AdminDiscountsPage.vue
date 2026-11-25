@@ -4,6 +4,7 @@ import AdminLayout from '@/layouts/AdminLayout.vue'
 import BaseInput from '@/components/base/BaseInput.vue'
 import BaseButton from '@/components/base/BaseButton.vue'
 import { productService } from '@/services/product.service'
+import CampaignEditor from '@/components/admin/CampaignEditor.vue'
 
 const percent = ref('0')
 const saved = ref('0')
@@ -42,6 +43,7 @@ onMounted(load)
   <AdminLayout>
     <div class="mx-auto max-w-4xl space-y-6">
       <header><p class="text-xs font-semibold uppercase tracking-widest text-rose-700">Pricing</p><h1 class="mt-2 font-serif text-3xl text-gray-900">Discounts</h1><p class="mt-2 text-sm text-gray-600">Manage an offer across your entire collection.</p></header>
+      <CampaignEditor />
       <div v-if="loading" role="status" class="text-sm text-gray-600">Loading discount…</div>
       <div v-else-if="loadFailed" role="alert" class="text-sm text-red-700">{{ error }} <button type="button" class="underline" @click="load">Retry</button></div>
       <div v-else class="grid gap-5 md:grid-cols-[1fr_0.75fr]">

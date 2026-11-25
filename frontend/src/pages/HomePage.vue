@@ -4,6 +4,7 @@ import { useProductStore } from '@/stores/product'
 import ProductCard from '@/components/product/ProductCard.vue'
 import ProductGridSkeleton from '@/components/product/ProductGridSkeleton.vue'
 import ProductStoryHero from '@/components/home/ProductStoryHero.vue'
+import SaleBanner from '@/components/home/SaleBanner.vue'
 const productStore = useProductStore()
 const productsError = ref(false)
 async function loadProducts() {
@@ -19,6 +20,7 @@ onMounted(loadProducts)
 
 <!-- 1. HERO SECTION WITH MINIMALIST HEADER & WARM AMBIENT GLOW -->
 <!-- ============================================== -->
+<SaleBanner />
 <ProductStoryHero />
 <!-- ============================================== -->
 <!-- 2. "OUR BEST SELLERS" PRODUCT ROW -->

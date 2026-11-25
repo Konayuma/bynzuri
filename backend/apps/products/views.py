@@ -1,10 +1,11 @@
-from rest_framework import viewsets, filters, decorators, permissions, views, status
+from rest_framework import viewsets, filters, decorators, permissions, views, status, serializers
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import DecimalField, ExpressionWrapper, F, Value, Subquery
 from django.db.models.functions import Round, Coalesce, Greatest
-from .models import Product, ProductImage, StoreDiscount
+from django.utils import timezone
+from .models import Product, ProductImage, StoreDiscount, SaleCampaign
 from .filters import ProductFilter
 from .serializers import (
     ProductListSerializer, ProductDetailSerializer, ProductCreateSerializer,
@@ -46,7 +47,9 @@ class ProductViewSet(viewsets.ModelViewSet):
             queryset = super().get_queryset()
         decimal = DecimalField(max_digits=5, decimal_places=2)
         queryset = queryset.annotate(store_discount=Coalesce(Subquery(StoreDiscount.objects.filter(pk=1).values('percent')[:1]), Value(0, output_field=decimal)))
-        amount = ExpressionWrapper(F('price') * (Value(100) - Greatest(F('discount_percent'), F('store_discount'))) / Value(100), output_field=DecimalField(max_digits=12, decimal_places=4))
+        today = timezone.localdate()
+        queryset = queryset.annotate(campaign_discount=Coalesce(Subquery(SaleCampaign.objects.filter(pk=1, enabled=True, starts_on__lte=today, ends_on__gte=today).values('percent')[:1]), Value(0, output_field=decimal)))
+        amount = ExpressionWrapper(F('price') * (Value(100) - Greatest(F('discount_percent'), F('store_discount'), F('campaign_discount'))) / Value(100), output_field=DecimalField(max_digits=12, decimal_places=4))
         return queryset.annotate(effective_price=Round(amount, 2))
 
     def admin_list(self, request):
@@ -81,6 +84,36 @@ class StoreDiscountView(views.APIView):
             return Response({'percent': exc.detail}, status=400)
         StoreDiscount.objects.update_or_create(pk=1, defaults={'percent': percent})
         return Response({'percent': str(percent)})
+
+class SaleCampaignSerializer(serializers.ModelSerializer):
+    percent = serializers.DecimalField(max_digits=5, decimal_places=2, min_value=0, max_value=100)
+
+    class Meta:
+        model = SaleCampaign
+        fields = ['title', 'percent', 'starts_on', 'ends_on', 'fulfilment', 'enabled']
+
+    def validate(self, data):
+        if data['ends_on'] < data['starts_on']:
+            raise serializers.ValidationError({'ends_on': 'End date must not precede start date.'})
+        return data
+
+
+class SaleCampaignView(views.APIView):
+    def get_permissions(self):
+        return [permissions.IsAdminUser() if self.request.method == 'PUT' or self.request.query_params.get('admin') == '1' else permissions.AllowAny()]
+
+    def get(self, request):
+        campaign = SaleCampaign.objects.filter(pk=1).first()
+        if not campaign or (request.query_params.get('admin') != '1' and (not campaign.enabled or campaign.ends_on < timezone.localdate())):
+            return Response(None)
+        return Response(SaleCampaignSerializer(campaign).data)
+
+    def put(self, request):
+        serializer = SaleCampaignSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        campaign, _ = SaleCampaign.objects.update_or_create(pk=1, defaults=serializer.validated_data)
+        return Response(SaleCampaignSerializer(campaign).data)
+
 
 class ProductImageUploadView(views.APIView):
     permission_classes = [permissions.IsAdminUser]
