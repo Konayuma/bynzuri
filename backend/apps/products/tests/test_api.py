@@ -73,6 +73,25 @@ class TestProductAPI:
         response = self.client.get(endpoint)
         assert Decimal(str(response.data['sale_price'])) == Decimal('79.99')
 
+    def test_storewide_discount_permissions_and_precedence(self, django_user_model):
+        user = django_user_model.objects.create_user(username='store-test', email='store@example.com', password='test-password')
+        self.client.force_authenticate(user=user)
+        endpoint = '/api/products/store-discount/'
+        assert self.client.put(endpoint, {'percent': '25'}, format='json').status_code == 403
+        user.is_staff = True
+        user.save()
+        assert self.client.put(endpoint, {'percent': '101'}, format='json').status_code == 400
+        assert self.client.put(endpoint, {'percent': '25'}, format='json').status_code == 200
+        item = self.client.get(f'{self.list_url}{self.product.slug}/').data
+        assert Decimal(str(item['effective_discount_percent'])) == Decimal('25')
+        assert Decimal(str(item['sale_price'])) == Decimal('74.99')
+        self.product.discount_percent = Decimal('30')
+        self.product.save()
+        item = self.client.get(f'{self.list_url}{self.product.slug}/').data
+        assert Decimal(str(item['sale_price'])) == Decimal('69.99')
+        assert self.client.put(endpoint, {'percent': '0'}, format='json').status_code == 200
+        assert Decimal(str(self.client.get(f'{self.list_url}{self.product.slug}/').data['sale_price'])) == Decimal('69.99')
+
     def test_best_sellers(self):
         response = self.client.get(f'{self.list_url}best-sellers/')
         assert response.status_code == status.HTTP_200_OK

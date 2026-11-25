@@ -9,6 +9,10 @@ from apps.categories.models import Category
 logger = logging.getLogger(__name__)
 
 
+class StoreDiscount(models.Model):
+    percent = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+
+
 class Product(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     category = models.ForeignKey(
@@ -45,8 +49,16 @@ class Product(models.Model):
         return self.stock > 0
 
     @property
+    def effective_discount_percent(self):
+        storewide = getattr(self, 'store_discount', None)
+        if storewide is None:
+            storewide = StoreDiscount.objects.filter(pk=1).values_list('percent', flat=True).first() or Decimal('0')
+            self.store_discount = storewide
+        return max(self.discount_percent, storewide)
+
+    @property
     def sale_price(self):
-        return (self.price * (Decimal('1') - self.discount_percent / Decimal('100'))).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        return (self.price * (Decimal('1') - self.effective_discount_percent / Decimal('100'))).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
 
 
 class ProductImage(models.Model):

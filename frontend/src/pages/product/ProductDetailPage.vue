@@ -11,6 +11,7 @@ import BaseButton from '@/components/base/BaseButton.vue'
 import { Heart, Minus, Plus, Star, Truck, ShieldCheck, Send } from '@lucide/vue'
 import type { Product } from '@/types'
 import { signatureImage } from '@/utils/productImage'
+import { formatProductDescription } from '@/utils/productDescription'
 
 const route = useRoute()
 const productStore = useProductStore()
@@ -32,6 +33,7 @@ const reviewError = ref('')
 const reviewSuccess = ref(false)
 
 const product = computed(() => productStore.currentProduct)
+const descriptionBlocks = computed(() => formatProductDescription(product.value?.description || ''))
 const galleryImages = computed(() => {
   if (!product.value) return []
   if (product.value.images?.length) return product.value.images
@@ -196,7 +198,7 @@ watch(product, (p) => {
             {{ product.title }}
           </h1>
 
-          <p class="font-bold text-2xl text-dark mb-4"><span v-if="Number(product.discount_percent) > 0" class="mr-3 text-base font-normal text-muted line-through">K{{ product.price }}</span>K{{ product.sale_price ?? product.price }}</p>
+          <p class="font-bold text-2xl text-dark mb-4"><span v-if="Number(product.effective_discount_percent ?? product.discount_percent) > 0" class="mr-3 text-base font-normal text-muted line-through">K{{ product.price }}</span>K{{ product.sale_price ?? product.price }}</p>
 
           <div class="flex items-center gap-2 mb-4">
             <div class="flex items-center gap-0.5">
@@ -222,23 +224,27 @@ watch(product, (p) => {
             </span>
           </div>
 
-          <p class="text-sm text-muted leading-relaxed mb-6">
-            {{ product.description }}
-          </p>
+          <div v-if="descriptionBlocks.length" class="mb-7 max-w-prose space-y-4 text-sm leading-7 text-muted break-words">
+            <template v-for="(block, index) in descriptionBlocks" :key="index">
+              <p v-if="block.type === 'paragraph'">{{ block.text }}</p>
+              <h2 v-else-if="block.type === 'heading'" class="pt-1 text-sm font-semibold text-dark">{{ block.text }}</h2>
+              <ul v-else class="list-disc space-y-1 pl-5 marker:text-gold"><li v-for="(item, itemIndex) in block.items" :key="itemIndex">{{ item }}</li></ul>
+            </template>
+          </div>
 
-          <div v-if="inStock" class="flex items-center gap-3 mb-6">
-            <div class="flex items-center border border-primary/40 rounded-[14px] overflow-hidden">
+          <div v-if="inStock" class="flex flex-wrap items-stretch gap-3 mb-6">
+            <div class="inline-flex shrink-0 items-center border border-primary/40 rounded-[14px] overflow-hidden" role="group" aria-label="Quantity">
               <button
-                class="p-3.5 hover:bg-primary/30 transition-colors"
+                type="button" class="grid h-12 w-12 shrink-0 place-items-center hover:bg-primary/30 transition-colors disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-offset-[-3px] focus-visible:outline-gold"
                 aria-label="Decrease quantity"
                 @click="decrementQty"
                 :disabled="quantity <= 1"
               >
                 <Minus class="w-4 h-4" />
               </button>
-              <span class="px-4 text-sm font-medium min-w-[40px] text-center">{{ quantity }}</span>
+              <span class="w-10 shrink-0 text-sm font-medium text-center" aria-live="polite">{{ quantity }}</span>
               <button
-                class="p-3.5 hover:bg-primary/30 transition-colors"
+                type="button" class="grid h-12 w-12 shrink-0 place-items-center hover:bg-primary/30 transition-colors disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-offset-[-3px] focus-visible:outline-gold"
                 aria-label="Increase quantity"
                 @click="incrementQty"
                 :disabled="quantity >= product.stock"
@@ -249,7 +255,7 @@ watch(product, (p) => {
 
             <BaseButton
               variant="secondary"
-              :fullWidth="true"
+              class="min-h-12 min-w-[10rem] flex-1"
               :loading="addingToCart"
               @click="handleAddToCart"
             >

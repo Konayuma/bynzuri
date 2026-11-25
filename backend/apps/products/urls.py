@@ -5,6 +5,7 @@ urlpatterns = [
     path('', views.ProductViewSet.as_view({'get': 'list', 'post': 'create'}), name='product-list'),
     path('import-signature/', views.SignatureCatalogImportView.as_view(), name='product-import-signature'),
     path('manage/', views.ProductViewSet.as_view({'get': 'admin_list'}), name='product-manage'),
+    path('store-discount/', views.StoreDiscountView.as_view(), name='store-discount'),
     path('best-sellers/', views.ProductViewSet.as_view({'get': 'best_sellers'}), name='product-best-sellers'),
     path('new-arrivals/', views.ProductViewSet.as_view({'get': 'new_arrivals'}), name='product-new-arrivals'),
     path('<slug:slug>/', views.ProductViewSet.as_view({

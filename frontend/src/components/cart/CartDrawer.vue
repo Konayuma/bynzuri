@@ -99,7 +99,7 @@ async function removeItem(itemId: string) {
           </div>
           <div class="flex-1 min-w-0">
             <h3 class="text-sm font-medium text-dark truncate">{{ item.product.title }}</h3>
-            <p class="text-sm font-semibold text-dark mt-1"><span v-if="Number(item.product.discount_percent) > 0" class="mr-2 font-normal text-muted line-through">K{{ item.product.price }}</span>K{{ item.product.sale_price ?? item.product.price }}</p>
+            <p class="text-sm font-semibold text-dark mt-1"><span v-if="Number(item.product.effective_discount_percent ?? item.product.discount_percent) > 0" class="mr-2 font-normal text-muted line-through">K{{ item.product.price }}</span>K{{ item.product.sale_price ?? item.product.price }}</p>
             <div class="flex items-center gap-2 mt-2">
               <button
                 class="w-11 h-11 rounded-full border border-primary/40 flex items-center justify-center hover:bg-primary/30 transition-colors"

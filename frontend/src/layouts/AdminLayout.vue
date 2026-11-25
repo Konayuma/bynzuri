@@ -2,7 +2,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
-import { LayoutDashboard, Package, ShoppingCart, Truck, LogOut, Menu, X } from '@lucide/vue'
+import { LayoutDashboard, Package, ShoppingCart, Truck, LogOut, Menu, Tag, Store, ArrowLeft } from '@lucide/vue'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -11,6 +11,7 @@ const sidebarOpen = ref(false)
 const navItems = [
   { label: 'Dashboard', icon: LayoutDashboard, to: '/admin' },
   { label: 'Products', icon: Package, to: '/admin/products' },
+  { label: 'Discounts', icon: Tag, to: '/admin/discounts' },
   { label: 'Orders', icon: ShoppingCart, to: '/admin/orders' },
   { label: 'Delivery', icon: Truck, to: '/admin/delivery' }
 ]
@@ -44,7 +45,15 @@ function handleLogout() {
           {{ item.label }}
         </router-link>
       </nav>
-      <div class="absolute bottom-0 left-0 right-0 p-3 border-t border-gray-100">
+      <div class="absolute bottom-0 left-0 right-0 p-3 border-t border-gray-100 space-y-1">
+        <router-link
+          to="/"
+          class="flex items-center gap-3 px-3 py-2.5 text-sm text-gray-600 hover:text-dark rounded-lg hover:bg-gray-50 w-full transition-colors focus-visible:outline-2 focus-visible:outline-gold"
+          @click="sidebarOpen = false"
+        >
+          <Store class="w-4 h-4" />
+          Back to Site
+        </router-link>
         <button
           class="flex items-center gap-3 px-3 py-2.5 text-sm text-gray-500 hover:text-red-500 rounded-lg hover:bg-red-50 w-full transition-colors"
           @click="handleLogout"
@@ -58,10 +67,17 @@ function handleLogout() {
     <div v-if="sidebarOpen" class="fixed inset-0 bg-black/20 z-30 lg:hidden" @click="sidebarOpen = false" />
 
     <div class="flex-1 flex flex-col min-w-0">
-      <header class="h-16 bg-white border-b border-gray-200 flex items-center px-4 lg:px-6">
+      <header class="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-4 lg:px-6">
         <button aria-label="Open admin navigation" :aria-expanded="sidebarOpen" class="lg:hidden p-2 -ml-2" @click="sidebarOpen = true">
           <Menu class="w-5 h-5" />
         </button>
+        <router-link
+          to="/"
+          class="ml-auto inline-flex items-center gap-2 min-h-10 px-3.5 rounded-lg border border-gray-200 text-sm font-medium text-dark hover:bg-gray-50 transition-colors focus-visible:outline-2 focus-visible:outline-gold"
+        >
+          <ArrowLeft class="w-4 h-4" />
+          <span>Back to Site</span>
+        </router-link>
       </header>
       <main class="flex-1 p-4 lg:p-6 overflow-auto">
         <slot />

@@ -30,3 +30,9 @@ class CatalogFilterTests(TestCase):
         self.assertEqual([p['title'] for p in response.data['results']], ['Oil'])
         response = self.client.get('/api/products/', {'in_stock': 'true', 'ordering': 'price'})
         self.assertEqual([p['title'] for p in response.data['results']], ['Oil', 'Shampoo'])
+
+    def test_storewide_discount_applies_to_price_filter(self):
+        from apps.products.models import StoreDiscount
+        StoreDiscount.objects.create(pk=1, percent=Decimal('25'))
+        response = self.client.get('/api/products/', {'max_price': '40'})
+        self.assertEqual([p['title'] for p in response.data['results']], ['Shampoo'])

@@ -2,9 +2,9 @@ from rest_framework import viewsets, filters, decorators, permissions, views, st
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
-from django.db.models import DecimalField, ExpressionWrapper, F, Value
-from django.db.models.functions import Round
-from .models import Product, ProductImage
+from django.db.models import DecimalField, ExpressionWrapper, F, Value, Subquery
+from django.db.models.functions import Round, Coalesce, Greatest
+from .models import Product, ProductImage, StoreDiscount
 from .filters import ProductFilter
 from .serializers import (
     ProductListSerializer, ProductDetailSerializer, ProductCreateSerializer,
@@ -44,7 +44,9 @@ class ProductViewSet(viewsets.ModelViewSet):
             queryset = Product.objects.all().select_related('category').prefetch_related('images')
         else:
             queryset = super().get_queryset()
-        amount = ExpressionWrapper(F('price') * (Value(100) - F('discount_percent')) / Value(100), output_field=DecimalField(max_digits=12, decimal_places=4))
+        decimal = DecimalField(max_digits=5, decimal_places=2)
+        queryset = queryset.annotate(store_discount=Coalesce(Subquery(StoreDiscount.objects.filter(pk=1).values('percent')[:1]), Value(0, output_field=decimal)))
+        amount = ExpressionWrapper(F('price') * (Value(100) - Greatest(F('discount_percent'), F('store_discount'))) / Value(100), output_field=DecimalField(max_digits=12, decimal_places=4))
         return queryset.annotate(effective_price=Round(amount, 2))
 
     def admin_list(self, request):
@@ -62,6 +64,23 @@ class ProductViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(products, many=True)
         return Response(serializer.data)
 
+
+class StoreDiscountView(views.APIView):
+    permission_classes = [permissions.IsAdminUser]
+
+    def get(self, request):
+        discount = StoreDiscount.objects.filter(pk=1).first()
+        return Response({'percent': str(discount.percent) if discount else '0.00'})
+
+    def put(self, request):
+        from rest_framework import serializers
+        field = serializers.DecimalField(max_digits=5, decimal_places=2, min_value=0, max_value=100)
+        try:
+            percent = field.run_validation(request.data.get('percent'))
+        except serializers.ValidationError as exc:
+            return Response({'percent': exc.detail}, status=400)
+        StoreDiscount.objects.update_or_create(pk=1, defaults={'percent': percent})
+        return Response({'percent': str(percent)})
 
 class ProductImageUploadView(views.APIView):
     permission_classes = [permissions.IsAdminUser]

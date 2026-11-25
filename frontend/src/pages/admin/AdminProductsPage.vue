@@ -311,7 +311,7 @@ onMounted(async () => {
             <tr v-for="product in products" :key="product.id" class="border-b border-gray-50 hover:bg-gray-50">
               <td class="px-4 py-3">{{ product.title }}</td>
               <td class="px-4 py-3 hidden md:table-cell text-gray-500">{{ product.category_name }}</td>
-              <td class="px-4 py-3"><span v-if="Number(product.discount_percent) > 0" class="mr-2 text-gray-500 line-through">K{{ product.price }}</span>K{{ product.sale_price ?? product.price }}<span v-if="Number(product.discount_percent) > 0" class="ml-2 text-xs font-medium text-rose-700">{{ Number(product.discount_percent) }}% off</span></td>
+              <td class="px-4 py-3"><span v-if="Number(product.effective_discount_percent ?? product.discount_percent) > 0" class="mr-2 text-gray-500 line-through">K{{ product.price }}</span>K{{ product.sale_price ?? product.price }}<span v-if="Number(product.effective_discount_percent ?? product.discount_percent) > 0" class="ml-2 text-xs font-medium text-rose-700">{{ Number(product.effective_discount_percent ?? product.discount_percent) }}% off</span></td>
               <td class="px-4 py-3 hidden md:table-cell">
                 <span :class="product.stock <= 5 ? 'text-red-500 font-medium' : ''">
                   {{ product.stock }}

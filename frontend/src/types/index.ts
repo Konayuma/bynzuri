@@ -38,6 +38,7 @@ export interface Product {
   price: string
   sale_price?: string
   discount_percent?: string
+  effective_discount_percent?: string
   stock: number
   is_in_stock: boolean
   is_active?: boolean

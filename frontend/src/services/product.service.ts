@@ -2,6 +2,12 @@ import api, { publicApi } from './api'
 import type { Product, Category, PaginatedResponse, ProductCreateData, ProductImage } from '@/types'
 
 export const productService = {
+  async getStoreDiscount(): Promise<{ percent: string }> {
+    return (await api.get('/products/store-discount/')).data
+  },
+  async setStoreDiscount(percent: string): Promise<{ percent: string }> {
+    return (await api.put('/products/store-discount/', { percent })).data
+  },
   async getProducts(params?: {
     page?: number
     search?: string

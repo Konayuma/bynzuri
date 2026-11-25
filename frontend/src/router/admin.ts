@@ -9,6 +9,7 @@ export const adminRoutes: RouteRecordRaw[] = [
     children: [
       { path: '', name: 'admin-dashboard', component: () => import('@/pages/admin/AdminDashboardPage.vue') },
       { path: 'products', name: 'admin-products', component: () => import('@/pages/admin/AdminProductsPage.vue') },
+      { path: 'discounts', name: 'admin-discounts', component: () => import('@/pages/admin/AdminDiscountsPage.vue') },
       { path: 'orders', name: 'admin-orders', component: () => import('@/pages/admin/AdminOrdersPage.vue') },
       { path: 'delivery', name: 'admin-delivery', component: () => import('@/pages/admin/AdminDeliveryPage.vue') },
     ],

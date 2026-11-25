@@ -3,6 +3,7 @@ import { ref, computed } from 'vue'
 import type { Cart, CartItem, Product } from '@/types'
 import { cartService } from '@/services/cart.service'
 import { hasSession } from '@/services/api'
+import { productService } from '@/services/product.service'
 
 export const useCartStore = defineStore('cart', () => {
   const cart = ref<Cart | null>(null)
@@ -18,8 +19,24 @@ export const useCartStore = defineStore('cart', () => {
   function initGuestCart() {
     const stored = localStorage.getItem('guest_cart')
     if (stored) {
-      try { cart.value = JSON.parse(stored) } catch { localStorage.removeItem('guest_cart') }
+      try {
+        cart.value = JSON.parse(stored)
+        void refreshGuestProducts()
+      } catch { localStorage.removeItem('guest_cart') }
     }
+  }
+
+  async function refreshGuestProducts() {
+    const current = cart.value
+    if (!current || hasSession()) return
+    const refreshed = await Promise.allSettled(current.items.map(item => productService.getProduct(item.product.slug)))
+    if (cart.value !== current || hasSession()) return
+    refreshed.forEach((result, index) => {
+      const item = current.items[index]
+      if (result.status === 'fulfilled' && item && item.product.id === result.value.id) item.product = result.value
+    })
+    recalculateGuestCart()
+    saveGuestCart()
   }
 
   function saveGuestCart() {

@@ -129,7 +129,7 @@ function handleToggleWishlist(e: Event) {
       </router-link>
     </h3>
     <p class="text-sm font-bold text-dark tabular-nums">
-      <span v-if="Number(product.discount_percent) > 0" class="mr-1.5 font-normal text-muted line-through">K{{ product.price }}</span>K{{ product.sale_price ?? product.price }}
+      <span v-if="Number(product.effective_discount_percent ?? product.discount_percent) > 0" class="mr-1.5 font-normal text-muted line-through">K{{ product.price }}</span>K{{ product.sale_price ?? product.price }}
     </p>
 
     <div class="mt-auto pt-3 flex items-center gap-1.5 sm:gap-2">

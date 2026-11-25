@@ -85,7 +85,7 @@ onBeforeUnmount(() => { clearTimeout(timer); requestId++; document.removeEventLi
             <button type="button" class="search-result" :class="{ 'is-active': activeIndex === index }" @mouseenter="activeIndex = index" @click="choose(product)">
               <span class="result-image"><img v-if="productImage(product)" :src="productImage(product)" alt="" /><ImageOff v-else :size="18" /></span>
               <span class="result-details"><strong>{{ product.title }}</strong><span>{{ product.category_name }}</span></span>
-              <span class="result-price"><span v-if="Number(product.discount_percent) > 0" class="mr-2 line-through">K{{ product.price }}</span>K{{ product.sale_price ?? product.price }}</span>
+              <span class="result-price"><span v-if="Number(product.effective_discount_percent ?? product.discount_percent) > 0" class="mr-2 line-through">K{{ product.price }}</span>K{{ product.sale_price ?? product.price }}</span>
             </button>
           </li>
         </ul>
