@@ -7,6 +7,7 @@ This is a source-code baseline, not a release certification. **In progress** mea
 
 ## Recent implementation
 
+- **In progress — sign-out feedback:** Account, navigation and admin sign-out actions show progress, confirm success after the server responds and offer retry on failure. Focused frontend tests and the build pass; deployed browser verification remains outstanding.
 - **In progress — Django admin user deletion:** Staff with user-deletion permission can delete a user together with the associated verification record, while direct deletion of verification records remains disabled. Tests cover permission checks and preservation of linked order history; deployment remains outstanding.
 - **In progress — search sitemap:** A dynamic sitemap lists public storefront pages and active products via the API and Cloudflare route, with `robots.txt` discovery. Focused API and proxy tests and the frontend build pass; live deployment, preferred hostname and Search Console submission remain to be checked.
 - **In progress — account rendering and session recovery:** Account lists tolerate missing records, locally stored wishlist entries are validated, public delivery data no longer uses a session token, and late unauthorized responses reuse an already refreshed token. Frontend regression tests pass; confirm the deployed account page and investigate any remaining live 401 responses.

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { ShoppingBag, User, Search, Menu, X, Heart, Package, MapPin, LogOut, LogIn, UserPlus, LayoutDashboard } from '@lucide/vue'
+import { ShoppingBag, User, Search, Menu, X, Heart, Package, MapPin, LogOut, LogIn, UserPlus, LayoutDashboard, HelpCircle } from '@lucide/vue'
 import { useCartStore } from '@/stores/cart'
 import { useUserStore } from '@/stores/user'
 import { useUIStore } from '@/stores/ui'
@@ -44,12 +44,17 @@ function onKeydown(event: KeyboardEvent) {
   }
 }
 
-function signOut() {
-  userStore.logout()
+async function signOut() {
+  if (userStore.signingOut) return
+  if (!await userStore.logout()) {
+    uiStore.showToast('We couldn’t confirm sign-out. Check your connection and try again.', { duration: 6000 })
+    return
+  }
   cartStore.cart = null
   cartStore.initGuestCart()
   closeAccount()
-  router.push('/')
+  await router.push('/')
+  uiStore.showToast('You’re signed out.')
 }
 
 function handleSearch() {
@@ -157,6 +162,16 @@ watch(() => route.fullPath, () => { mobileSearchOpen.value = false; uiStore.clos
         >
           Oils
         </router-link>
+        <router-link
+          to="/help"
+          :aria-current="route.path === '/help' ? 'page' : undefined"
+          :class="[
+            'text-sm font-medium transition-colors relative after:absolute after:bottom-[-22px] after:left-0 after:w-full after:h-[2px] after:bg-dark after:transition-transform after:duration-200',
+            route.path === '/help' ? 'text-dark after:scale-x-100' : 'text-muted hover:text-dark after:scale-x-0 hover:after:scale-x-100',
+          ]"
+        >
+          Help &amp; Support
+        </router-link>
       </nav>
 
       <!-- Desktop persistent search bar -->
@@ -207,13 +222,14 @@ watch(() => route.fullPath, () => { mobileSearchOpen.value = false; uiStore.clos
                   <router-link to="/account/orders" @click="closeAccount()"><Package /> <span>Order history</span></router-link>
                   <router-link to="/account#saved-addresses" @click="closeAccount()"><MapPin /> <span>Saved addresses</span></router-link>
                   <router-link to="/wishlist" @click="closeAccount()"><Heart /> <span>Wishlist</span></router-link>
+                  <router-link to="/help" @click="closeAccount()"><HelpCircle /> <span>Help &amp; Support</span></router-link>
                   <router-link v-if="userStore.isAdmin" to="/admin" @click="closeAccount()"><LayoutDashboard /> <span>Admin dashboard</span></router-link>
                 </div>
-                <div class="account-signout"><button type="button" @click="signOut"><LogOut /> <span>Sign out</span></button></div>
+                <div class="account-signout"><button type="button" :disabled="userStore.signingOut" :aria-busy="userStore.signingOut" @click="signOut"><LogOut /> <span aria-live="polite">{{ userStore.signingOut ? 'Signing out…' : 'Sign out' }}</span></button></div>
               </template>
               <template v-else>
                 <div class="account-welcome"><strong>Welcome to By Nzuri</strong><span>Sign in to view your orders and saved details.</span></div>
-                <div class="account-links"><router-link to="/auth/login" @click="closeAccount()"><LogIn /> <span>Sign in</span></router-link><router-link to="/auth/register" @click="closeAccount()"><UserPlus /> <span>Create account</span></router-link><router-link to="/wishlist" @click="closeAccount()"><Heart /> <span>Wishlist</span></router-link></div>
+                <div class="account-links"><router-link to="/auth/login" @click="closeAccount()"><LogIn /> <span>Sign in</span></router-link><router-link to="/auth/register" @click="closeAccount()"><UserPlus /> <span>Create account</span></router-link><router-link to="/wishlist" @click="closeAccount()"><Heart /> <span>Wishlist</span></router-link><router-link to="/help" @click="closeAccount()"><HelpCircle /> <span>Help &amp; Support</span></router-link></div>
               </template>
             </div>
           </Transition>
@@ -281,6 +297,13 @@ watch(() => route.fullPath, () => { mobileSearchOpen.value = false; uiStore.clos
         >
           Oils
         </router-link>
+        <router-link
+          to="/help"
+          class="block py-2 text-sm font-medium text-muted hover:text-dark transition-colors"
+          @click="uiStore.closeMobileMenu"
+        >
+          Help &amp; Support
+        </router-link>
       </nav>
     </div>
   </header>
@@ -305,6 +328,7 @@ watch(() => route.fullPath, () => { mobileSearchOpen.value = false; uiStore.clos
 .account-welcome { padding:12px 10px 14px; border-bottom:1px solid #eee4e4; }
 .account-links { padding:6px 0; }
 .account-links a, .account-signout button { display:flex; align-items:center; gap:12px; width:100%; min-height:42px; padding:9px 10px; border-radius:11px; color:#342a2b; text-align:left; font-size:.875rem; transition:background .15s; }
+.account-signout button:disabled { opacity:.6; cursor:wait; }
 .account-links a:hover, .account-signout button:hover { background:#f7edee; }
 .account-links svg, .account-signout svg { width:17px; height:17px; flex:none; color:#857477; }
 .account-signout { border-top:1px solid #eee4e4; padding-top:6px; }

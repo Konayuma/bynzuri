@@ -7,6 +7,7 @@ import { useUserStore } from '@/stores/user'
 import { useUIStore } from '@/stores/ui'
 import { addressService } from '@/services/address.service'
 import { orderService } from '@/services/order.service'
+import { authService } from '@/services/auth.service'
 
 vi.mock('@/services/address.service', () => ({
   addressService: {
@@ -114,6 +115,16 @@ describe('AccountPage', () => {
     expect(wrapper.text()).toContain('Welcome, Monica')
     expect(wrapper.text()).toContain('Could not load your recent orders.')
     expect(wrapper.text()).toContain('Could not load your saved addresses.')
+  })
+
+  it('shows a failure message and keeps the account when sign-out fails', async () => {
+    const { wrapper, userStore } = await mountAccount()
+    const logout = vi.spyOn(authService, 'logout').mockRejectedValue(new Error('offline'))
+    await wrapper.findAll('button').find(button => button.text() === 'Sign Out')!.trigger('click')
+    await flushPromises()
+    expect(userStore.isAuthenticated).toBe(true)
+    expect(useUIStore().toast?.message).toContain('couldn’t confirm sign-out')
+    logout.mockRestore()
   })
 
   it('keeps the profile visible if an order or address entry is missing', async () => {

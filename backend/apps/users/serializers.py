@@ -3,7 +3,7 @@ import re
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import transaction
 from apps.delivery.models import Province, Town
-from .models import User, Address
+from .models import User, Address, SupportInquiry
 
 
 def normalize_account_phone(value):
@@ -111,3 +111,38 @@ class AddressSerializer(serializers.ModelSerializer):
         if validated_data.get('is_default'):
             Address.objects.filter(user_id=instance.user_id, is_default=True).exclude(pk=instance.pk).update(is_default=False)
         return super().update(instance, validated_data)
+
+
+class SupportInquirySerializer(serializers.ModelSerializer):
+    website = serializers.CharField(write_only=True, required=False, allow_blank=True, default='')
+
+    class Meta:
+        model = SupportInquiry
+        fields = ['name', 'email', 'phone', 'topic', 'order_reference', 'subject', 'message', 'website']
+
+    def validate_name(self, value):
+        value = value.strip()
+        if len(value) < 2:
+            raise serializers.ValidationError('Enter your name (at least 2 characters).')
+        return value
+
+    def validate_email(self, value):
+        return value.strip().lower()
+
+    def validate_phone(self, value):
+        return value.strip()
+
+    def validate_order_reference(self, value):
+        return value.strip()
+
+    def validate_subject(self, value):
+        value = value.strip()
+        if len(value) < 3:
+            raise serializers.ValidationError('Enter a short subject (at least 3 characters).')
+        return value
+
+    def validate_message(self, value):
+        value = value.strip()
+        if len(value) < 10:
+            raise serializers.ValidationError('Please enter at least 10 characters describing how we can help.')
+        return value

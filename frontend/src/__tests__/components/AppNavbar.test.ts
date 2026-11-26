@@ -1,10 +1,12 @@
-import { describe, it, expect } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { describe, it, expect, vi } from 'vitest'
+import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { createRouter, createWebHistory } from 'vue-router'
 import AppNavbar from '@/layouts/AppNavbar.vue'
 import { useUserStore } from '@/stores/user'
 import { useCartStore } from '@/stores/cart'
+import { useUIStore } from '@/stores/ui'
+import { authService } from '@/services/auth.service'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -38,6 +40,7 @@ describe('AppNavbar', () => {
     const links = wrapper.findAll('a')
     const linkTexts = links.map(l => l.text())
     expect(linkTexts.some(t => t.includes('Shop All'))).toBe(true)
+    expect(linkTexts.some(t => t.includes('Help & Support'))).toBe(true)
   })
 
   it('shows cart icon', () => {
@@ -77,6 +80,7 @@ describe('AppNavbar', () => {
 
   it('offers account links and clears the signed-in cart on sign out', async () => {
     const wrapper = createWrapper()
+    const logout = vi.spyOn(authService, 'logout').mockResolvedValue()
     const user = useUserStore()
     user.user = { first_name: 'Ada', last_name: 'Test', email: 'ada@example.com', role: 'customer' } as typeof user.user
     const cart = useCartStore()
@@ -86,8 +90,28 @@ describe('AppNavbar', () => {
     expect(wrapper.text()).toContain('Order history')
     expect(wrapper.find('a[href="/account#saved-addresses"]').exists()).toBe(true)
     await wrapper.findAll('button').find(button => button.text() === 'Sign out')!.trigger('click')
+    await flushPromises()
     expect(user.isAuthenticated).toBe(false)
     expect(cart.itemCount).toBe(0)
+    expect(useUIStore().toast?.message).toContain('signed out')
+    logout.mockRestore()
     wrapper.unmount()
+  })
+
+  it('shows sign-out progress and a retry message when the request fails', async () => {
+    const wrapper = createWrapper()
+    const user = useUserStore()
+    user.user = { first_name: 'Ada', last_name: 'Test', email: 'ada@example.com', role: 'customer' } as typeof user.user
+    let rejectLogout!: (error: Error) => void
+    const logout = vi.spyOn(authService, 'logout').mockImplementation(() => new Promise((_, reject) => { rejectLogout = reject }))
+    await wrapper.get('button[aria-label="Account"]').trigger('click')
+    await wrapper.findAll('button').find(button => button.text() === 'Sign out')!.trigger('click')
+    const button = wrapper.findAll('button').find(item => item.text() === 'Signing out…')!
+    expect(button.attributes('disabled')).toBeDefined()
+    rejectLogout(new Error('offline'))
+    await flushPromises()
+    expect(user.isAuthenticated).toBe(true)
+    expect(useUIStore().toast?.message).toContain('couldn’t confirm sign-out')
+    logout.mockRestore(); wrapper.unmount()
   })
 })

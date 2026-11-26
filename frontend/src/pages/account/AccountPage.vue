@@ -171,11 +171,16 @@ async function saveProfile() {
   }
 }
 
-function handleLogout() {
-  userStore.logout()
+async function handleLogout() {
+  if (userStore.signingOut) return
+  if (!await userStore.logout()) {
+    uiStore.showToast('We couldn’t confirm sign-out. Check your connection and try again.', { duration: 6000 })
+    return
+  }
   cartStore.cart = null
   cartStore.initGuestCart()
-  router.push('/')
+  await router.push('/')
+  uiStore.showToast('You’re signed out.')
 }
 
 async function loadOrders() {
@@ -437,11 +442,12 @@ onMounted(async () => {
             <div class="pt-2 mt-2 border-t border-primary/20">
               <button
                 type="button"
-                class="flex items-center gap-3 px-3 min-h-11 rounded-xl hover:bg-red-50 transition-colors w-full text-left text-sm text-red-600"
+                class="flex items-center gap-3 px-3 min-h-11 rounded-xl hover:bg-red-50 transition-colors w-full text-left text-sm text-red-600 disabled:opacity-60 disabled:cursor-wait"
+                :disabled="userStore.signingOut" :aria-busy="userStore.signingOut"
                 @click="handleLogout"
               >
                 <LogOut class="w-4 h-4 shrink-0" aria-hidden="true" />
-                <span>Sign Out</span>
+                <span aria-live="polite">{{ userStore.signingOut ? 'Signing out…' : 'Sign Out' }}</span>
               </button>
             </div>
           </nav>

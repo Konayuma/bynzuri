@@ -2,10 +2,14 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
+import { useCartStore } from '@/stores/cart'
+import { useUIStore } from '@/stores/ui'
 import { LayoutDashboard, Package, ShoppingCart, Truck, LogOut, Menu, Tag, Store, ArrowLeft } from '@lucide/vue'
 
 const router = useRouter()
 const userStore = useUserStore()
+const cartStore = useCartStore()
+const uiStore = useUIStore()
 const sidebarOpen = ref(false)
 
 const navItems = [
@@ -16,9 +20,16 @@ const navItems = [
   { label: 'Delivery', icon: Truck, to: '/admin/delivery' }
 ]
 
-function handleLogout() {
-  userStore.logout()
-  router.push('/')
+async function handleLogout() {
+  if (userStore.signingOut) return
+  if (!await userStore.logout()) {
+    uiStore.showToast('We couldn’t confirm sign-out. Check your connection and try again.', { duration: 6000 })
+    return
+  }
+  cartStore.cart = null
+  cartStore.initGuestCart()
+  await router.push('/')
+  uiStore.showToast('You’re signed out.')
 }
 </script>
 
@@ -55,11 +66,12 @@ function handleLogout() {
           Back to Site
         </router-link>
         <button
-          class="flex items-center gap-3 px-3 py-2.5 text-sm text-gray-500 hover:text-red-500 rounded-lg hover:bg-red-50 w-full transition-colors"
+          class="flex items-center gap-3 px-3 min-h-11 py-2.5 text-sm text-gray-500 hover:text-red-500 rounded-lg hover:bg-red-50 w-full transition-colors disabled:opacity-60 disabled:cursor-wait"
+          :disabled="userStore.signingOut" :aria-busy="userStore.signingOut"
           @click="handleLogout"
         >
           <LogOut class="w-4 h-4" />
-          Sign Out
+          <span aria-live="polite">{{ userStore.signingOut ? 'Signing out…' : 'Sign Out' }}</span>
         </button>
       </div>
     </aside>

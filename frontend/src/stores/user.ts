@@ -9,6 +9,8 @@ import { clearSession, getAccessToken, hasSession, refreshAccessToken, setAccess
 export const useUserStore = defineStore('user', () => {
   const user = ref<User | null>(null)
   const loading = ref(false)
+  const signingOut = ref(false)
+  let identityEpoch = 0
 
   const isAuthenticated = computed(() => !!user.value)
   const isAdmin = computed(() => user.value?.is_staff === true)
@@ -17,11 +19,15 @@ export const useUserStore = defineStore('user', () => {
     if (!hasSession()) return
 
     loading.value = true
+    const epoch = identityEpoch
     try {
       if (!getAccessToken()) await refreshAccessToken()
-      user.value = await authService.getProfile()
+      const profile = await authService.getProfile()
+      if (epoch !== identityEpoch) return
+      user.value = profile
       sessionRestored()
     } catch (error) {
+      if (epoch !== identityEpoch) return
       if (axios.isAxiosError(error) && [400, 401].includes(error.response?.status ?? 0)) { clearSession(); user.value = null; sessionExpired() }
       else if (!hasSession()) user.value = null
       else if (!axios.isAxiosError(error) || !error.response || error.response.status >= 500) sessionUnavailable()
@@ -56,15 +62,25 @@ export const useUserStore = defineStore('user', () => {
     }
   }
 
-  function logout() {
-    user.value = null
-    clearSession()
-    void authService.logout().catch(() => sessionUnavailable())
-    sessionRestored()
+  async function logout(): Promise<boolean> {
+    if (signingOut.value) return false
+    signingOut.value = true
+    try {
+      await authService.logout()
+      identityEpoch++
+      user.value = null
+      clearSession()
+      sessionRestored()
+      return true
+    } catch {
+      return false
+    } finally {
+      signingOut.value = false
+    }
   }
 
   if (typeof window !== 'undefined') {
-    window.addEventListener('bynzuri:session-expired', () => { user.value = null })
+    window.addEventListener('bynzuri:session-expired', () => { identityEpoch++; user.value = null })
     window.addEventListener('storage', event => {
       if (event.key === 'bynzuri_session' && event.oldValue && !event.newValue) {
         clearSession()
@@ -77,6 +93,7 @@ export const useUserStore = defineStore('user', () => {
   return {
     user,
     loading,
+    signingOut,
     isAuthenticated,
     isAdmin,
     fetchProfile,

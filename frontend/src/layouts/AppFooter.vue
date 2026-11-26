@@ -26,7 +26,7 @@
             <li><router-link to="/help" class="text-sm text-muted hover:text-background transition-colors">Help & Support</router-link></li>
             <li><span class="text-sm text-muted">Delivery: 1-5 business days</span></li>
             <li><span class="text-sm text-muted">Returns within 7 days</span></li>
-            <li><a href="mailto:hello@bynzuri.zm" class="text-sm text-muted hover:text-background transition-colors">hello@bynzuri.zm</a></li>
+            <li><a href="mailto:hairskincare@bynzuri.com" class="text-sm text-muted hover:text-background transition-colors">hairskincare@bynzuri.com</a></li>
             <li><span class="text-sm text-muted">Lusaka, Zambia</span></li>
           </ul>
         </div>
@@ -34,7 +34,7 @@
         <div>
           <h4 class="font-body text-sm font-semibold uppercase tracking-wider mb-4">Need help?</h4>
           <p class="text-sm text-muted mb-3">Questions about a product or an order?</p>
-          <router-link to="/help" class="text-sm underline text-background">Contact our team</router-link>
+          <router-link to="/help#contact-form" class="text-sm underline text-background">Send an inquiry</router-link>
         </div>
       </div>
 

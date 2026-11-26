@@ -31,7 +31,7 @@ async function handleForgotPassword() {
   emailError.value = ''
 
   try {
-    await authService.forgotPassword(trimmed, `${window.location.origin}/auth/reset-password`)
+    await authService.forgotPassword(trimmed, window.location.origin)
     sent.value = true
   } catch {
     error.value = 'Something went wrong. Please try again.'
@@ -50,7 +50,7 @@ async function handleForgotPassword() {
           Enter the email you used to sign up and we&apos;ll send you a reset link
         </p>
         <p v-else class="text-sm text-muted mt-1">
-          Check your inbox for a reset link. It may take a minute to arrive.
+          Check your inbox (and spam folder) for a reset link. Delivery can take a few minutes.
         </p>
       </div>
 
@@ -80,6 +80,12 @@ async function handleForgotPassword() {
         Remember your password?
         <router-link to="/auth/login" class="text-dark font-medium hover:underline">
           Sign in
+        </router-link>
+      </p>
+      <p class="text-xs text-center text-muted mt-2">
+        Need help?
+        <router-link to="/help#contact-form" class="text-dark font-medium hover:underline">
+          Contact Help &amp; Support
         </router-link>
       </p>
     </div>

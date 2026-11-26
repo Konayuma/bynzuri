@@ -138,6 +138,8 @@ REST_FRAMEWORK = {
         'anon': '100/hour',
         'user': '1000/hour',
         'email_verification': '30/hour',
+        'password_reset': '15/hour',
+        'support_inquiry': '10/hour',
     },
 }
 
@@ -228,3 +230,4 @@ PUBLIC_SITE_URL = os.environ.get('PUBLIC_SITE_URL', 'https://bynzuri.com').strip
 RESEND_FROM_EMAIL = os.environ.get('RESEND_FROM_EMAIL', 'HairSkin by Nzuri <hairskincare@bynzuri.com>').strip()
 RESEND_REPLY_TO = os.environ.get('RESEND_REPLY_TO', 'hairskincare@bynzuri.com').strip()
 ORDER_NOTIFICATION_EMAIL = os.environ.get('ORDER_NOTIFICATION_EMAIL', 'hairskincare@bynzuri.com').strip()
+SUPPORT_NOTIFICATION_EMAIL = os.environ.get('SUPPORT_NOTIFICATION_EMAIL', ORDER_NOTIFICATION_EMAIL).strip()

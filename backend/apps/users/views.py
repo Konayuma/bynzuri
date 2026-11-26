@@ -1,19 +1,27 @@
-from django.contrib.auth.tokens import PasswordResetTokenGenerator
-from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
-from django.utils.encoding import force_bytes, force_str
+from django.utils.http import urlsafe_base64_decode
+from django.utils.encoding import force_str
 from django.db import transaction
 from django.utils import timezone
 from django.utils.crypto import constant_time_compare
 from rest_framework.throttling import AnonRateThrottle
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
-from .serializers import UserSerializer, RegisterSerializer, AddressSerializer
-from .models import User, Address, EmailVerification
+from .serializers import UserSerializer, RegisterSerializer, AddressSerializer, SupportInquirySerializer
+from .models import User, Address, EmailVerification, PasswordResetRequest
+from .password_reset import issue_password_reset, token_generator, RESEND_DELAY as PASSWORD_RESET_DELAY
 from .verification import issue_code, code_for, RESEND_DELAY, MAX_ATTEMPTS
 
 
 class VerificationThrottle(AnonRateThrottle):
     scope = 'email_verification'
+
+
+class PasswordResetThrottle(AnonRateThrottle):
+    scope = 'password_reset'
+
+
+class SupportInquiryThrottle(AnonRateThrottle):
+    scope = 'support_inquiry'
 
 
 class RegisterView(generics.CreateAPIView):
@@ -60,36 +68,24 @@ class AddressDetailView(generics.RetrieveUpdateDestroyAPIView):
         return Address.objects.filter(user=self.request.user)
 
 
-token_generator = PasswordResetTokenGenerator()
-
-
 class ForgotPasswordView(generics.GenericAPIView):
     permission_classes = [permissions.AllowAny]
+    throttle_classes = [PasswordResetThrottle]
 
     def post(self, request):
-        email = request.data.get('email', '').strip().lower()
+        email = str(request.data.get('email', '')).strip().lower()
         if not email:
             return Response(
                 {'detail': 'Email is required'},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        try:
-            user = User.objects.get(email=email)
-        except User.DoesNotExist:
-            return Response(
-                {'detail': 'If an account with that email exists, a reset link has been sent.'},
-                status=status.HTTP_200_OK
-            )
-
-        uid = urlsafe_base64_encode(force_bytes(user.pk))
-        token = token_generator.make_token(user)
-
-        reset_url = f"{request.data.get('redirect_url', 'https://bynzuri.com')}/auth/reset-password?uid={uid}&token={token}"
-
-        # TODO: Send email via Celery task
-        # from apps.users.tasks import send_password_reset_email
-        # send_password_reset_email.delay(user.email, reset_url)
+        with transaction.atomic():
+            user = User.objects.select_for_update().filter(email__iexact=email, is_active=True).first()
+            if user:
+                existing = PasswordResetRequest.objects.select_for_update().filter(user=user).first()
+                if not existing or timezone.now() >= existing.sent_requested_at + PASSWORD_RESET_DELAY:
+                    issue_password_reset(user)
 
         return Response(
             {'detail': 'If an account with that email exists, a reset link has been sent.'},
@@ -119,7 +115,7 @@ class ResetPasswordView(generics.GenericAPIView):
 
         try:
             user_id = force_str(urlsafe_base64_decode(uid))
-            user = User.objects.get(pk=user_id)
+            user = User.objects.get(pk=user_id, is_active=True)
         except (TypeError, ValueError, OverflowError, User.DoesNotExist):
             return Response(
                 {'detail': 'Invalid reset link'},
@@ -132,12 +128,44 @@ class ResetPasswordView(generics.GenericAPIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        user.set_password(new_password)
-        user.save()
+        with transaction.atomic():
+            user.set_password(new_password)
+            user.save(update_fields=['password'])
+            PasswordResetRequest.objects.filter(user=user).exclude(status='expired').update(status='expired')
 
         return Response(
             {'detail': 'Password has been reset successfully'},
             status=status.HTTP_200_OK
+        )
+
+
+class SupportInquiryCreateView(generics.GenericAPIView):
+    serializer_class = SupportInquirySerializer
+    permission_classes = [permissions.AllowAny]
+    throttle_classes = [SupportInquiryThrottle]
+
+    def post(self, request):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        honeypot = serializer.validated_data.pop('website', '').strip()
+        if honeypot:
+            return Response(
+                {
+                    'detail': 'Your inquiry has been received. Our team will reply by email.',
+                    'reference': 'SUP-RECEIVED',
+                },
+                status=status.HTTP_201_CREATED,
+            )
+
+        user = request.user if getattr(request.user, 'is_authenticated', False) else None
+        inquiry = serializer.save(user=user)
+        return Response(
+            {
+                'id': str(inquiry.id),
+                'reference': inquiry.reference,
+                'detail': 'Your inquiry has been received. Our team will reply by email.',
+            },
+            status=status.HTTP_201_CREATED,
         )
 
 

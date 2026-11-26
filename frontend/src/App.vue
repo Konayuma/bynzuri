@@ -127,6 +127,9 @@ function handleToastAction() {
     <div v-if="navigating" role="status" aria-live="polite" class="fixed top-3 left-1/2 z-[70] -translate-x-1/2 rounded-full border border-primary/50 bg-white px-4 py-2 text-sm font-medium text-dark shadow-lg">
       Loading page…
     </div>
+    <div v-if="userStore.signingOut" role="status" aria-live="polite" class="fixed top-3 left-1/2 z-[80] -translate-x-1/2 rounded-full border border-primary/50 bg-white px-4 py-2 text-sm font-medium text-dark shadow-lg">
+      Signing out…
+    </div>
     <AppNavbar v-if="!router.currentRoute.value.meta.adminArea" />
     <div v-if="updateAvailable" role="alert" class="border-b border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950">
       <div class="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3">

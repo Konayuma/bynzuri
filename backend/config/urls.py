@@ -2,6 +2,7 @@ from django.contrib import admin
 from django.db import connection
 from django.http import JsonResponse
 from django.urls import path, include
+from apps.users.views import SupportInquiryCreateView
 from .sitemap import sitemap
 
 
@@ -19,6 +20,7 @@ urlpatterns = [
     path('api/health/', health_check, name='health-check'),
     path('api/sitemap/', sitemap, name='storefront-sitemap'),
     path('api/auth/', include('apps.users.urls')),
+    path('api/support/inquiries/', SupportInquiryCreateView.as_view(), name='support-inquiry-create'),
     path('api/products/', include('apps.products.urls')),
     path('api/categories/', include('apps.categories.urls')),
     path('api/cart/', include('apps.cart.urls')),
