@@ -6,6 +6,7 @@ export interface User {
   phone: string
   role: 'customer' | 'admin'
   is_staff?: boolean
+  email_verified?: boolean
 }
 
 export interface AuthTokens {

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch, onMounted, onUnmounted, defineAsyncComponent, computed } from 'vue'
+import { ref, watch, onMounted, onUnmounted, onErrorCaptured, defineAsyncComponent, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import AppNavbar from '@/layouts/AppNavbar.vue'
 import AppFooter from '@/layouts/AppFooter.vue'
@@ -20,7 +20,13 @@ const routeContainer = ref<HTMLElement | null>(null)
 const isRouteAnimating = ref(false)
 const retryingSession = ref(false)
 const updateAvailable = ref(false)
+const routeError = ref(false)
 const navigating = ref(false)
+
+onErrorCaptured(() => {
+  routeError.value = true
+  return false
+})
 let navigationTimer: ReturnType<typeof setTimeout> | undefined
 let removeNavigationStart: (() => void) | undefined
 let removeNavigationEnd: (() => void) | undefined
@@ -98,6 +104,7 @@ onUnmounted(() => {
 })
 
 watch(() => router.currentRoute.value.path, (newPath, oldPath) => {
+  routeError.value = false
   if (newPath === oldPath) return
   const el = routeContainer.value
   if (!el) return
@@ -136,6 +143,19 @@ function handleToastAction() {
     </div>
     <main class="flex-1">
       <div
+        v-if="routeError"
+        role="alert"
+        class="mx-auto max-w-md px-4 py-20 text-center"
+      >
+        <h1 class="font-heading text-xl font-semibold text-dark">Something went wrong</h1>
+        <p class="mt-2 text-sm text-muted">We couldn’t display this page right now. Try reloading to continue.</p>
+        <div class="mt-5 flex items-center justify-center gap-3">
+          <button type="button" class="min-h-11 rounded-full bg-dark px-5 text-sm font-medium text-background hover:bg-dark/90" @click="reloadApplication">Reload page</button>
+          <router-link to="/" class="min-h-11 inline-flex items-center px-4 text-sm font-medium text-dark underline underline-offset-4" @click="routeError = false">Go home</router-link>
+        </div>
+      </div>
+      <div
+        v-else
         ref="routeContainer"
         class="route-transition"
         :class="{ 'route-enter': isRouteAnimating }"
