@@ -7,6 +7,7 @@ This is a source-code baseline, not a release certification. **In progress** mea
 
 ## Recent implementation
 
+- **In progress — search sitemap:** A dynamic sitemap lists public storefront pages and active products via the API and Cloudflare route, with `robots.txt` discovery. Local verification is required; live deployment, preferred hostname and Search Console submission remain to be checked.
 - **In progress — account rendering and session recovery:** Account lists tolerate missing records, locally stored wishlist entries are validated, public delivery data no longer uses a session token, and late unauthorized responses reuse an already refreshed token. Frontend regression tests pass; confirm the deployed account page and investigate any remaining live 401 responses.
 - **In progress — international account phone numbers:** Registration offers a country calling-code selector and saves international-format account numbers. Zambia-specific delivery and mobile-money number requirements remain in checkout. Focused tests and the production build pass; live and device verification remain outstanding.
 - **In progress — checkout address reuse and verification recovery:** Signed-in customers can save a delivery address and phone at checkout, with a default address reused on future visits. Account address access is scoped to its owner, and the server validates province and town. Verification and location-loading failures offer recovery. Automated tests cover local behavior; browser and live deployment verification remain outstanding.
