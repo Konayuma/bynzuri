@@ -35,5 +35,19 @@ onMounted(async () => { try { campaign.value = await productService.getCampaign(
 .sale-banner__offer{font-family:var(--font-heading,serif);font-size:clamp(3rem,6vw,5rem);line-height:.9;white-space:nowrap;color:#f4c6c2}.sale-banner__offer span{font-size:.32em;margin-left:.18em;text-transform:uppercase;letter-spacing:.06em}
 .sale-banner__details{font-size:.875rem;line-height:1.65;color:#fff1ed}.sale-banner__details p+p{color:#e6bab9}.sale-banner__link{color:#fff7f3;min-height:44px;display:inline-flex;align-items:center;gap:.5rem;font-size:.875rem;text-decoration:underline;text-underline-offset:5px;white-space:nowrap}.sale-banner__link:focus-visible{outline:2px solid #f4c6c2;outline-offset:4px}
 .sale-banner--compact{border-radius:1.25rem;margin-bottom:2rem}.sale-banner--compact .sale-banner__inner{padding:1.25rem 1.75rem}
-@media(max-width:700px){.sale-banner__inner{padding:1.4rem 1.25rem;display:grid;grid-template-columns:1fr auto;gap:1rem}.sale-banner__details{grid-column:1/-1}.sale-banner__link{grid-column:1/-1}.sale-banner__offer{font-size:3.5rem}.sale-banner--compact .sale-banner__inner{padding:1.3rem}}
+@media(max-width:700px){
+  .sale-banner__inner{padding:.85rem 1rem;display:grid;grid-template-columns:1fr auto;gap:.35rem .75rem;align-items:center}
+  .sale-banner__eyebrow{font-size:.625rem;letter-spacing:.12em}
+  .sale-banner h2{font-size:1.15rem;line-height:1.15;margin:.15rem 0 0}
+  .sale-banner__offer{font-size:1.9rem;line-height:1}
+  .sale-banner__offer span{font-size:.42em}
+  .sale-banner__details{grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;gap:.15rem .5rem;font-size:.75rem;line-height:1.35}
+  .sale-banner__details p+p::before{content:'·';margin-right:.5rem;color:#c99b99}
+  .sale-banner__link{grid-column:1/-1;min-height:36px;font-size:.8rem}
+  .sale-banner--compact{border-radius:.875rem;margin-bottom:1rem}
+  .sale-banner--compact .sale-banner__inner{padding:.7rem .95rem;gap:.25rem .75rem}
+  .sale-banner--compact .sale-banner__eyebrow{display:none}
+  .sale-banner--compact h2{font-size:1.05rem;margin:0}
+  .sale-banner--compact .sale-banner__offer{font-size:1.65rem}
+}
 </style>

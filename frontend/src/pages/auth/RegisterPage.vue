@@ -23,6 +23,7 @@ const form = ref({
 })
 const loading = ref(false)
 const error = ref('')
+const offerVerification = ref(false)
 const fieldErrors = ref<Record<string, string>>({})
 const phoneCountry = ref<CountryCode>('ZM')
 const passwordCheck = computed(() => validatePassword(form.value.password))
@@ -59,6 +60,7 @@ async function handleRegister() {
 
   loading.value = true
   error.value = ''
+  offerVerification.value = false
 
   try {
     await userStore.register({
@@ -72,6 +74,7 @@ async function handleRegister() {
     error.value = axios.isAxiosError(cause) && cause.response?.status === 400
       ? 'Check your details. If you already have an account, sign in or verify your email.'
       : 'We could not create your account. Check your connection and try again.'
+    offerVerification.value = true
     loading.value = false
     return
   }
@@ -88,6 +91,17 @@ async function handleRegister() {
     state: { email: registeredEmail },
     query: { ...(redirect.startsWith('/') && !redirect.startsWith('//') ? { redirect } : {}) }
   })
+}
+function continueVerification() {
+  const email = form.value.email.trim()
+  if (!isEmail(email)) {
+    fieldErrors.value.email = 'Enter a valid email address.'
+    return
+  }
+  rememberVerificationEmail(email)
+  const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : ''
+  void router.push({ path: '/auth/verify-email', state: { email },
+    query: { ...(redirect.startsWith('/') && !redirect.startsWith('//') ? { redirect } : {}) } })
 }
 </script>
 
@@ -156,6 +170,11 @@ async function handleRegister() {
         />
 
         <p v-if="error" role="alert" class="text-sm text-red-700">{{ error }}</p>
+
+        <div v-if="offerVerification" class="text-sm text-muted">
+          If you already started creating an account, continue to verification and request a new code if needed.
+          <button type="button" class="text-dark font-medium underline" @click="continueVerification">Continue verification</button>
+        </div>
 
         <BaseButton type="submit" variant="secondary" fullWidth :loading="loading">
           Create Account

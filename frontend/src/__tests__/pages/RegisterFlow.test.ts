@@ -58,9 +58,18 @@ describe('registration flow', () => {
     expect(register).not.toHaveBeenCalled()
   })
 
-  it('does not show a continue verification link on account creation', async () => {
-    const { wrapper } = await setup()
-    expect(wrapper.text()).not.toContain('Continue verification')
+  it('offers verification recovery after a failed registration and preserves checkout', async () => {
+    const { wrapper, router, user } = await setup()
+    vi.spyOn(user, 'register').mockRejectedValue(new Error('Connection lost'))
+    await wrapper.get('form').trigger('submit')
+    await flushPromises()
+    const button = wrapper.findAll('button').find((item) => item.text().includes('Continue verification'))
+    expect(button).toBeDefined()
+    await button!.trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.path).toBe('/auth/verify-email')
+    expect(router.currentRoute.value.query).toEqual({ redirect: '/checkout' })
+    expect(sessionStorage.getItem('bynzuri_verification_email')).toBe('ada@example.com')
   })
 
   it('collapses pasted or autofilled full numbers with calling code', async () => {
