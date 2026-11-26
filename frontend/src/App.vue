@@ -123,6 +123,7 @@ function handleToastAction() {
 
 <template>
   <div class="min-h-screen flex flex-col bg-background">
+    <div class="flex min-h-screen min-h-[100dvh] flex-col">
     <div v-if="navigating" role="status" aria-live="polite" class="fixed top-3 left-1/2 z-[70] -translate-x-1/2 rounded-full border border-primary/50 bg-white px-4 py-2 text-sm font-medium text-dark shadow-lg">
       Loading page…
     </div>
@@ -163,6 +164,7 @@ function handleToastAction() {
         <router-view />
       </div>
     </main>
+    </div>
     <AppFooter v-if="!router.currentRoute.value.meta.standalone && !router.currentRoute.value.meta.adminArea" />
     <CartDrawer
       v-if="uiStore.isCartOpen && !router.currentRoute.value.meta.adminArea"
