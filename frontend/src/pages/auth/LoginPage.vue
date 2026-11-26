@@ -59,7 +59,7 @@ async function handleLogin() {
     <div class="w-full max-w-sm">
       <div class="text-center mb-8">
         <h1 class="font-heading text-2xl font-semibold text-dark">Welcome Back</h1>
-        <p class="text-sm text-muted mt-1">{{ route.query.created === '1' ? 'Your account was created. Sign in to continue.' : route.query.reason === 'expired' ? 'Your session expired. Sign in again to continue.' : route.query.redirect === '/checkout' ? 'Sign in to continue to checkout. Your cart will be kept.' : 'Sign in to track orders, save addresses, and check out faster' }}</p>
+        <p class="text-sm text-muted mt-1">{{ route.query.verified === '1' ? 'Your email is verified. Sign in to continue.' : route.query.created === '1' ? 'Your account was created. Sign in to continue.' : route.query.reason === 'expired' ? 'Your session expired. Sign in again to continue.' : route.query.redirect === '/checkout' ? 'Sign in to continue to checkout. Your cart will be kept.' : 'Sign in to track orders, save addresses, and check out faster' }}</p>
       </div>
 
       <form @submit.prevent="handleLogin" class="space-y-4">
@@ -90,6 +90,8 @@ async function handleLogin() {
           Sign In
         </BaseButton>
       </form>
+
+      <p class="mt-4 text-center text-sm text-muted">Still need to verify your email? <router-link :to="{ path: '/auth/verify-email', query: { ...(email ? { email } : {}), ...(route.query.redirect ? { redirect: route.query.redirect } : {}) } }" class="font-medium text-dark underline">Enter your code</router-link></p>
 
       <p class="text-sm text-center text-muted mt-6">
         Don&apos;t have an account?

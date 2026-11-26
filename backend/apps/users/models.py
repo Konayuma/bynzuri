@@ -41,6 +41,21 @@ class User(AbstractUser):
         verbose_name_plural = 'Users'
 
 
+class EmailVerification(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='email_verification')
+    nonce = models.CharField(max_length=64)
+    expires_at = models.DateTimeField()
+    attempts = models.PositiveSmallIntegerField(default=0)
+    sent_requested_at = models.DateTimeField()
+    status = models.CharField(max_length=20, default='pending', db_index=True)
+    send_attempts = models.PositiveIntegerField(default=0)
+    first_attempt_at = models.DateTimeField(null=True, blank=True)
+    next_attempt_at = models.DateTimeField(null=True, blank=True)
+    lease_until = models.DateTimeField(null=True, blank=True)
+    provider_id = models.CharField(max_length=255, blank=True)
+    last_error = models.CharField(max_length=200, blank=True)
+
+
 class Address(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='addresses')

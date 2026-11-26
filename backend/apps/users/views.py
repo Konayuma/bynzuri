@@ -1,10 +1,19 @@
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_str
+from django.db import transaction
+from django.utils import timezone
+from django.utils.crypto import constant_time_compare
+from rest_framework.throttling import AnonRateThrottle
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from .serializers import UserSerializer, RegisterSerializer, AddressSerializer
-from .models import User, Address
+from .models import User, Address, EmailVerification
+from .verification import issue_code, code_for, RESEND_DELAY, MAX_ATTEMPTS
+
+
+class VerificationThrottle(AnonRateThrottle):
+    scope = 'email_verification'
 
 
 class RegisterView(generics.CreateAPIView):
@@ -14,16 +23,9 @@ class RegisterView(generics.CreateAPIView):
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        user = serializer.save()
-
-        import secrets
-        user.email_verification_token = secrets.token_urlsafe(32)
-        user.save(update_fields=['email_verification_token'])
-
-        # TODO: Send verification email via Celery task
-        # from apps.users.tasks import send_verification_email
-        # verification_url = f"{request.data.get('redirect_url', 'https://bynzuri.com')}/auth/verify-email?token={user.email_verification_token}"
-        # send_verification_email.delay(user.email, verification_url)
+        with transaction.atomic():
+            user = serializer.save()
+            issue_code(user)
 
         return Response(
             UserSerializer(user).data,
@@ -141,6 +143,30 @@ class ResetPasswordView(generics.GenericAPIView):
 
 class VerifyEmailView(generics.GenericAPIView):
     permission_classes = [permissions.AllowAny]
+    throttle_classes = [VerificationThrottle]
+
+    def post(self, request):
+        email = str(request.data.get('email', '')).strip().lower()
+        code = str(request.data.get('code', '')).strip()
+        message = 'This code is incorrect or expired. Check it or request a new code.'
+        if not email or len(code) != 6 or not code.isascii() or not code.isdigit():
+            return Response({'detail': message}, status=status.HTTP_400_BAD_REQUEST)
+        with transaction.atomic():
+            user = User.objects.select_for_update().filter(email__iexact=email).first()
+            challenge = EmailVerification.objects.select_for_update().filter(user=user).first() if user else None
+            if not challenge or challenge.user.email_verified or challenge.user.is_active or challenge.expires_at <= timezone.now() or challenge.attempts >= MAX_ATTEMPTS:
+                return Response({'detail': message}, status=status.HTTP_400_BAD_REQUEST)
+            challenge.attempts += 1
+            if not constant_time_compare(code_for(challenge), code):
+                challenge.save(update_fields=['attempts'])
+                return Response({'detail': message}, status=status.HTTP_400_BAD_REQUEST)
+            user.email_verified = True
+            user.is_active = True
+            user.email_verification_token = ''
+            user.save(update_fields=['email_verified', 'is_active', 'email_verification_token'])
+            challenge.status = 'verified'
+            challenge.save(update_fields=['status', 'attempts'])
+        return Response({'detail': 'Email verified. You can now sign in.'})
 
     def get(self, request):
         token = request.query_params.get('token', '')
@@ -176,6 +202,7 @@ class VerifyEmailView(generics.GenericAPIView):
 
 class ResendVerificationEmailView(generics.GenericAPIView):
     permission_classes = [permissions.AllowAny]
+    throttle_classes = [VerificationThrottle]
 
     def post(self, request):
         email = request.data.get('email', '').strip().lower()
@@ -185,27 +212,9 @@ class ResendVerificationEmailView(generics.GenericAPIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        try:
-            user = User.objects.get(email=email)
-        except User.DoesNotExist:
-            return Response(
-                {'detail': 'If an account with that email exists, a verification link has been sent.'},
-                status=status.HTTP_200_OK
-            )
-
-        if user.email_verified:
-            return Response(
-                {'detail': 'Email already verified'},
-                status=status.HTTP_200_OK
-            )
-
-        import secrets
-        user.email_verification_token = secrets.token_urlsafe(32)
-        user.save(update_fields=['email_verification_token'])
-
-        # TODO: Send verification email via Celery task
-
-        return Response(
-            {'detail': 'If an account with that email exists, a verification link has been sent.'},
-            status=status.HTTP_200_OK
-        )
+        with transaction.atomic():
+            user = User.objects.select_for_update().filter(email__iexact=email).first()
+            challenge = EmailVerification.objects.select_for_update().filter(user=user).first() if user else None
+            if user and challenge and not user.email_verified and not user.is_active and timezone.now() >= challenge.sent_requested_at + RESEND_DELAY:
+                issue_code(user)
+        return Response({'detail': 'If this account is eligible, a new code will be emailed. Please wait at least one minute between requests.'})

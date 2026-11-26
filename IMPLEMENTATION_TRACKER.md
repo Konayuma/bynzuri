@@ -7,6 +7,7 @@ This is a source-code baseline, not a release certification. **In progress** mea
 
 ## Recent implementation
 
+- **In progress — registration email verification:** New accounts require a six-digit email code before sign-in. Codes expire, limit guesses and use the existing scheduled Resend sender. Backend and frontend tests cover local behavior; deployment and live delivery verification remain outstanding. Existing accounts are unchanged; password reset email delivery remains unfinished.
 - **In progress — branded order emails:** Order messages now have a responsive receipt-style HTML layout alongside plain text; payment status remains explicit. Focused email tests pass; verify delivery and rendering in real email clients after deployment.
 - **In progress — admin analytics:** Sales history, top products and paginated orders are implemented. Sales use current paid/fulfilment statuses and the order creation date, include delivery, and are not a payment-date or refund ledger. Local API tests and frontend build validate the implementation; live data and browser verification remain outstanding.
 - **In progress — transactional order email:** A durable Resend outbox queues unpaid order confirmations, owner order alerts, confirmed-payment receipts and alerts, and delivery-status updates. Duplicate events are guarded; retries use provider idempotency. Automated tests cover local behavior, but production requires verified DNS, a configured API key and a running scheduler; live delivery and bounce handling are not yet verified. See `DEPLOYMENT.md`.
@@ -14,7 +15,7 @@ This is a source-code baseline, not a release certification. **In progress** mea
 ## Immediate priorities
 
 - [ ] **P0 — Secure and verify payments (FR-4.1–4.4):** Exercise Lenco in its test environment, including signed and invalid webhooks, repeated callbacks, failed payments, status verification and simultaneous requests. Confirm provider contract, amounts, ownership and state transitions before enabling real payments.
-- [ ] **P0 — Complete account email delivery:** Registration, password reset and resend-verification views contain email-delivery TODOs in `backend/apps/users/views.py`. Implement delivery and test the complete flows without exposing tokens.
+- [~] **P0 — Complete account email delivery:** Registration verification is implemented and requires live delivery verification; password reset email delivery remains a TODO in `backend/apps/users/views.py`.
 - [ ] **P0 — Validate checkout and stock under concurrency:** Test guest cart merge, delivery pricing, order creation and inventory locking with PostgreSQL and concurrent buyers, including failure and retry paths.
 - [ ] **P0 — Repair order creation lifecycle:** The order idempotency key is derived from the persistent cart ID, so a later purchase using the same cart can be rejected. Review stock rollback when a later cart item is unavailable and define recovery for unpaid orders before live use.
 - [ ] **P1 — Address production security and deployment:** Review token storage, JWT signing, production CORS, HTTPS, secrets and cloud storage against the SRS; verify the deployed configuration.

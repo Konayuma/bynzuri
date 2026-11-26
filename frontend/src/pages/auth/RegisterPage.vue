@@ -1,16 +1,15 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
+import axios from 'axios'
 import { isEmail, isZambianPhone } from '@/utils/formValidation'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
-import { useCartStore } from '@/stores/cart'
 import BaseButton from '@/components/base/BaseButton.vue'
 import BaseInput from '@/components/base/BaseInput.vue'
 
 const router = useRouter()
 const route = useRoute()
 const userStore = useUserStore()
-const cartStore = useCartStore()
 const form = ref({
   first_name: '',
   last_name: '',
@@ -52,30 +51,17 @@ async function handleRegister() {
       last_name: form.value.last_name.trim(),
       phone: form.value.phone
     })
-  } catch {
-    error.value = 'Could not create your account. The email may already be in use.'
+  } catch (cause) {
+    error.value = axios.isAxiosError(cause) && cause.response?.status === 400
+      ? 'Check your details. If you already have an account, sign in or verify your email.'
+      : 'We could not create your account. Check your connection and try again.'
     loading.value = false
     return
   }
 
-  try {
-    await userStore.login(form.value.email.trim(), form.value.password)
-  } catch {
-    loading.value = false
-    await router.push({ path: '/auth/login', query: { ...route.query, created: '1' } })
-    return
-  }
-
-  try {
-    await cartStore.mergeGuestCart()
-    await cartStore.fetchCart()
-  } catch {
-    cartStore.error = 'Signed in, but your cart could not be restored. Please try again.'
-  } finally {
-    loading.value = false
-  }
   const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : ''
-  await router.push(redirect.startsWith('/') && !redirect.startsWith('//') ? redirect : '/')
+  loading.value = false
+  await router.push({ path: '/auth/verify-email', query: { email: form.value.email.trim(), ...(redirect.startsWith('/') && !redirect.startsWith('//') ? { redirect } : {}) } })
 }
 </script>
 

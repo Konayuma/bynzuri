@@ -42,8 +42,8 @@ export const authService = {
     await publicApi.post('/auth/reset-password/', { uid, token, new_password: newPassword })
   },
 
-  async verifyEmail(token: string): Promise<void> {
-    await publicApi.get('/auth/verify-email/', { params: { token } })
+  async verifyEmail(email: string, code: string): Promise<void> {
+    await publicApi.post('/auth/verify-email/', { email, code })
   },
 
   async resendVerificationEmail(email: string): Promise<void> {

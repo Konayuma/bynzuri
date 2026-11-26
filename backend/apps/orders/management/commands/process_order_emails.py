@@ -2,6 +2,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.conf import settings
 from apps.orders.email_notifications import process_one
 from apps.orders.models import OrderEmail
+from apps.users.verification import process_verification_email
 
 
 class Command(BaseCommand):
@@ -24,6 +25,8 @@ class Command(BaseCommand):
         if not settings.RESEND_API_KEY:
             raise CommandError('RESEND_API_KEY is not configured; notifications remain queued.')
         count = 0
+        while count < max(0, options['limit']) and process_verification_email():
+            count += 1
         while count < max(0, options['limit']) and process_one():
             count += 1
-        self.stdout.write(f'Processed {count} order email notification(s).')
+        self.stdout.write(f'Processed {count} email notification(s).')

@@ -64,9 +64,9 @@ describe('authService', () => {
   })
 
   it('calls verify email endpoint', async () => {
-    vi.mocked(publicApi.get).mockResolvedValue({ data: {} })
-    await authService.verifyEmail('token123')
-    expect(publicApi.get).toHaveBeenCalledWith('/auth/verify-email/', { params: { token: 'token123' } })
+    vi.mocked(publicApi.post).mockResolvedValue({ data: {} })
+    await authService.verifyEmail('test@example.com', '123456')
+    expect(publicApi.post).toHaveBeenCalledWith('/auth/verify-email/', { email: 'test@example.com', code: '123456' })
   })
 
   it('calls resend verification email endpoint', async () => {
