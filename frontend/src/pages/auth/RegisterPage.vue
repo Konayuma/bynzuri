@@ -2,7 +2,7 @@
 import { ref, watch } from 'vue'
 import axios from 'axios'
 import { isEmail } from '@/utils/formValidation'
-import { parsePhoneNumberFromString, type CountryCode } from 'libphonenumber-js'
+import { getCountryCallingCode, parsePhoneNumberFromString, type CountryCode } from 'libphonenumber-js'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import BaseButton from '@/components/base/BaseButton.vue'
@@ -40,7 +40,13 @@ async function handleRegister() {
   if (!data.first_name.trim()) errors.first_name = 'Enter your first name.'
   if (!data.last_name.trim()) errors.last_name = 'Enter your last name.'
   if (!isEmail(data.email)) errors.email = 'Enter a valid email address.'
-  const phone = parsePhoneNumberFromString(data.phone.trim(), phoneCountry.value)
+  const rawPhone = data.phone.trim()
+  const compactDigits = rawPhone.replace(/[\s().-]/g, '')
+  const dialCode = getCountryCallingCode(phoneCountry.value)
+  let phone = parsePhoneNumberFromString(rawPhone, phoneCountry.value)
+  if ((!phone || !phone.isValid()) && /^\d+$/.test(compactDigits) && compactDigits.startsWith(dialCode)) {
+    phone = parsePhoneNumberFromString(`+${compactDigits}`, phoneCountry.value)
+  }
   if (!phone || !phone.isValid() || (phone.country && phone.country !== phoneCountry.value)) errors.phone = 'Enter a valid number for the selected country.'
   if (data.password.length < 8) errors.password = 'Use at least 8 characters.'
   if (data.password !== data.confirm_password) errors.confirm_password = 'Passwords do not match.'

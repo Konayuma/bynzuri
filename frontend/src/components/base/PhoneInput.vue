@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { getCountries, getCountryCallingCode, type CountryCode } from 'libphonenumber-js'
+import { getCountries, getCountryCallingCode, parsePhoneNumberFromString, type CountryCode } from 'libphonenumber-js'
 
 const props = defineProps<{ modelValue: string; country: CountryCode; error?: string; disabled?: boolean }>()
 const emit = defineEmits<{ 'update:modelValue': [string]; 'update:country': [CountryCode] }>()
@@ -13,6 +13,49 @@ const countries = getCountries().map(code => ({
   flag: String.fromCodePoint(...[...code].map(char => 127397 + char.charCodeAt(0))),
 })).sort((a, b) => a.name.localeCompare(b.name))
 const selected = computed(() => countries.find(country => country.code === props.country))
+
+function collapsePhoneInput(raw: string): { value: string; country?: CountryCode } {
+  const trimmed = raw.trim()
+  if (!trimmed) return { value: raw }
+
+  const compact = trimmed.replace(/[\s().-]/g, '')
+
+  // International format with leading '+' or '00'
+  if (compact.startsWith('+') || compact.startsWith('00')) {
+    const intl = compact.startsWith('00') ? `+${compact.slice(2)}` : compact
+    const parsed = parsePhoneNumberFromString(intl)
+    if (parsed?.isValid() && parsed.nationalNumber) {
+      return {
+        value: parsed.nationalNumber,
+        country: parsed.country,
+      }
+    }
+    return { value: raw }
+  }
+
+  // Bare calling code pasted or autofilled without '+' (e.g. 260978734029 while +260 is selected)
+  const dial = selected.value?.dial
+  if (dial && /^\d+$/.test(compact) && compact.startsWith(dial) && compact.length > dial.length + 5) {
+    const parsed = parsePhoneNumberFromString(`+${compact}`, props.country)
+    if (parsed?.isValid() && (!parsed.country || parsed.country === props.country) && parsed.nationalNumber) {
+      return { value: parsed.nationalNumber }
+    }
+  }
+
+  return { value: raw }
+}
+
+function handleInput(event: Event) {
+  const input = event.target as HTMLInputElement
+  const collapsed = collapsePhoneInput(input.value)
+  if (collapsed.country && collapsed.country !== props.country) {
+    emit('update:country', collapsed.country)
+  }
+  if (collapsed.value !== input.value) {
+    input.value = collapsed.value
+  }
+  emit('update:modelValue', collapsed.value)
+}
 </script>
 
 <template>
@@ -34,7 +77,7 @@ const selected = computed(() => countries.find(country => country.code === props
         :aria-invalid="error ? 'true' : undefined" :aria-describedby="error ? 'reg-phone-error' : 'reg-phone-hint'"
         class="min-h-12 min-w-0 flex-1 rounded-[14px] border bg-white px-4 py-3 text-base text-dark shadow-sm focus:outline-none focus:border-gold focus:ring-2 focus:ring-gold/25 disabled:opacity-60"
         :class="error ? 'border-red-600' : 'border-[#b9a8a8]'" placeholder="Phone number"
-        @input="emit('update:modelValue', ($event.target as HTMLInputElement).value)" />
+        @input="handleInput" />
     </div>
     <p v-if="error" id="reg-phone-error" class="text-sm text-red-700" role="alert">{{ error }}</p>
     <p v-else id="reg-phone-hint" class="text-sm text-muted">Country code: +{{ selected?.dial }}. Enter your phone number.</p>

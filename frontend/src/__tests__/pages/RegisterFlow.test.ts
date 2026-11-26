@@ -60,4 +60,31 @@ describe('registration flow', () => {
     const { wrapper } = await setup()
     expect(wrapper.text()).not.toContain('Continue verification')
   })
+
+  it('collapses pasted or autofilled full numbers with calling code', async () => {
+    const { wrapper, user } = await setup()
+    const register = vi.spyOn(user, 'register').mockResolvedValue()
+    const phoneInput = wrapper.get('#reg-phone')
+
+    await phoneInput.setValue('260978734029')
+    expect((phoneInput.element as HTMLInputElement).value).toBe('978734029')
+
+    await wrapper.get('form').trigger('submit')
+    await flushPromises()
+    expect(register).toHaveBeenCalledWith(expect.objectContaining({ phone: '+260978734029' }))
+  })
+
+  it('auto-switches country and collapses when pasting a foreign international number', async () => {
+    const { wrapper, user } = await setup()
+    const register = vi.spyOn(user, 'register').mockResolvedValue()
+    const phoneInput = wrapper.get('#reg-phone')
+
+    await phoneInput.setValue('+1 202 555 0123')
+    expect((phoneInput.element as HTMLInputElement).value).toBe('2025550123')
+    expect((wrapper.get('select[aria-label="Phone country code"]').element as HTMLSelectElement).value).toBe('US')
+
+    await wrapper.get('form').trigger('submit')
+    await flushPromises()
+    expect(register).toHaveBeenCalledWith(expect.objectContaining({ phone: '+12025550123' }))
+  })
 })
