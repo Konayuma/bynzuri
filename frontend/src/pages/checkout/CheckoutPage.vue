@@ -11,7 +11,7 @@ import BaseInput from '@/components/base/BaseInput.vue'
 import BaseSelect from '@/components/base/BaseSelect.vue'
 import { ChevronLeft, ChevronRight, ChevronDown, MapPin, Loader2, CheckCircle2, XCircle, Smartphone, ShoppingBag } from '@lucide/vue'
 import type { Province, Town, DeliveryMethod, Address, Order } from '@/types'
-import { isEmail, isZambianPhone, isZambianMobileMoneyPhone, normalizeZambianPhone } from '@/utils/formValidation'
+import { isEmail, isValidName, isValidStreetAddress, isZambianPhone, isZambianMobileMoneyPhone, normalizeZambianPhone } from '@/utils/formValidation'
 import { signatureImage } from '@/utils/productImage'
 import { useDialogFocus } from '@/composables/useDialogFocus'
 
@@ -156,13 +156,16 @@ function validateStep(step: number): boolean {
   const data = form.value
   if (step === 1) {
     if (!data.first_name.trim()) errors.first_name = 'Enter your first name.'
+    else if (!isValidName(data.first_name)) errors.first_name = 'Enter a valid first name (at least 2 letters).'
     if (!data.last_name.trim()) errors.last_name = 'Enter your last name.'
+    else if (!isValidName(data.last_name)) errors.last_name = 'Enter a valid last name (at least 2 letters).'
     if (!isEmail(data.email)) errors.email = 'Enter a valid email address.'
     if (!isZambianPhone(data.phone)) errors.phone = 'Enter a Zambian number, for example 0971234567 or +260971234567.'
   } else if (step === 2) {
     if (!data.province) errors.province = 'Select a province.'
     if (!data.town || !towns.value.some(t => t.id === data.town)) errors.town = 'Select a town in this province.'
     if (!data.street_address.trim()) errors.street_address = 'Enter a street address or landmark.'
+    else if (!isValidStreetAddress(data.street_address)) errors.street_address = 'Enter a complete street address or landmark (at least 4 characters).'
   } else if (step === 3) {
     if (!deliveryMethods.value.some(m => m.id === data.delivery_method)) errors.delivery_method = 'Select a delivery method.'
   } else {

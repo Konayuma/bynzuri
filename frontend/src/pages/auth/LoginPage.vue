@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import axios from 'axios'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { useCartStore } from '@/stores/cart'
 import { hasSession } from '@/services/api'
+import { isEmail } from '@/utils/formValidation'
 import BaseButton from '@/components/base/BaseButton.vue'
 import BaseInput from '@/components/base/BaseInput.vue'
 
@@ -16,18 +17,33 @@ const email = ref('')
 const password = ref('')
 const loading = ref(false)
 const error = ref('')
+const fieldErrors = ref<Record<string, string>>({})
+
+watch(email, () => { delete fieldErrors.value.email; error.value = '' })
+watch(password, () => { delete fieldErrors.value.password; error.value = '' })
 
 async function handleLogin() {
-  if (!email.value || !password.value) {
+  const errors: Record<string, string> = {}
+  const trimmedEmail = email.value.trim().toLowerCase()
+  if (!trimmedEmail || !password.value) {
+    if (!trimmedEmail) errors.email = 'Enter your email address.'
+    if (!password.value) errors.password = 'Enter your password.'
+    fieldErrors.value = errors
     error.value = 'Enter both your email and password to continue'
     return
   }
+  if (!isEmail(trimmedEmail)) {
+    fieldErrors.value = { email: 'Enter a valid email address.' }
+    error.value = 'Enter a valid email address.'
+    return
+  }
+  fieldErrors.value = {}
 
   loading.value = true
   error.value = ''
 
   try {
-    await userStore.login(email.value, password.value)
+    await userStore.login(trimmedEmail, password.value)
   } catch (cause) {
     if (hasSession()) {
       error.value = 'Signed in, but we could not load your account. Check your connection and try again.'
@@ -62,13 +78,15 @@ async function handleLogin() {
         <p class="text-sm text-muted mt-1">{{ route.query.verified === '1' ? 'Your email is verified. Sign in to continue.' : route.query.created === '1' ? 'Your account was created. Sign in to continue.' : route.query.reason === 'expired' ? 'Your session expired. Sign in again to continue.' : route.query.redirect === '/checkout' ? 'Sign in to continue to checkout. Your cart will be kept.' : 'Sign in to track orders, save addresses, and check out faster' }}</p>
       </div>
 
-      <form @submit.prevent="handleLogin" class="space-y-4">
+      <form novalidate @submit.prevent="handleLogin" class="space-y-4">
         <BaseInput
           v-model="email"
           label="Email"
           type="email"
           required
           id="login-email"
+          autocomplete="email"
+          :error="fieldErrors.email"
         />
         <BaseInput
           v-model="password"
@@ -76,6 +94,8 @@ async function handleLogin() {
           type="password"
           required
           id="login-password"
+          autocomplete="current-password"
+          :error="fieldErrors.password"
         />
 
         <div class="flex justify-end">

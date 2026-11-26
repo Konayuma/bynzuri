@@ -16,7 +16,7 @@ import {
   Heart, ShieldCheck, KeyRound, HelpCircle, LayoutDashboard, CheckCircle2, ChevronRight
 } from '@lucide/vue'
 import type { Address, Province, Town, Order } from '@/types'
-import { isZambianPhone } from '@/utils/formValidation'
+import { isValidName, isValidStreetAddress, isZambianPhone } from '@/utils/formValidation'
 import { isValidPhoneNumber } from 'libphonenumber-js'
 
 const userStore = useUserStore()
@@ -29,6 +29,7 @@ const router = useRouter()
 const editingProfile = ref(false)
 const savingProfile = ref(false)
 const profileError = ref('')
+const profileFieldErrors = ref<Record<string, string>>({})
 const profileForm = ref({
   first_name: '',
   last_name: '',
@@ -50,6 +51,7 @@ const showModal = ref(false)
 const editingAddress = ref<Address | null>(null)
 const saving = ref(false)
 const formError = ref('')
+const addressFieldErrors = ref<Record<string, string>>({})
 const addressError = ref('')
 const confirmDeleteId = ref<string | null>(null)
 const deletingId = ref<string | null>(null)
@@ -121,12 +123,14 @@ watch(() => userStore.user, () => {
 function startEditProfile() {
   syncProfileForm()
   profileError.value = ''
+  profileFieldErrors.value = {}
   editingProfile.value = true
 }
 
 function cancelEditProfile() {
   syncProfileForm()
   profileError.value = ''
+  profileFieldErrors.value = {}
   editingProfile.value = false
 }
 
@@ -134,13 +138,18 @@ async function saveProfile() {
   const firstName = profileForm.value.first_name.trim()
   const lastName = profileForm.value.last_name.trim()
   const phone = profileForm.value.phone.trim()
+  const errors: Record<string, string> = {}
 
-  if (!firstName) {
-    profileError.value = 'Enter your first name.'
-    return
-  }
+  if (!firstName) errors.first_name = 'Enter your first name.'
+  else if (!isValidName(firstName)) errors.first_name = 'Enter a valid first name (at least 2 letters).'
+  if (lastName && !isValidName(lastName)) errors.last_name = 'Enter a valid last name (at least 2 letters).'
   if (phone && !isZambianPhone(phone) && !isValidPhoneNumber(phone)) {
-    profileError.value = 'Enter a valid phone number with its country code, for example +260 97 123 4567.'
+    errors.phone = 'Enter a valid phone number with its country code, for example +260 97 123 4567.'
+  }
+
+  profileFieldErrors.value = errors
+  if (Object.keys(errors).length) {
+    profileError.value = Object.values(errors)[0] || ''
     return
   }
 
@@ -237,6 +246,7 @@ function openCreateModal() {
     is_default: addresses.value.length === 0,
   }
   formError.value = ''
+  addressFieldErrors.value = {}
   towns.value = []
   showModal.value = true
 }
@@ -251,6 +261,7 @@ async function openEditModal(address: Address) {
     is_default: address.is_default,
   }
   formError.value = ''
+  addressFieldErrors.value = {}
   if (address.province) {
     try {
       const data = await orderService.getTowns(address.province)
@@ -263,13 +274,18 @@ async function openEditModal(address: Address) {
 }
 
 async function saveAddress() {
-  if (!form.value.province || !form.value.town || !form.value.street_address || !form.value.phone) {
-    formError.value = 'Please fill in all address fields.'
+  const errors: Record<string, string> = {}
+  if (!form.value.province) errors.province = 'Select a province.'
+  if (!form.value.town || !towns.value.some(t => t.id === form.value.town)) errors.town = 'Select a town in the chosen province.'
+  if (!form.value.street_address.trim()) errors.street_address = 'Enter a street address or landmark.'
+  else if (!isValidStreetAddress(form.value.street_address)) errors.street_address = 'Enter a complete street address or landmark (at least 4 characters).'
+  if (!form.value.phone.trim() || !isZambianPhone(form.value.phone)) errors.phone = 'Enter a Zambian number, for example 0971234567 or +260971234567.'
+
+  addressFieldErrors.value = errors
+  if (Object.keys(errors).length) {
+    formError.value = Object.values(errors)[0] || 'Please check the address fields.'
     return
   }
-  if (!form.value.street_address.trim()) { formError.value = 'Enter a street address or landmark.'; return }
-  if (!towns.value.some(t => t.id === form.value.town)) { formError.value = 'Select a town in the chosen province.'; return }
-  if (!isZambianPhone(form.value.phone)) { formError.value = 'Enter a Zambian number, for example 0971234567 or +260971234567.'; return }
   saving.value = true
   formError.value = ''
   try {
@@ -446,18 +462,22 @@ onMounted(async () => {
             </BaseButton>
           </div>
 
-          <form v-if="editingProfile" class="space-y-4" @submit.prevent="saveProfile">
+          <form v-if="editingProfile" novalidate class="space-y-4" @submit.prevent="saveProfile">
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <BaseInput
                 id="profile-first-name"
                 v-model="profileForm.first_name"
                 label="First Name"
                 required
+                :error="profileFieldErrors.first_name"
+                @update:model-value="delete profileFieldErrors.first_name; profileError = ''"
               />
               <BaseInput
                 id="profile-last-name"
                 v-model="profileForm.last_name"
                 label="Last Name"
+                :error="profileFieldErrors.last_name"
+                @update:model-value="delete profileFieldErrors.last_name; profileError = ''"
               />
             </div>
             <BaseInput
@@ -466,6 +486,8 @@ onMounted(async () => {
               label="Phone Number"
               type="tel"
               placeholder="0971234567 or +260971234567"
+              :error="profileFieldErrors.phone"
+              @update:model-value="delete profileFieldErrors.phone; profileError = ''"
             />
             <p class="text-xs text-muted -mt-2">We use this number for delivery SMS updates and mobile money prefill.</p>
             <p v-if="profileError" role="alert" class="text-sm text-red-700">{{ profileError }}</p>
@@ -685,7 +707,8 @@ onMounted(async () => {
           label="Province"
           :options="provinceOptions"
           required
-          @update:modelValue="handleProvinceChange"
+          :error="addressFieldErrors.province"
+          @update:modelValue="(val) => { delete addressFieldErrors.province; formError = ''; handleProvinceChange(val) }"
         />
         <BaseSelect
           v-model="form.town"
@@ -693,9 +716,26 @@ onMounted(async () => {
           :options="townOptions"
           required
           :disabled="!form.province"
+          :error="addressFieldErrors.town"
+          @update:modelValue="delete addressFieldErrors.town; formError = ''"
         />
-        <BaseInput v-model="form.street_address" label="Street Address" required placeholder="Street, building, landmark" />
-        <BaseInput v-model="form.phone" label="Phone Number" type="tel" required placeholder="260xxxxxxxxx" />
+        <BaseInput
+          v-model="form.street_address"
+          label="Street Address"
+          required
+          placeholder="Street, building, landmark"
+          :error="addressFieldErrors.street_address"
+          @update:model-value="delete addressFieldErrors.street_address; formError = ''"
+        />
+        <BaseInput
+          v-model="form.phone"
+          label="Phone Number"
+          type="tel"
+          required
+          placeholder="260xxxxxxxxx"
+          :error="addressFieldErrors.phone"
+          @update:model-value="delete addressFieldErrors.phone; formError = ''"
+        />
         <p class="text-xs text-muted -mt-2">For delivery updates via SMS</p>
         <div class="flex items-center gap-2">
           <input id="is_default" v-model="form.is_default" type="checkbox" class="rounded accent-gold" />

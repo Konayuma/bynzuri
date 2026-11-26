@@ -8,6 +8,14 @@ class UserAdmin(admin.ModelAdmin):
     list_filter = ['role', 'is_active']
     search_fields = ['email', 'first_name', 'last_name']
 
+    def get_deleted_objects(self, objs, request):
+        deleted, counts, permissions, protected = super().get_deleted_objects(objs, request)
+        if self.has_delete_permission(request):
+            # Verification rows belong to their user and cascade with it. They
+            # remain protected from direct deletion in their own admin screen.
+            permissions.discard(EmailVerification._meta.verbose_name)
+        return deleted, counts, permissions, protected
+
 
 @admin.register(Address)
 class AddressAdmin(admin.ModelAdmin):

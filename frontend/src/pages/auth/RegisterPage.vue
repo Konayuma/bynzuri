@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import axios from 'axios'
-import { isEmail } from '@/utils/formValidation'
+import { isEmail, isValidName, validatePassword } from '@/utils/formValidation'
 import { getCountryCallingCode, parsePhoneNumberFromString, type CountryCode } from 'libphonenumber-js'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
@@ -25,6 +25,7 @@ const loading = ref(false)
 const error = ref('')
 const fieldErrors = ref<Record<string, string>>({})
 const phoneCountry = ref<CountryCode>('ZM')
+const passwordCheck = computed(() => validatePassword(form.value.password))
 watch(phoneCountry, () => { delete fieldErrors.value.phone; error.value = '' })
 for (const key of Object.keys(form.value) as Array<keyof typeof form.value>) {
   watch(() => form.value[key], () => {
@@ -38,7 +39,9 @@ async function handleRegister() {
   const data = form.value
   const errors: Record<string, string> = {}
   if (!data.first_name.trim()) errors.first_name = 'Enter your first name.'
+  else if (!isValidName(data.first_name)) errors.first_name = 'Enter a valid first name (at least 2 letters).'
   if (!data.last_name.trim()) errors.last_name = 'Enter your last name.'
+  else if (!isValidName(data.last_name)) errors.last_name = 'Enter a valid last name (at least 2 letters).'
   if (!isEmail(data.email)) errors.email = 'Enter a valid email address.'
   const rawPhone = data.phone.trim()
   const compactDigits = rawPhone.replace(/[\s().-]/g, '')
@@ -48,7 +51,8 @@ async function handleRegister() {
     phone = parsePhoneNumberFromString(`+${compactDigits}`, phoneCountry.value)
   }
   if (!phone || !phone.isValid() || (phone.country && phone.country !== phoneCountry.value)) errors.phone = 'Enter a valid number for the selected country.'
-  if (data.password.length < 8) errors.password = 'Use at least 8 characters.'
+  const pw = validatePassword(data.password)
+  if (!pw.valid) errors.password = pw.message
   if (data.password !== data.confirm_password) errors.confirm_password = 'Passwords do not match.'
   fieldErrors.value = errors
   if (Object.keys(errors).length) return
@@ -130,7 +134,14 @@ async function handleRegister() {
             :error="fieldErrors.password"
             autocomplete="new-password"
         />
-        <p class="text-xs text-muted -mt-2">At least 8 characters</p>
+        <ul class="text-xs space-y-1 -mt-2 text-muted" aria-label="Password requirements">
+          <li :class="passwordCheck.checks.minLength ? 'text-success font-medium' : ''">
+            {{ passwordCheck.checks.minLength ? '✓' : '•' }} At least 8 characters
+          </li>
+          <li :class="passwordCheck.checks.hasLetter && passwordCheck.checks.hasNumber ? 'text-success font-medium' : ''">
+            {{ passwordCheck.checks.hasLetter && passwordCheck.checks.hasNumber ? '✓' : '•' }} Includes a letter and a number
+          </li>
+        </ul>
         <BaseInput
           v-model="form.confirm_password"
           label="Confirm Password"

@@ -14,6 +14,7 @@ import { Heart, Minus, Plus, Star, Truck, ShieldCheck, Send, ChevronRight } from
 import type { Product } from '@/types'
 import { signatureImage } from '@/utils/productImage'
 import { formatProductDescription } from '@/utils/productDescription'
+import { isValidReviewComment } from '@/utils/formValidation'
 
 const route = useRoute()
 const productStore = useProductStore()
@@ -120,8 +121,19 @@ function loadRecentlyViewed() {
 }
 
 async function submitReview() {
-  if (!reviewComment.value.trim()) {
-    reviewError.value = 'Write a few words about your experience'
+  const trimmed = reviewComment.value.trim()
+  if (reviewRating.value < 1 || reviewRating.value > 5) {
+    reviewError.value = 'Select a rating between 1 and 5 stars.'
+    return
+  }
+  if (!trimmed) {
+    reviewError.value = 'Write a few words about your experience.'
+    return
+  }
+  if (!isValidReviewComment(trimmed)) {
+    reviewError.value = trimmed.length < 5
+      ? 'Please write at least 5 characters so your review is helpful to other shoppers.'
+      : 'Keep your review under 1,000 characters.'
     return
   }
   reviewSubmitting.value = true
@@ -131,7 +143,7 @@ async function submitReview() {
     await productStore.createReview({
       product_slug: route.params.slug as string,
       rating: reviewRating.value,
-      comment: reviewComment.value.trim(),
+      comment: trimmed,
     })
     reviewSuccess.value = true
     reviewComment.value = ''
@@ -369,17 +381,25 @@ watch(product, (p) => {
               />
             </button>
           </div>
-          <label for="review-comment" class="block text-sm font-medium text-dark mb-2">Your review</label>
+          <div class="flex items-center justify-between mb-2">
+            <label for="review-comment" class="block text-sm font-medium text-dark">Your review</label>
+            <span class="text-xs text-muted tabular-nums">{{ reviewComment.trim().length }} / 1000</span>
+          </div>
           <textarea id="review-comment"
             v-model="reviewComment"
-            class="w-full px-4 py-3 bg-white border border-primary/40 rounded-[14px] text-sm text-dark placeholder:text-muted/60 focus:outline-none focus:border-gold transition-colors"
+            maxlength="1000"
+            :aria-invalid="!!reviewError"
+            :aria-describedby="reviewError ? 'review-error' : undefined"
+            class="w-full px-4 py-3 bg-white border rounded-[14px] text-sm text-dark placeholder:text-muted/60 focus:outline-none focus:border-gold transition-colors"
+            :class="reviewError ? 'border-red-600' : 'border-primary/40'"
             rows="3"
             placeholder="Share your experience with this product..."
+            @input="reviewError = ''"
           />
-          <div class="flex items-center justify-between mt-3">
-            <p v-if="reviewError" class="text-xs text-red-500">{{ reviewError }}</p>
-            <p v-if="reviewSuccess" class="text-xs text-success">Thanks! Your review has been submitted.</p>
-            <div />
+          <div class="flex items-center justify-between gap-3 mt-3">
+            <p v-if="reviewError" id="review-error" role="alert" class="text-sm text-red-700">{{ reviewError }}</p>
+            <p v-else-if="reviewSuccess" role="status" class="text-sm text-success">Thanks! Your review has been submitted.</p>
+            <div v-else />
             <BaseButton size="sm" :loading="reviewSubmitting" @click="submitReview">
               <Send class="w-3.5 h-3.5 mr-1.5" /> Submit
             </BaseButton>

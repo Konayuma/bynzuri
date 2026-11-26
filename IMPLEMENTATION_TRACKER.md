@@ -7,6 +7,7 @@ This is a source-code baseline, not a release certification. **In progress** mea
 
 ## Recent implementation
 
+- **In progress — Django admin user deletion:** Staff with user-deletion permission can delete a user together with the associated verification record, while direct deletion of verification records remains disabled. Tests cover permission checks and preservation of linked order history; deployment remains outstanding.
 - **In progress — search sitemap:** A dynamic sitemap lists public storefront pages and active products via the API and Cloudflare route, with `robots.txt` discovery. Focused API and proxy tests and the frontend build pass; live deployment, preferred hostname and Search Console submission remain to be checked.
 - **In progress — account rendering and session recovery:** Account lists tolerate missing records, locally stored wishlist entries are validated, public delivery data no longer uses a session token, and late unauthorized responses reuse an already refreshed token. Frontend regression tests pass; confirm the deployed account page and investigate any remaining live 401 responses.
 - **In progress — international account phone numbers:** Registration offers a country calling-code selector and saves international-format account numbers. Zambia-specific delivery and mobile-money number requirements remain in checkout. Focused tests and the production build pass; live and device verification remain outstanding.

@@ -1,25 +1,37 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import { authService } from '@/services/auth.service'
+import { isEmail } from '@/utils/formValidation'
 import BaseButton from '@/components/base/BaseButton.vue'
 import BaseInput from '@/components/base/BaseInput.vue'
 
 const email = ref('')
 const loading = ref(false)
 const error = ref('')
+const emailError = ref('')
 const sent = ref(false)
 
+watch(email, () => { emailError.value = ''; error.value = '' })
+
 async function handleForgotPassword() {
-  if (!email.value) {
+  const trimmed = email.value.trim().toLowerCase()
+  if (!trimmed) {
+    emailError.value = 'Enter your email address.'
     error.value = 'Enter your email address'
+    return
+  }
+  if (!isEmail(trimmed)) {
+    emailError.value = 'Enter a valid email address.'
+    error.value = 'Enter a valid email address.'
     return
   }
 
   loading.value = true
   error.value = ''
+  emailError.value = ''
 
   try {
-    await authService.forgotPassword(email.value, `${window.location.origin}/auth/reset-password`)
+    await authService.forgotPassword(trimmed, `${window.location.origin}/auth/reset-password`)
     sent.value = true
   } catch {
     error.value = 'Something went wrong. Please try again.'
@@ -42,16 +54,18 @@ async function handleForgotPassword() {
         </p>
       </div>
 
-      <form v-if="!sent" @submit.prevent="handleForgotPassword" class="space-y-4">
+      <form v-if="!sent" novalidate @submit.prevent="handleForgotPassword" class="space-y-4">
         <BaseInput
           v-model="email"
           label="Email"
           type="email"
           required
           id="forgot-email"
+          autocomplete="email"
+          :error="emailError"
         />
 
-        <p v-if="error" class="text-xs text-red-500">{{ error }}</p>
+        <p v-if="error" role="alert" class="text-sm text-red-700">{{ error }}</p>
 
         <BaseButton type="submit" variant="secondary" fullWidth :loading="loading">
           Send Reset Link
