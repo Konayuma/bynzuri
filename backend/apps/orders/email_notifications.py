@@ -64,6 +64,13 @@ def queue_status_update(order, status):
 def email_content(record):
     p = record.payload
     ref = p['order_id']
+    payment_method = {
+        'airtel_money': 'Airtel Money',
+        'mtn_momo': 'MTN Mobile Money',
+        'zamtel_money': 'Zamtel Money',
+        'visa': 'Visa',
+        'mastercard': 'Mastercard',
+    }.get(p['payment_method'], p['payment_method'].replace('_', ' ').strip().capitalize())
     subjects = {
         'order_received': 'We received your order — payment pending',
         'owner_order': 'New order received — payment pending',
@@ -74,33 +81,39 @@ def email_content(record):
         'order_cancelled': 'Your order has been cancelled',
     }
     subject = f"By Nzuri: {subjects[record.event]} ({ref[:8]})"
-    lines = [subjects[record.event], f'Order: {ref}', '']
+    descriptions = {
+        'order_received': 'Thank you for your order. Payment was not confirmed when you placed it. If prompted, approve the payment on your phone. We will email you a receipt once payment is confirmed.',
+        'owner_order': 'A new order was placed. Payment was not confirmed when the order was created. Check the admin dashboard for its latest status.',
+        'payment_receipt': 'Thank you for your order. We have confirmed your payment. We will send another email when your order is dispatched.',
+        'owner_paid': 'Payment for this order has been confirmed. Check the admin dashboard to manage the order.',
+        'order_dispatched': 'Your order has been dispatched. Reply to this email if you have questions about delivery.',
+        'order_delivered': 'Your order has been marked as delivered. If you have not received it, please reply to this email.',
+        'order_cancelled': 'Your order has been cancelled. If you have questions, please reply to this email.',
+    }
+    is_owner = record.event.startswith('owner_')
+    payment_label = 'Confirmed' if p['paid'] else 'Not confirmed at time of this update'
+    contact_message = ('Manage this order in your admin dashboard.' if is_owner
+                       else 'Questions about your order? Reply to this email.')
+    lines = [subjects[record.event], '']
+    if p['name'] and not is_owner:
+        lines += [f"Hello {p['name']},", '']
+    lines += [descriptions[record.event], '', f'Order number: {ref}', f'Payment: {payment_label}', '']
     if record.event.startswith('owner_'):
         lines += [f"Customer: {p['name']} ({p['customer_email']})", f"Phone: {p['phone']}",
                   f"Address: {p['address']}, {p['town']}, {p['province']}",
                   f"Delivery: {p['delivery_method']}", f"Order notes: {p['notes'] or 'None'}", '']
     lines += [f"{item['quantity']} × {item['title']} — ZMW {item['unit_price']} each" for item in p['items']]
-    lines += ['', f"Subtotal: ZMW {p['subtotal']}", f"Delivery: ZMW {p['delivery_fee']}",
-              f"Total: ZMW {p['total']}", f"Payment method: {p['payment_method']}",
-              f"Payment: {'Confirmed' if p['paid'] else 'Not confirmed'}"]
+    lines += ['', f"Subtotal: ZMW {p['subtotal']}", f"Delivery fee: ZMW {p['delivery_fee']}",
+              f"Order total: ZMW {p['total']}", f"Payment method: {payment_method}"]
     if p['payment_reference']:
         lines.append(f"Payment reference: {p['payment_reference']}")
-    lines += ['', 'Questions? Reply to this email.', 'HairSkin by Nzuri']
+    lines += ['', contact_message, 'HairSkin by Nzuri']
     text = '\n'.join(lines)
     items = [{**item, 'line_total': f"{Decimal(item['unit_price']) * item['quantity']:.2f}"} for item in p['items']]
-    descriptions = {
-        'order_received': 'Thank you for your order. We will confirm your payment before preparing it.',
-        'owner_order': 'A new order has been placed. Payment is not yet confirmed.',
-        'payment_receipt': 'Thank you for shopping with us. Your payment has been confirmed.',
-        'owner_paid': 'Payment has been confirmed for this order.',
-        'order_dispatched': 'Your order is on its way. Thank you for shopping with us.',
-        'order_delivered': 'Your order has been marked as delivered. Thank you for choosing us.',
-        'order_cancelled': 'Your order has been cancelled. Please contact us if you have any questions.',
-    }
     html = render_to_string('orders/order_email.html', {
         'heading': subjects[record.event], 'description': descriptions[record.event],
-        'payload': p, 'items': items, 'is_owner': record.event.startswith('owner_'),
-        'payment_label': 'Confirmed' if p['paid'] else 'Not confirmed',
+        'payload': p, 'items': items, 'is_owner': is_owner, 'contact_message': contact_message,
+        'payment_label': payment_label, 'payment_method': payment_method,
     })
     return subject, text, html
 

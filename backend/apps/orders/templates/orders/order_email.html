@@ -5,14 +5,16 @@
   <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:#f7f2f1;"><tr><td align="center" style="padding:24px 12px;">
     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;max-width:600px;background-color:#ffffff;border:1px solid #eee4e3;">
       <tr><td style="padding:28px 24px;background-color:#e9d6d8;text-align:center;">
+        <img src="https://bynzuri.com/email-logo.png" width="180" alt="HairSkin by Nzuri" style="display:block;width:180px;max-width:100%;height:auto;margin:0 auto 10px;border:0;">
         <div style="font-family:Georgia,serif;font-size:24px;letter-spacing:1px;color:#292322;">HairSkin by Nzuri</div>
         <div style="padding-top:7px;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:#6d5558;">Hair &amp; skin care</div>
       </td></tr>
       <tr><td style="padding:30px 24px 8px;">
         <div style="font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:#8b6268;">Order update</div>
         <h1 style="margin:10px 0 12px;font-family:Georgia,serif;font-size:26px;line-height:1.25;font-weight:normal;color:#292322;">{{ heading }}</h1>
-        <p style="margin:0 0 20px;font-size:15px;line-height:1.6;color:#625856;">{% if payload.name and not is_owner %}Hello {{ payload.name }}, {% endif %}{{ description }}</p>
-        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:#faf5f4;"><tr><td style="padding:15px;font-size:13px;line-height:1.7;overflow-wrap:anywhere;"><strong>Order:</strong> {{ payload.order_id }}<br><strong>Payment:</strong> {{ payment_label }}{% if payload.payment_reference %}<br><strong>Payment reference:</strong> {{ payload.payment_reference }}{% endif %}</td></tr></table>
+        {% if payload.name and not is_owner %}<p style="margin:0 0 10px;font-size:15px;line-height:1.6;color:#625856;">Hello {{ payload.name }},</p>{% endif %}
+        <p style="margin:0 0 20px;font-size:15px;line-height:1.6;color:#625856;">{{ description }}</p>
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:#faf5f4;"><tr><td style="padding:15px;font-size:13px;line-height:1.7;overflow-wrap:anywhere;"><strong>Order number:</strong> {{ payload.order_id }}<br><strong>Payment:</strong> {{ payment_label }}{% if payload.payment_reference %}<br><strong>Payment reference:</strong> {{ payload.payment_reference }}{% endif %}</td></tr></table>
       </td></tr>
       <tr><td style="padding:20px 24px 0;">
         <h2 style="margin:0 0 12px;font-family:Georgia,serif;font-size:19px;font-weight:normal;">Order summary</h2>
@@ -20,11 +22,11 @@
           <thead><tr style="color:#766a68;text-align:left;"><th scope="col" style="padding:10px 4px;border-bottom:1px solid #e9e1df;font-size:11px;text-transform:uppercase;">Item</th><th scope="col" style="padding:10px 4px;border-bottom:1px solid #e9e1df;text-align:center;font-size:11px;text-transform:uppercase;">Qty</th><th scope="col" style="padding:10px 4px;border-bottom:1px solid #e9e1df;text-align:right;font-size:11px;text-transform:uppercase;">Amount</th></tr></thead>
           <tbody>{% for item in items %}<tr><td style="padding:12px 4px;border-bottom:1px solid #f1ebea;overflow-wrap:anywhere;">{{ item.title }}<br><span style="font-size:12px;color:#766a68;">ZMW {{ item.unit_price }} each</span></td><td style="padding:12px 4px;border-bottom:1px solid #f1ebea;text-align:center;">{{ item.quantity }}</td><td style="padding:12px 4px;border-bottom:1px solid #f1ebea;text-align:right;white-space:nowrap;">ZMW {{ item.line_total }}</td></tr>{% endfor %}</tbody>
         </table>
-        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="font-size:14px;"><tr><td style="padding:14px 4px 5px;color:#766a68;">Subtotal</td><td align="right" style="padding:14px 4px 5px;">ZMW {{ payload.subtotal }}</td></tr><tr><td style="padding:5px 4px 14px;color:#766a68;">Delivery</td><td align="right" style="padding:5px 4px 14px;">ZMW {{ payload.delivery_fee }}</td></tr><tr><td style="padding:15px 4px;border-top:1px solid #e9e1df;font-weight:bold;">Total</td><td align="right" style="padding:15px 4px;border-top:1px solid #e9e1df;font-weight:bold;">ZMW {{ payload.total }}</td></tr></table>
-        <p style="margin:4px 0 20px;font-size:13px;line-height:1.6;color:#625856;"><strong>Payment method:</strong> {{ payload.payment_method }}</p>
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="font-size:14px;"><tr><td style="padding:14px 4px 5px;color:#766a68;">Subtotal</td><td align="right" style="padding:14px 4px 5px;">ZMW {{ payload.subtotal }}</td></tr><tr><td style="padding:5px 4px 14px;color:#766a68;">Delivery fee</td><td align="right" style="padding:5px 4px 14px;">ZMW {{ payload.delivery_fee }}</td></tr><tr><td style="padding:15px 4px;border-top:1px solid #e9e1df;font-weight:bold;">Order total</td><td align="right" style="padding:15px 4px;border-top:1px solid #e9e1df;font-weight:bold;">ZMW {{ payload.total }}</td></tr></table>
+        <p style="margin:4px 0 20px;font-size:13px;line-height:1.6;color:#625856;"><strong>Payment method:</strong> {{ payment_method }}</p>
         {% if is_owner %}<div style="padding:16px;background-color:#faf5f4;font-size:13px;line-height:1.7;overflow-wrap:anywhere;"><strong>Customer details</strong><br>{{ payload.name }} ({{ payload.customer_email }})<br>{{ payload.phone }}<br>{{ payload.address }}, {{ payload.town }}, {{ payload.province }}<br><strong>Delivery:</strong> {{ payload.delivery_method }}<br><strong>Notes:</strong> {{ payload.notes|default:'None' }}</div>{% endif %}
       </td></tr>
-      <tr><td style="padding:24px;text-align:center;font-size:13px;line-height:1.6;color:#625856;">Questions about your order? Reply to this email.<br><span style="font-family:Georgia,serif;color:#8b6268;">Thank you for choosing By Nzuri.</span></td></tr>
+      <tr><td style="padding:24px;text-align:center;font-size:13px;line-height:1.6;color:#625856;">{{ contact_message }}<br><span style="font-family:Georgia,serif;color:#8b6268;">Thank you for choosing By Nzuri.</span></td></tr>
     </table>
   </td></tr></table>
 </body>

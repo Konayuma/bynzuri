@@ -49,6 +49,8 @@ def test_early_confirmation_is_explicitly_unpaid_and_details_are_escaped(user, o
     subject, text, html = email_content(customer)
     assert 'payment pending' in subject
     assert 'Not confirmed' in text and 'ZMW 235.00' in text
+    assert 'approve the payment on your phone' in text and 'approve the payment on your phone' in html
+    assert 'Not confirmed at time of this update' in text and 'Not confirmed at time of this update' in html
     assert '&lt;Oil &amp; cream&gt;' in html and '<Oil & cream>' not in html
     assert 'Order summary' in html and 'ZMW 200.00' in html
     assert 'Not confirmed' in html and 'Payment received' not in html
@@ -58,6 +60,7 @@ def test_early_confirmation_is_explicitly_unpaid_and_details_are_escaped(user, o
     assert order.street_address in owner_text
     assert 'Please call before delivery' in owner_text
     assert order.street_address in owner_html
+    assert 'admin dashboard' in owner_text and 'admin dashboard' in owner_html
 
 
 def test_confirmed_receipt_has_reference_and_paid_status(user, order):
@@ -69,6 +72,20 @@ def test_confirmed_receipt_has_reference_and_paid_status(user, order):
     assert 'Payment: Confirmed' in text
     assert 'Confirmed' in html and 'receipt-reference' in html
     assert 'payment pending' not in html.lower()
+
+
+@pytest.mark.parametrize('method,label', [
+    ('airtel_money', 'Airtel Money'), ('mtn_momo', 'MTN Mobile Money'),
+    ('zamtel_money', 'Zamtel Money'), ('visa', 'Visa'), ('mastercard', 'Mastercard'),
+])
+def test_emails_show_customer_friendly_payment_method(user, order, method, label):
+    order.payment_method = method
+    order.save(update_fields=['payment_method'])
+    queue_order_created(order)
+    _, text, html = email_content(OrderEmail.objects.get(event='order_received'))
+    assert f'Payment method: {label}' in text
+    assert f'Payment method:</strong> {label}' in html
+    assert 'https://bynzuri.com/email-logo.png' in html
 
 
 @pytest.mark.parametrize('event,heading,paid', [
