@@ -127,7 +127,7 @@ export interface Review {
 
 export interface Address {
   id: string
-  user: string
+  user?: string
   province: string
   province_name: string
   town: string

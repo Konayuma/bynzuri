@@ -32,6 +32,16 @@ describe('registration flow', () => {
     await flushPromises()
     expect(login).not.toHaveBeenCalled()
     expect(router.currentRoute.value.path).toBe('/auth/verify-email')
-    expect(router.currentRoute.value.query).toEqual({ email: 'ada@example.com', redirect: '/checkout' })
+    expect(router.currentRoute.value.query).toEqual({ redirect: '/checkout' })
+    expect(sessionStorage.getItem('bynzuri_verification_email')).toBe('ada@example.com')
+  })
+
+  it('offers verification recovery from account creation', async () => {
+    const { wrapper, router } = await setup()
+    await wrapper.findAll('a').find(link => link.text() === 'Continue verification')!.trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.path).toBe('/auth/verify-email')
+    expect(router.currentRoute.value.query.redirect).toBe('/checkout')
+    expect(sessionStorage.getItem('bynzuri_verification_email')).toBe('ada@example.com')
   })
 })

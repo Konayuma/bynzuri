@@ -4,6 +4,8 @@ import { createPinia, setActivePinia } from 'pinia'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import CheckoutPage from '@/pages/checkout/CheckoutPage.vue'
 import { useCartStore } from '@/stores/cart'
+import { useUserStore } from '@/stores/user'
+import { addressService } from '@/services/address.service'
 
 vi.mock('@/services/order.service', () => ({ orderService: {
   getProvinces: vi.fn().mockResolvedValue([{ id: 'p1', name: 'Lusaka' }]),
@@ -77,6 +79,40 @@ describe('checkout validation', () => {
     expect(wrapper.text()).toContain('K110.00')
     expect(wrapper.text()).not.toContain('Your cart is empty')
     wrapper.unmount()
+  })
+
+  it('saves an address for the signed-in customer and reuses the default on a later checkout', async () => {
+    const user = useUserStore()
+    user.user = { id: 'user-1', email: 'ada@example.com', first_name: 'Ada', last_name: 'Banda', phone: '0971234567', role: 'customer', is_staff: false }
+    vi.spyOn(useCartStore(), 'fetchCart').mockResolvedValue()
+    const address = { id: 'a1', province: 'p1', province_name: 'Lusaka', town: 't1', town_name: 'Lusaka', street_address: '123 Main Street', phone: '0971234567', is_default: true }
+    const list = vi.spyOn(addressService, 'getAddresses').mockResolvedValue([])
+    const create = vi.spyOn(addressService, 'createAddress').mockRejectedValueOnce(new Error('offline')).mockResolvedValue(address)
+    const router = createRouter({ history: createMemoryHistory(), routes: [{ path: '/', component: CheckoutPage }] })
+    const wrapper = mount(CheckoutPage, { attachTo: document.body, global: { plugins: [router] } })
+    await flushPromises()
+    const continueButton = () => wrapper.findAll('button').find(button => button.text().includes('Continue'))!
+    await continueButton().trigger('click')
+    await selectDropdownOption(wrapper, '#province', 'Lusaka')
+    await selectDropdownOption(wrapper, '#town', 'Lusaka')
+    await wrapper.get('#street_address').setValue('123 Main Street')
+    await wrapper.findAll('button').find(button => button.text() === 'Save address')!.trigger('click')
+    await flushPromises()
+    expect(wrapper.text()).toContain('could not confirm whether the address was saved')
+    expect((wrapper.get('#street_address').element as HTMLInputElement).value).toBe('123 Main Street')
+    await wrapper.findAll('button').find(button => button.text() === 'Save address')!.trigger('click')
+    await flushPromises()
+    expect(create).toHaveBeenCalledWith({ province: 'p1', town: 't1', street_address: '123 Main Street', phone: '0971234567', is_default: true })
+    expect(wrapper.text()).toContain('Delivery address saved')
+    wrapper.unmount()
+    list.mockResolvedValue([address])
+    const next = mount(CheckoutPage, { attachTo: document.body, global: { plugins: [router] } })
+    await flushPromises()
+    await next.findAll('button').find(button => button.text().includes('Continue'))!.trigger('click')
+    await flushPromises()
+    expect((next.get('#street_address').element as HTMLInputElement).value).toBe('123 Main Street')
+    expect(next.text()).toContain('Lusaka')
+    next.unmount(); list.mockRestore(); create.mockRestore()
   })
 
 })

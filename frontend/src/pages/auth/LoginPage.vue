@@ -91,7 +91,6 @@ async function handleLogin() {
         </BaseButton>
       </form>
 
-      <p class="mt-4 text-center text-sm text-muted">Still need to verify your email? <router-link :to="{ path: '/auth/verify-email', query: { ...(email ? { email } : {}), ...(route.query.redirect ? { redirect: route.query.redirect } : {}) } }" class="font-medium text-dark underline">Enter your code</router-link></p>
 
       <p class="text-sm text-center text-muted mt-6">
         Don&apos;t have an account?

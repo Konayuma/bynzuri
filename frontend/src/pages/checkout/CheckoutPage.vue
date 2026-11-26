@@ -46,12 +46,15 @@ try {
     checkoutKey = saved.key
     createdOrderId.value = saved.orderId || null
   }
-} catch { sessionStorage.removeItem(pendingKey) }
+} catch { /* Storage may be blocked; checkout will explain before placing an order. */ }
 
 function saveCheckoutAttempt(orderId: string | null = null) {
-  sessionStorage.setItem(pendingKey, JSON.stringify({ key: checkoutKey, orderId, userId: userStore.user?.id }))
+  try {
+    sessionStorage.setItem(pendingKey, JSON.stringify({ key: checkoutKey, orderId, userId: userStore.user?.id }))
+    return true
+  } catch { return false }
 }
-function clearCheckoutAttempt() { sessionStorage.removeItem(pendingKey); checkoutKey = '' }
+function clearCheckoutAttempt() { try { sessionStorage.removeItem(pendingKey) } catch { /* Storage is unavailable. */ } checkoutKey = '' }
 function viewOrder() {
   paymentRun++
   if (createdOrderId.value) {
@@ -68,6 +71,13 @@ const deliveryLoading = ref(false)
 const deliveryError = ref('')
 const savedAddresses = ref<Address[]>([])
 const selectedAddressId = ref<string | null>(null)
+const addressLoading = ref(false)
+const addressSaving = ref(false)
+const addressError = ref('')
+const addressNotice = ref('')
+const townsLoading = ref(false)
+const townsError = ref('')
+let townRequest = 0
 
 const form = ref({
   first_name: '',
@@ -164,6 +174,7 @@ function validateStep(step: number): boolean {
 }
 
 function nextStep() {
+  if (currentStep.value === 2 && townsLoading.value) { townsError.value = 'Please wait for towns to load.'; return }
   if (currentStep.value < totalSteps && validateStep(currentStep.value)) {
     error.value = ''
     currentStep.value++
@@ -181,29 +192,54 @@ function prevStep() {
 }
 
 async function handleProvinceChange(provinceId: string) {
+  const request = ++townRequest
   form.value.province = provinceId
   form.value.town = ''
+  selectedAddressId.value = null
+  towns.value = []
+  townsError.value = ''
+  townsLoading.value = Boolean(provinceId)
   if (provinceId) {
-    towns.value = await orderService.getTowns(provinceId)
-  } else {
-    towns.value = []
+    try {
+      const result = await orderService.getTowns(provinceId)
+      if (request === townRequest) towns.value = result
+    } catch {
+      if (request === townRequest) townsError.value = 'Could not load towns. Try again.'
+    } finally {
+      if (request === townRequest) townsLoading.value = false
+    }
   }
 }
 
-async function selectSavedAddress(address: Address) {
+async function selectSavedAddress(address: Address, applyPhone = true) {
+  const request = ++townRequest
   selectedAddressId.value = address.id
   form.value.province = address.province
-  form.value.town = address.town
+  form.value.town = ''
   form.value.street_address = address.street_address
-  if (!form.value.phone || form.value.phone === '260') {
+  if (applyPhone && address.phone) {
     form.value.phone = address.phone
   }
-  if (address.province) {
-    towns.value = await orderService.getTowns(address.province)
+  towns.value = []
+  townsError.value = ''
+  townsLoading.value = true
+  try {
+    const result = await orderService.getTowns(address.province)
+    if (request !== townRequest) return
+    towns.value = result
+    if (result.some(town => town.id === address.town)) form.value.town = address.town
+    else townsError.value = 'This saved town is no longer available. Please choose another town.'
+  } catch {
+    if (request === townRequest) townsError.value = 'Could not load towns for this address. Try again.'
+  } finally {
+    if (request === townRequest) townsLoading.value = false
   }
 }
 
 function useCustomAddress() {
+  townRequest++
+  townsLoading.value = false
+  townsError.value = ''
   selectedAddressId.value = null
   form.value.province = ''
   form.value.town = ''
@@ -211,7 +247,37 @@ function useCustomAddress() {
   towns.value = []
 }
 
+async function loadSavedAddresses() {
+  addressLoading.value = true
+  addressError.value = ''
+  try { savedAddresses.value = await addressService.getAddresses() }
+  catch { addressError.value = 'Could not load saved addresses. You can enter an address or try again.' }
+  finally { addressLoading.value = false }
+}
+
+async function saveAddress() {
+  if (addressSaving.value || townsLoading.value) return
+  addressNotice.value = ''
+  addressError.value = ''
+  if (!validateStep(2)) return
+  if (!isZambianPhone(form.value.phone)) { addressError.value = 'Enter a valid delivery phone number in Your Details first.'; return }
+  const details = { province: form.value.province, town: form.value.town, street_address: form.value.street_address.trim(), phone: form.value.phone.trim() }
+  const matches = (address: Address) => address.province === details.province && address.town === details.town && address.street_address.trim() === details.street_address && address.phone === details.phone
+  addressSaving.value = true
+  try {
+    // Refresh first so a retry after a lost response does not create a duplicate.
+    const existing = await addressService.getAddresses()
+    const address = existing.find(matches) || await addressService.createAddress({ ...details, is_default: existing.length === 0 })
+    savedAddresses.value = existing.some(item => item.id === address.id) ? existing : [...existing, address]
+    selectedAddressId.value = address.id
+    addressNotice.value = 'Delivery address saved to your account for next time.'
+  } catch {
+    addressError.value = 'We could not confirm whether the address was saved. Try again; your checkout details are still here.'
+  } finally { addressSaving.value = false }
+}
+
 async function handleSubmit() {
+  if (loading.value) return
   if (createdOrderId.value) { viewOrder(); return }
   if (checkoutCartLoading.value || cartStore.loading) { error.value = 'Your cart is still loading. Please wait.'; return }
   if (cartStore.error) { error.value = 'Your cart could not be loaded. Please retry before placing your order.'; return }
@@ -231,7 +297,14 @@ async function handleSubmit() {
   error.value = ''
 
   try {
-    if (!checkoutKey) { checkoutKey = crypto.randomUUID(); saveCheckoutAttempt() }
+    if (!checkoutKey) {
+      checkoutKey = crypto.randomUUID()
+      if (!saveCheckoutAttempt()) {
+        checkoutKey = ''
+        error.value = 'Your browser is blocking session storage. Enable it before placing an order so we can safely recover your checkout.'
+        return
+      }
+    }
     const order = createdOrderId.value ? { id: createdOrderId.value } : await orderService.createOrder({
       checkout_key: checkoutKey,
       province: form.value.province,
@@ -326,6 +399,12 @@ async function loadDeliveryMethods() {
 }
 
 onMounted(async () => {
+  if (userStore.user) {
+    form.value.first_name = userStore.user.first_name || ''
+    form.value.last_name = userStore.user.last_name || ''
+    form.value.email = userStore.user.email || ''
+    form.value.phone = userStore.user.phone || '260'
+  }
   await Promise.all([
     (async () => {
       try {
@@ -339,16 +418,10 @@ onMounted(async () => {
   ])
 
   if (userStore.isAuthenticated) {
-    try {
-      savedAddresses.value = await addressService.getAddresses()
-    } catch {
-      savedAddresses.value = []
-    }
-    if (userStore.user) {
-      form.value.first_name = userStore.user.first_name || ''
-      form.value.last_name = userStore.user.last_name || ''
-      form.value.email = userStore.user.email || ''
-      form.value.phone = userStore.user.phone || '260'
+    await loadSavedAddresses()
+    const defaultAddress = savedAddresses.value.find(address => address.is_default)
+    if (defaultAddress && currentStep.value === 1 && !form.value.province && !form.value.street_address && !createdOrderId.value) {
+      await selectSavedAddress(defaultAddress, form.value.phone === (userStore.user?.phone || '260'))
     }
   }
 })
@@ -522,6 +595,9 @@ onMounted(async () => {
       <div v-if="currentStep === 2" class="space-y-4">
         <h2 class="font-heading text-xl font-semibold text-dark mb-4">Delivery Location</h2>
 
+        <p v-if="addressLoading" role="status" class="text-sm text-muted">Loading saved addresses…</p>
+        <div v-if="addressError" role="alert" class="rounded-xl bg-red-50 p-4 text-sm text-red-700"><p>{{ addressError }}</p><button v-if="!addressSaving" type="button" class="mt-2 min-h-11 font-medium underline" @click="loadSavedAddresses">Reload saved addresses</button></div>
+
         <div v-if="savedAddresses.length > 0" class="space-y-2 mb-4">
           <p class="text-sm font-medium text-dark">Deliver to a saved address</p>
           <div class="space-y-2">
@@ -530,13 +606,13 @@ onMounted(async () => {
               :key="address.id"
               type="button"
               class="w-full p-3 border rounded-[14px] text-left transition-all"
-              :class="selectedAddressId === address.id ? 'border-gold bg-gold/5' : 'border-primary/40 hover:border-primary'"
+              :class="selectedAddressId === address.id && form.province === address.province && form.town === address.town && form.street_address === address.street_address ? 'border-gold bg-gold/5' : 'border-primary/40 hover:border-primary'"
               @click="selectSavedAddress(address)"
             >
               <div class="flex items-start gap-2">
                 <MapPin class="w-4 h-4 text-muted mt-0.5 shrink-0" />
-                <div>
-                  <p class="text-sm text-dark">{{ address.street_address }}</p>
+                <div class="min-w-0">
+                  <p class="text-sm text-dark break-words">{{ address.street_address }}</p>
                   <p class="text-xs text-muted">{{ address.town_name || address.town }}, {{ address.province_name || address.province }}</p>
                   <p class="text-xs text-muted">Phone: {{ address.phone }}</p>
                 </div>
@@ -573,8 +649,10 @@ onMounted(async () => {
           required
           id="town"
           :error="fieldErrors.town"
-          :disabled="!form.province"
+          :disabled="!form.province || townsLoading"
         />
+        <p v-if="townsLoading" role="status" class="text-sm text-muted">Loading towns…</p>
+        <p v-if="townsError" role="alert" class="text-sm text-red-700">{{ townsError }} <button type="button" class="min-h-11 underline" @click="handleProvinceChange(form.province)">Try again</button></p>
         <BaseInput
           v-model="form.street_address"
           label="Street Address"
@@ -583,6 +661,12 @@ onMounted(async () => {
           :error="fieldErrors.street_address"
           placeholder="Street, building, landmark"
         />
+        <div v-if="userStore.isAuthenticated" class="rounded-xl border border-primary/40 bg-white p-4">
+          <p class="text-sm font-medium text-dark">Save this delivery address</p>
+          <p class="mt-1 text-sm text-muted">Keep this address and delivery phone in your account for a faster checkout. You can manage saved addresses in your account.</p>
+          <button type="button" class="mt-2 min-h-11 font-semibold text-sm text-dark underline underline-offset-4 disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-gold" :disabled="addressSaving || addressLoading || townsLoading" @click="saveAddress">{{ addressSaving ? 'Saving address…' : 'Save address' }}</button>
+          <p v-if="addressNotice" role="status" class="mt-1 text-sm text-green-800">{{ addressNotice }}</p>
+        </div>
       </div>
 
       <!-- Step 3: Delivery Method -->

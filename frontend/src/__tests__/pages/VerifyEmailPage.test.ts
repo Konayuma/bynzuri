@@ -3,6 +3,7 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { createRouter, createMemoryHistory } from 'vue-router'
 import VerifyEmailPage from '@/pages/auth/VerifyEmailPage.vue'
 import { authService } from '@/services/auth.service'
+import { rememberVerificationEmail } from '@/services/verification-context'
 
 describe('VerifyEmailPage', () => {
   async function setup() {
@@ -17,6 +18,9 @@ describe('VerifyEmailPage', () => {
 
   it('verifies the entered code and offers sign in', async () => {
     const { wrapper, router } = await setup()
+    await flushPromises()
+    expect(wrapper.find('#verification-email').exists()).toBe(false)
+    expect(router.currentRoute.value.query.email).toBeUndefined()
     const verify = vi.spyOn(authService, 'verifyEmail').mockResolvedValue()
     await wrapper.get('#verification-code').setValue('123456')
     await wrapper.get('form').trigger('submit')
@@ -29,14 +33,51 @@ describe('VerifyEmailPage', () => {
     verify.mockRestore()
   })
 
+  it('allows a returning customer to enter an email if the sign-up context is missing', async () => {
+    rememberVerificationEmail('')
+    const router = createRouter({ history: createMemoryHistory(), routes: [{ path: '/auth/verify-email', component: VerifyEmailPage }] })
+    await router.push('/auth/verify-email')
+    await router.isReady()
+    const wrapper = mount(VerifyEmailPage, { global: { plugins: [router] } })
+    expect(wrapper.find('#verification-email').exists()).toBe(true)
+    expect(wrapper.text()).toContain('Use the email address you signed up with')
+  })
+
   it('offers clear help for an invalid code', async () => {
     const { wrapper } = await setup()
     const verify = vi.spyOn(authService, 'verifyEmail').mockRejectedValue({ response: { status: 400 } })
     await wrapper.get('#verification-code').setValue('123456')
     await wrapper.get('form').trigger('submit')
     await flushPromises()
-    expect(wrapper.get('[role="alert"]').text()).toContain('incorrect or expired')
+    expect(wrapper.get('[role="alert"]').text()).toContain('incorrect or has expired')
     expect(wrapper.text()).toContain('Send a new code')
+    verify.mockRestore()
+  })
+
+  it('requests a new code for the saved account without showing its email', async () => {
+    const { wrapper } = await setup()
+    const resend = vi.spyOn(authService, 'resendVerificationEmail').mockResolvedValue()
+    const button = wrapper.findAll('button').find(item => item.text() === 'Send a new code')!
+    await button.trigger('click')
+    await flushPromises()
+    expect(resend).toHaveBeenCalledWith('ada@example.com')
+    expect(wrapper.text()).toContain('check your spam folder')
+    expect(wrapper.find('#verification-email').exists()).toBe(false)
+    resend.mockRestore()
+  })
+
+  it('offers sign-in recovery after a lost verification response without claiming success', async () => {
+    const { wrapper, router } = await setup()
+    const verify = vi.spyOn(authService, 'verifyEmail').mockRejectedValue(new Error('offline'))
+    await wrapper.get('#verification-code').setValue('123456')
+    await wrapper.get('form').trigger('submit')
+    await flushPromises()
+    expect(wrapper.get('[role="alert"]').text()).toContain('could not verify')
+    const signIn = wrapper.findAll('button').find(item => item.text() === 'Continue to sign in')!
+    await signIn.trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.path).toBe('/auth/login')
+    expect(router.currentRoute.value.query.verified).toBeUndefined()
     verify.mockRestore()
   })
 })

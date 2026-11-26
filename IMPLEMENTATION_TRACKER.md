@@ -7,6 +7,7 @@ This is a source-code baseline, not a release certification. **In progress** mea
 
 ## Recent implementation
 
+- **In progress — checkout address reuse and verification recovery:** Signed-in customers can save a delivery address and phone at checkout, with a default address reused on future visits. Account address access is scoped to its owner, and the server validates province and town. Verification and location-loading failures offer recovery. Automated tests cover local behavior; browser and live deployment verification remain outstanding.
 - **In progress — registration email verification:** New accounts require a six-digit email code before sign-in. Codes expire, limit guesses and use the existing scheduled Resend sender. Backend and frontend tests cover local behavior; deployment and live delivery verification remain outstanding. Existing accounts are unchanged; password reset email delivery remains unfinished.
 - **In progress — branded order emails:** Order messages now have a responsive receipt-style HTML layout alongside plain text; payment status remains explicit. Focused email tests pass; verify delivery and rendering in real email clients after deployment.
 - **In progress — admin analytics:** Sales history, top products and paginated orders are implemented. Sales use current paid/fulfilment statuses and the order creation date, include delivery, and are not a payment-date or refund ledger. Local API tests and frontend build validate the implementation; live data and browser verification remain outstanding.

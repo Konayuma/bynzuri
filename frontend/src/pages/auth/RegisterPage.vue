@@ -6,6 +6,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import BaseButton from '@/components/base/BaseButton.vue'
 import BaseInput from '@/components/base/BaseInput.vue'
+import { rememberVerificationEmail } from '@/services/verification-context'
 
 const router = useRouter()
 const route = useRoute()
@@ -29,6 +30,7 @@ for (const key of Object.keys(form.value) as Array<keyof typeof form.value>) {
 }
 
 async function handleRegister() {
+  if (loading.value) return
   const data = form.value
   const errors: Record<string, string> = {}
   if (!data.first_name.trim()) errors.first_name = 'Enter your first name.'
@@ -60,8 +62,9 @@ async function handleRegister() {
   }
 
   const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : ''
+  rememberVerificationEmail(form.value.email)
   loading.value = false
-  await router.push({ path: '/auth/verify-email', query: { email: form.value.email.trim(), ...(redirect.startsWith('/') && !redirect.startsWith('//') ? { redirect } : {}) } })
+  await router.push({ path: '/auth/verify-email', query: { ...(redirect.startsWith('/') && !redirect.startsWith('//') ? { redirect } : {}) } })
 }
 </script>
 
@@ -138,6 +141,8 @@ async function handleRegister() {
           Create Account
         </BaseButton>
       </form>
+
+      <p class="mt-5 text-center text-sm text-muted">Already requested a code? <router-link :to="{ path: '/auth/verify-email', query: route.query.redirect ? { redirect: route.query.redirect } : {} }" class="font-medium text-dark underline" @click="form.email.trim() && rememberVerificationEmail(form.email)">Continue verification</router-link></p>
 
       <p class="text-sm text-center text-muted mt-6">
         Already have an account?
