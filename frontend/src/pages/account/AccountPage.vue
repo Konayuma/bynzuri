@@ -39,11 +39,13 @@ const profileForm = ref({
 const recentOrders = ref<Order[]>([])
 const loadingOrders = ref(true)
 const ordersError = ref(false)
+const ordersIncomplete = ref(false)
 
 // Addresses state
 const addresses = ref<Address[]>([])
 const loadingAddresses = ref(true)
 const addressesLoadError = ref(false)
+const addressesIncomplete = ref(false)
 const showModal = ref(false)
 const editingAddress = ref<Address | null>(null)
 const saving = ref(false)
@@ -76,13 +78,13 @@ const initials = computed(() => {
 
 const provinceOptions = computed(() =>
   Array.isArray(provinces.value)
-    ? provinces.value.map(p => ({ value: p.id, label: p.name }))
+    ? provinces.value.filter(p => p && typeof p.id === 'string' && typeof p.name === 'string').map(p => ({ value: p.id, label: p.name }))
     : []
 )
 
 const townOptions = computed(() =>
   Array.isArray(towns.value)
-    ? towns.value.map(t => ({ value: t.id, label: t.name }))
+    ? towns.value.filter(t => t && typeof t.id === 'string' && typeof t.name === 'string').map(t => ({ value: t.id, label: t.name }))
     : []
 )
 
@@ -170,9 +172,12 @@ function handleLogout() {
 async function loadOrders() {
   loadingOrders.value = true
   ordersError.value = false
+  ordersIncomplete.value = false
   try {
     const data = await orderService.getOrders()
-    recentOrders.value = Array.isArray(data) ? data : []
+    if (!Array.isArray(data)) throw new Error('Invalid order response')
+    recentOrders.value = data.filter(order => order && typeof order.id === 'string' && order.id.length > 0)
+    ordersIncomplete.value = recentOrders.value.length !== data.length
   } catch {
     recentOrders.value = []
     ordersError.value = true
@@ -184,9 +189,12 @@ async function loadOrders() {
 async function loadAddresses() {
   loadingAddresses.value = true
   addressesLoadError.value = false
+  addressesIncomplete.value = false
   try {
     const data = await addressService.getAddresses()
-    addresses.value = Array.isArray(data) ? data : []
+    if (!Array.isArray(data)) throw new Error('Invalid address response')
+    addresses.value = data.filter(address => address && typeof address.id === 'string' && address.id.length > 0)
+    addressesIncomplete.value = addresses.value.length !== data.length
   } catch {
     addresses.value = []
     addressesLoadError.value = true
@@ -198,7 +206,7 @@ async function loadAddresses() {
 async function loadProvinces() {
   try {
     const data = await orderService.getProvinces()
-    provinces.value = Array.isArray(data) ? data : []
+    provinces.value = Array.isArray(data) ? data.filter(p => p && typeof p.id === 'string' && typeof p.name === 'string') : []
   } catch {
     provinces.value = []
   }
@@ -210,7 +218,7 @@ async function handleProvinceChange(provinceId: string) {
   if (provinceId) {
     try {
       const data = await orderService.getTowns(provinceId)
-      towns.value = Array.isArray(data) ? data : []
+      towns.value = Array.isArray(data) ? data.filter(t => t && typeof t.id === 'string' && typeof t.name === 'string') : []
     } catch {
       towns.value = []
     }
@@ -492,6 +500,7 @@ onMounted(async () => {
             </router-link>
           </div>
 
+          <p v-if="ordersIncomplete" role="status" class="mb-3 text-sm text-red-700">Some orders could not be displayed. <button type="button" class="font-medium underline" @click="loadOrders">Try again</button> or contact us.</p>
           <div v-if="loadingOrders" class="space-y-3" role="status" aria-live="polite">
             <div v-for="i in 2" :key="i" class="rounded-xl border border-primary/20 p-4">
               <div class="h-4 w-28 bg-primary/30 rounded animate-pulse mb-2" />
@@ -505,8 +514,8 @@ onMounted(async () => {
           </div>
 
           <div v-else-if="recentOrders.length === 0" class="rounded-xl border border-dashed border-primary/50 p-6 text-center">
-            <p class="text-sm font-medium text-dark">No orders yet</p>
-            <p class="text-xs text-muted mt-1 mb-4">When you place an order, you can track its status and receipts here.</p>
+            <p class="text-sm font-medium text-dark">{{ ordersIncomplete ? 'Orders are unavailable' : 'No orders yet' }}</p>
+            <p v-if="!ordersIncomplete" class="text-xs text-muted mt-1 mb-4">When you place an order, you can track its status and receipts here.</p>
             <router-link to="/catalog" class="inline-flex min-h-10 items-center justify-center rounded-full bg-dark px-5 text-xs font-semibold uppercase tracking-wider text-background hover:bg-dark/90">
               Browse products
             </router-link>
@@ -525,13 +534,13 @@ onMounted(async () => {
                   class="text-[11px] font-medium px-2.5 py-0.5 rounded-full capitalize"
                   :class="statusColors[order.status] || 'text-muted bg-primary/20'"
                 >
-                  {{ statusLabels[order.status] || order.status.replace('_', ' ') }}
+                  {{ statusLabels[order.status] || (order.status ? order.status.replaceAll('_', ' ') : 'Status unavailable') }}
                 </span>
               </div>
               <div class="flex items-center justify-between text-sm">
                 <span class="text-muted">
                   {{ new Date(order.created_at).toLocaleDateString('en-ZM', { year: 'numeric', month: 'short', day: 'numeric' }) }}
-                  · {{ order.items.length }} item{{ order.items.length !== 1 ? 's' : '' }}
+                  <template v-if="Array.isArray(order.items)"> · {{ order.items.length }} item{{ order.items.length !== 1 ? 's' : '' }}</template>
                 </span>
                 <span class="font-semibold text-dark tabular-nums">K{{ order.grand_total }}</span>
               </div>
@@ -553,6 +562,7 @@ onMounted(async () => {
 
           <p v-if="addressError" role="alert" class="mb-4 text-sm text-red-700">{{ addressError }}</p>
 
+          <p v-if="addressesIncomplete" role="status" class="mb-3 text-sm text-red-700">Some saved addresses could not be displayed. <button type="button" class="font-medium underline" @click="loadAddresses">Try again</button>.</p>
           <div v-if="loadingAddresses" class="space-y-3" role="status" aria-live="polite">
             <div v-for="i in 2" :key="i" class="rounded-[14px] border border-primary/20 p-4">
               <div class="h-4 w-40 bg-primary/30 rounded animate-pulse mb-2" />
@@ -566,7 +576,7 @@ onMounted(async () => {
           </div>
 
           <div v-else-if="addresses.length === 0" class="rounded-xl border border-dashed border-primary/50 p-6 text-center text-muted text-sm">
-            No saved addresses yet. Add one to speed up your next checkout.
+            {{ addressesIncomplete ? 'Saved addresses are unavailable.' : 'No saved addresses yet. Add one to speed up your next checkout.' }}
           </div>
 
           <div v-else class="space-y-3">

@@ -115,4 +115,14 @@ describe('AccountPage', () => {
     expect(wrapper.text()).toContain('Could not load your recent orders.')
     expect(wrapper.text()).toContain('Could not load your saved addresses.')
   })
+
+  it('keeps the profile visible if an order or address entry is missing', async () => {
+    vi.mocked(addressService.getAddresses).mockResolvedValueOnce([null] as never)
+    vi.mocked(orderService.getOrders).mockResolvedValueOnce([null] as never)
+    vi.mocked(orderService.getProvinces).mockResolvedValueOnce([null] as never)
+    const { wrapper } = await mountAccount()
+    expect(wrapper.text()).toContain('Welcome, Monica')
+    expect(wrapper.text()).toContain('Some orders could not be displayed')
+    expect(wrapper.text()).toContain('Some saved addresses could not be displayed')
+  })
 })

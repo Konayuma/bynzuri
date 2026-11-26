@@ -20,18 +20,20 @@ export const useWishlistStore = defineStore('wishlist', () => {
   function ensureLoaded() {
     if (loaded) return
     loaded = true
-    const stored = localStorage.getItem(STORAGE_KEY)
-    if (stored) {
-      try {
-        items.value = JSON.parse(stored)
-      } catch {
-        items.value = []
-      }
-    }
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY)
+      if (!stored) return
+      const parsed: unknown = JSON.parse(stored)
+      items.value = Array.isArray(parsed) ? parsed.filter((item): item is WishlistItem =>
+        !!item && typeof item === 'object' && typeof item.id === 'string' &&
+        !!item.product && typeof item.product === 'object' && typeof item.product.id === 'string' &&
+        typeof item.product.title === 'string' && typeof item.product.slug === 'string'
+      ) : []
+    } catch { items.value = [] }
   }
 
   function save() {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(items.value))
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(items.value)) } catch { /* Keep the current session usable. */ }
   }
 
   function isWishlisted(productId: string): boolean {

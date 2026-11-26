@@ -54,9 +54,10 @@ describe('VerifyEmailPage', () => {
     verify.mockRestore()
   })
 
-  it('requests a new code for the saved account without showing its email', async () => {
+  it('requests a new code for the saved account without rendering an email input', async () => {
     const { wrapper } = await setup()
     const resend = vi.spyOn(authService, 'resendVerificationEmail').mockResolvedValue()
+    expect(wrapper.text()).toContain('ada@example.com')
     const button = wrapper.findAll('button').find(item => item.text() === 'Send a new code')!
     await button.trigger('click')
     await flushPromises()

@@ -65,6 +65,12 @@ api.interceptors.response.use(response => response, async error => {
     return Promise.reject(error)
   }
   original._retry = true
+  // A concurrent request may already have refreshed the token after this
+  // request was sent. Retry with it rather than rotating the cookie again.
+  if (accessToken && original.headers?.Authorization && original.headers.Authorization !== `Bearer ${accessToken}`) {
+    original.headers.Authorization = `Bearer ${accessToken}`
+    return api(original)
+  }
   const currentGeneration = generation
   try {
     const access = await refreshAccessToken()

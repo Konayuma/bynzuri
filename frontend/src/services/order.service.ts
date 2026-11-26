@@ -1,4 +1,4 @@
-import api from './api'
+import api, { publicApi } from './api'
 import type { Order, DeliveryMethod, Province, Town, AdminOrder, PaginatedResponse } from '@/types'
 
 export const orderService = {
@@ -27,17 +27,17 @@ export const orderService = {
   },
 
   async getProvinces(): Promise<Province[]> {
-    const response = await api.get('/delivery/provinces/')
+    const response = await publicApi.get('/delivery/provinces/')
     return response.data
   },
 
   async getTowns(provinceId: string): Promise<Town[]> {
-    const response = await api.get(`/delivery/towns/?province=${provinceId}`)
+    const response = await publicApi.get(`/delivery/towns/?province=${encodeURIComponent(provinceId)}`)
     return response.data
   },
 
   async getDeliveryMethods(): Promise<DeliveryMethod[]> {
-    const response = await api.get('/delivery/methods/')
+    const response = await publicApi.get('/delivery/methods/')
     return response.data
   },
 

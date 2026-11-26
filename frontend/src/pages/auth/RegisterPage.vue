@@ -67,18 +67,23 @@ async function handleRegister() {
   }
 
   const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : ''
-  rememberVerificationEmail(form.value.email)
+  const registeredEmail = form.value.email.trim()
+  rememberVerificationEmail(registeredEmail)
   loading.value = false
-  await router.push({ path: '/auth/verify-email', query: { ...(redirect.startsWith('/') && !redirect.startsWith('//') ? { redirect } : {}) } })
+  await router.push({
+    path: '/auth/verify-email',
+    state: { email: registeredEmail },
+    query: { ...(redirect.startsWith('/') && !redirect.startsWith('//') ? { redirect } : {}) }
+  })
 }
 </script>
 
 <template>
-  <div class="min-h-[80vh] flex items-center justify-center px-4">
-    <div class="w-full max-w-sm">
+  <div class="min-h-[80vh] flex items-center justify-center px-4 py-12">
+    <div class="w-full max-w-md mx-auto">
       <div class="text-center mb-8">
-        <h1 class="font-heading text-2xl font-semibold text-dark">Create Account</h1>
-        <p class="text-sm text-muted mt-1">Track your orders, save addresses, and shop faster next time</p>
+        <h1 class="font-heading text-2xl sm:text-3xl font-semibold text-dark">Create Account</h1>
+        <p class="text-sm text-muted mt-1.5">Track your orders, save addresses, and shop faster next time</p>
       </div>
 
       <form novalidate @submit.prevent="handleRegister" class="space-y-4">
@@ -136,8 +141,6 @@ async function handleRegister() {
           Create Account
         </BaseButton>
       </form>
-
-      <p class="mt-5 text-center text-sm text-muted">Already requested a code? <router-link :to="{ path: '/auth/verify-email', query: route.query.redirect ? { redirect: route.query.redirect } : {} }" class="font-medium text-dark underline" @click="form.email.trim() && rememberVerificationEmail(form.email)">Continue verification</router-link></p>
 
       <p class="text-sm text-center text-muted mt-6">
         Already have an account?

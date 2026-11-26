@@ -35,6 +35,23 @@ describe('expired access tokens', () => {
     expect(getAccessToken()).toBe('expired')
     expect(sessionState.notice).toBe('unavailable')
   })
+  it('retries a late 401 with a token already refreshed by another request', async () => {
+    const refresh = vi.spyOn(sessionApi, 'post').mockResolvedValue({ data: { access: 'new-access' } })
+    let rejectLate!: () => void
+    api.defaults.adapter = async config => {
+      if (config.headers.get('Authorization') === 'Bearer expired') {
+        if (config.url === '/late') return await new Promise((_, reject) => { rejectLate = () => reject(unauthorized(config)) })
+        throw unauthorized(config)
+      }
+      return { data: 'ok', status: 200, statusText: 'OK', headers: new AxiosHeaders(), config }
+    }
+    const late = api.get('/late')
+    await vi.waitFor(() => expect(rejectLate).toBeTypeOf('function'))
+    await api.get('/first')
+    rejectLate()
+    expect((await late).data).toBe('ok')
+    expect(refresh).toHaveBeenCalledTimes(1)
+  })
   it('clears a rejected refresh and announces expiry once', async () => {
     const listener = vi.fn(); window.addEventListener('bynzuri:session-expired', listener)
     vi.spyOn(sessionApi, 'post').mockRejectedValue(unauthorized({} as never))
