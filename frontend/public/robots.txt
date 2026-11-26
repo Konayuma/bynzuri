@@ -1,3 +1,3 @@
 User-agent: *
 Allow: /
-Sitemap: https://bynzuri.com/sitemap.xml
+Sitemap: https://www.bynzuri.com/sitemap.xml

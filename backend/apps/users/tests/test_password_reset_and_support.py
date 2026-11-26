@@ -20,7 +20,7 @@ User = get_user_model()
 
 @override_settings(
     RESEND_API_KEY='test-key',
-    PUBLIC_SITE_URL='https://bynzuri.com',
+    PUBLIC_SITE_URL='https://www.bynzuri.com',
     RESEND_FROM_EMAIL='HairSkin by Nzuri <hairskincare@bynzuri.com>',
     RESEND_REPLY_TO='hairskincare@bynzuri.com',
 )
@@ -58,7 +58,7 @@ def test_forgot_password_queues_and_sends_working_reset_link_via_resend():
     assert 'evil.example' not in payload['text']
     assert '/auth/reset-password/auth/reset-password' not in payload['text']
 
-    match = re.search(r'https://bynzuri\.com/auth/reset-password\?[^\s]+', payload['text'])
+    match = re.search(r'https://www\.bynzuri\.com/auth/reset-password\?[^\s]+', payload['text'])
     assert match is not None
     parsed = urlparse(match.group(0))
     params = parse_qs(parsed.query)

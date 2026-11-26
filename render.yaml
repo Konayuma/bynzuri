@@ -38,7 +38,7 @@ services:
       - key: SUPPORT_NOTIFICATION_EMAIL
         value: hairskincare@bynzuri.com
       - key: PUBLIC_SITE_URL
-        value: https://bynzuri.com
+        value: https://www.bynzuri.com
 
   # Run migrations on the web service before enabling this scheduled sender.
   - type: cron
@@ -68,4 +68,4 @@ services:
       - key: SUPPORT_NOTIFICATION_EMAIL
         value: hairskincare@bynzuri.com
       - key: PUBLIC_SITE_URL
-        value: https://bynzuri.com
+        value: https://www.bynzuri.com

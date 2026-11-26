@@ -154,7 +154,7 @@ SIMPLE_JWT = {
 
 CORS_ALLOWED_ORIGINS = os.environ.get(
     'CORS_ALLOWED_ORIGINS',
-    'http://localhost:5173,http://localhost:3000,https://bynzuri.com'
+    'http://localhost:5173,http://localhost:3000,https://bynzuri.com,https://www.bynzuri.com'
 ).split(',')
 CORS_ALLOWED_ORIGINS = [origin.strip() for origin in CORS_ALLOWED_ORIGINS if origin.strip()]
 CORS_ALLOW_CREDENTIALS = True
@@ -226,7 +226,7 @@ LENCO_RELAY_SECRET = os.environ.get('LENCO_RELAY_SECRET', '')
 
 # Transactional email: configure only on the backend/worker, never in the browser.
 RESEND_API_KEY = os.environ.get('RESEND_API_KEY', '').strip()
-PUBLIC_SITE_URL = os.environ.get('PUBLIC_SITE_URL', 'https://bynzuri.com').strip().rstrip('/')
+PUBLIC_SITE_URL = os.environ.get('PUBLIC_SITE_URL', 'https://www.bynzuri.com').strip().rstrip('/')
 RESEND_FROM_EMAIL = os.environ.get('RESEND_FROM_EMAIL', 'HairSkin by Nzuri <hairskincare@bynzuri.com>').strip()
 RESEND_REPLY_TO = os.environ.get('RESEND_REPLY_TO', 'hairskincare@bynzuri.com').strip()
 ORDER_NOTIFICATION_EMAIL = os.environ.get('ORDER_NOTIFICATION_EMAIL', 'hairskincare@bynzuri.com').strip()
