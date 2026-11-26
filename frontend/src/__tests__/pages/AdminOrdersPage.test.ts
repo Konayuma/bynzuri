@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
+import { createPinia } from 'pinia'
 import { flushPromises, mount } from '@vue/test-utils'
 import AdminOrdersPage from '@/pages/admin/AdminOrdersPage.vue'
 import { orderService } from '@/services/order.service'
@@ -52,7 +53,7 @@ describe('AdminOrdersPage error feedback', () => {
       response: { data: { detail: 'Invalid status transition.' } },
     })
 
-    const wrapper = mount(AdminOrdersPage, { attachTo: document.body })
+    const wrapper = mount(AdminOrdersPage, { attachTo: document.body, global: { plugins: [createPinia()] } })
     await flushPromises()
 
     const actionTrigger = wrapper.get('button[aria-label="Change status for order order-12"]')

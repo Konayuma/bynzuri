@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
+import { useUIStore } from '@/stores/ui'
 import AdminLayout from '@/layouts/AdminLayout.vue'
 import BaseButton from '@/components/base/BaseButton.vue'
 import BaseInput from '@/components/base/BaseInput.vue'
@@ -10,6 +11,7 @@ import { adminService } from '@/services/admin.service'
 import type { AdminProvince, AdminTown, AdminDeliveryMethod } from '@/types'
 import { Plus, Pencil, Trash2 } from '@lucide/vue'
 
+const uiStore = useUIStore()
 const activeTab = ref('provinces')
 
 const tabs = [
@@ -118,7 +120,8 @@ async function save() {
       }
     }
     showModal.value = false
-    await loadData()
+    uiStore.showToast('Delivery settings saved.')
+    await loadData().catch(() => uiStore.showToast('Saved, but the list could not be refreshed.'))
   } catch (e: any) {
     formError.value = e.response?.data?.detail || e.response?.data?.name?.[0] || 'Failed to save'
   } finally {
@@ -136,8 +139,9 @@ async function remove(item: any) {
     } else {
       await adminService.deleteDeliveryMethod(item.id)
     }
-    await loadData()
-  } catch { /* ignore */ }
+    uiStore.showToast('Delivery item deleted.')
+    await loadData().catch(() => uiStore.showToast('Deleted, but the list could not be refreshed.'))
+  } catch { uiStore.showToast('Could not delete the delivery item. Please try again.', { duration: 6000 }) }
 }
 
 onMounted(loadData)

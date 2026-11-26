@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import BaseDrawer from '@/components/base/BaseDrawer.vue'
 import BaseButton from '@/components/base/BaseButton.vue'
+import { useUIStore } from '@/stores/ui'
 import { useCartStore } from '@/stores/cart'
 import { useUserStore } from '@/stores/user'
 import { Minus, Plus, Trash2 } from '@lucide/vue'
@@ -19,6 +20,7 @@ const emit = defineEmits<{
 }>()
 
 const cartStore = useCartStore()
+const uiStore = useUIStore()
 const userStore = useUserStore()
 const router = useRouter()
 const imageOverrides = reactive<Record<string, string>>({})
@@ -59,7 +61,7 @@ async function updateQuantity(itemId: string, quantity: number) {
 }
 
 async function removeItem(itemId: string) {
-  try { await cartStore.removeItem(itemId) } catch { /* The cart shows the error. */ }
+  try { await cartStore.removeItem(itemId); uiStore.showToast('Item removed from your bag.') } catch { /* The cart shows the error. */ }
 }
 </script>
 

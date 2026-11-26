@@ -121,5 +121,8 @@ describe('ProductCard', () => {
     await favBtn.trigger('click')
     expect(wishlistStore.isWishlisted(mockProduct.id)).toBe(true)
     expect(wrapper.find('button[aria-label="Remove from wishlist"]').exists()).toBe(true)
+    expect(useUIStore().toast?.message).toBe('Added to your wishlist.')
+    await wrapper.get('button[aria-label="Remove from wishlist"]').trigger('click')
+    expect(useUIStore().toast?.message).toBe('Removed from your wishlist.')
   })
 })

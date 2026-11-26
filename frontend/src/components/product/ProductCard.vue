@@ -54,7 +54,9 @@ async function handleAddToCart(e: Event) {
 
 function handleToggleWishlist(e: Event) {
   e.stopPropagation()
+  const removing = wishlistStore.isWishlisted(props.product.id)
   wishlistStore.toggle(props.product)
+  uiStore.showToast(removing ? 'Removed from your wishlist.' : 'Added to your wishlist.')
 }
 
 </script>

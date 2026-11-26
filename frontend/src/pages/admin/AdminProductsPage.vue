@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useUIStore } from '@/stores/ui'
 import AdminLayout from '@/layouts/AdminLayout.vue'
 import BaseButton from '@/components/base/BaseButton.vue'
 import BaseInput from '@/components/base/BaseInput.vue'
@@ -9,6 +10,7 @@ import { productService } from '@/services/product.service'
 import type { Product, Category, ProductCreateData, PaginatedResponse, ProductImage } from '@/types'
 import { Plus, Pencil, Trash2, Upload, X, ImageIcon } from '@lucide/vue'
 
+const uiStore = useUIStore()
 const products = ref<Product[]>([])
 const categories = ref<Category[]>([])
 const loading = ref(true)
@@ -108,6 +110,7 @@ async function createCategory() {
     categoryName.value = ''
     addingCategory.value = false
     categoryLoadError.value = ''
+    uiStore.showToast('Category created.')
   } catch (error: any) {
     const data = error.response?.data
     categoryError.value = data?.name?.[0] || data?.slug?.[0] || data?.detail || 'Could not create the category. Please try again.'
@@ -241,6 +244,7 @@ async function saveProduct() {
     }
     await uploadImages(slug)
     showModal.value = false
+    uiStore.showToast('Product saved.')
     await loadProducts()
   } catch (e: any) {
     if (e.response?.status === 401) {
@@ -262,6 +266,7 @@ async function deleteProduct(product: Product) {
   if (!confirm(`Delete "${product.title}"?`)) return
   try {
     await productService.deleteProduct(product.slug)
+    uiStore.showToast('Product deleted.')
     await loadProducts()
   } catch {
     listError.value = 'Could not delete the product. Please try again.'

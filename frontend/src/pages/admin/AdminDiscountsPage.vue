@@ -1,18 +1,19 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import { useUIStore } from '@/stores/ui'
 import AdminLayout from '@/layouts/AdminLayout.vue'
 import BaseInput from '@/components/base/BaseInput.vue'
 import BaseButton from '@/components/base/BaseButton.vue'
 import { productService } from '@/services/product.service'
 import CampaignEditor from '@/components/admin/CampaignEditor.vue'
 
+const uiStore = useUIStore()
 const percent = ref('0')
 const saved = ref('0')
 const loading = ref(true)
 const saving = ref(false)
 const error = ref('')
 const loadFailed = ref(false)
-const message = ref('')
 const preview = computed(() => (100 * (1 - (Number(percent.value) || 0) / 100)).toFixed(2))
 
 async function load() {
@@ -28,11 +29,11 @@ async function save() {
     error.value = 'Enter a percentage between 0 and 100, with up to two decimal places.'
     return
   }
-  saving.value = true; error.value = ''; message.value = ''
+  saving.value = true; error.value = ''
   try {
     percent.value = (await productService.setStoreDiscount(value)).percent
     saved.value = percent.value
-    message.value = Number(percent.value) ? 'Storewide discount is active.' : 'Storewide discount has been removed.'
+    uiStore.showToast(Number(percent.value) ? 'Storewide discount is active.' : 'Storewide discount has been removed.')
   } catch { error.value = 'Could not save the discount. Please check your connection and try again.' }
   finally { saving.value = false }
 }
@@ -52,7 +53,6 @@ onMounted(load)
           <p class="mt-3 mb-5 text-sm leading-6 text-gray-600">Apply a percentage discount to every product, including products added later.</p>
           <BaseInput v-model="percent" label="Discount percentage" type="number" min="0" max="100" step="0.01" hint="Enter 0 to remove the storewide offer." required />
           <p v-if="error" role="alert" class="mt-3 text-sm text-red-700">{{ error }}</p>
-          <p v-if="message" role="status" class="mt-3 text-sm text-green-700">{{ message }}</p>
           <BaseButton type="submit" :loading="saving" class="mt-5">Save discount</BaseButton>
         </form>
         <aside class="rounded-2xl bg-[#efe3e3] p-6 text-gray-900"><p class="text-xs font-semibold uppercase tracking-widest text-rose-800">Price preview</p><p class="mt-5 text-sm text-gray-600">A product priced at K100.00</p><p class="mt-2 font-serif text-3xl">K{{ preview }}</p><p class="mt-2 text-sm text-gray-600">Original price <span class="line-through">K100.00</span></p><div class="mt-6 border-t border-rose-300/60 pt-4 text-sm leading-6 text-gray-700">If a product has its own discount, the larger discount applies. Discounts are not combined.</div></aside>

@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useUIStore } from '@/stores/ui'
 import AdminLayout from '@/layouts/AdminLayout.vue'
 import BaseSelect from '@/components/base/BaseSelect.vue'
 import { orderService } from '@/services/order.service'
 import type { AdminOrder } from '@/types'
 
+const uiStore = useUIStore()
 const orders = ref<AdminOrder[]>([])
 const loading = ref(true)
 const statusFilter = ref('')
@@ -87,6 +89,7 @@ async function updateStatus(order: AdminOrder, newStatus: string) {
     const updated = await orderService.updateOrderStatus(order.id, newStatus)
     const idx = orders.value.findIndex(o => o.id === order.id)
     if (idx !== -1) orders.value[idx] = updated
+    uiStore.showToast('Order status updated.')
   } catch (e: unknown) {
     errorMessage.value = (e as { response?: { data?: { detail?: string } } }).response?.data?.detail
       || 'Could not update order status. Please try again.'

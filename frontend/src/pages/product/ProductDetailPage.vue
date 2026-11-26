@@ -70,6 +70,7 @@ async function deleteOwnReview() {
     await reviewService.deleteReview(ownReview.value.id)
     ownReview.value = null
     editingReview.value = false
+    uiStore.showToast('Your review was deleted.')
     await productStore.fetchReviews(String(route.params.slug))
     await productStore.fetchProduct(String(route.params.slug)).catch(() => {})
   } catch { reviewError.value = 'Could not delete your review. Please try again.' }
@@ -137,7 +138,9 @@ async function handleAddToCart() {
 
 function handleToggleWishlist() {
   if (product.value) {
+    const removing = wishlistStore.isWishlisted(product.value.id)
     wishlistStore.toggle(product.value)
+    uiStore.showToast(removing ? 'Removed from your wishlist.' : 'Added to your wishlist.')
   }
 }
 

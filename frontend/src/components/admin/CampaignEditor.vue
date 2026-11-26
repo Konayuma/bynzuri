@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useUIStore } from '@/stores/ui'
 import { onMounted, ref } from 'vue'
 import { productService, type SaleCampaign } from '@/services/product.service'
 import BaseInput from '@/components/base/BaseInput.vue'
@@ -8,7 +9,7 @@ const campaign = ref<SaleCampaign | null>(null)
 const loading = ref(true)
 const saving = ref(false)
 const error = ref('')
-const message = ref('')
+const uiStore = useUIStore()
 async function load() {
   loading.value = true; error.value = ''
   try { campaign.value = await productService.getCampaign(true) }
@@ -20,8 +21,8 @@ async function save() {
   if (!campaign.value.title.trim() || !campaign.value.starts_on || !campaign.value.ends_on || !campaign.value.fulfilment.trim() || !/^\d+(\.\d{1,2})?$/.test(campaign.value.percent) || Number(campaign.value.percent) > 100 || campaign.value.ends_on < campaign.value.starts_on) {
     error.value = 'Complete all fields, enter a discount from 0 to 100, and choose an end date after the start date.'; return
   }
-  saving.value = true; error.value = ''; message.value = ''
-  try { campaign.value = await productService.saveCampaign(campaign.value); message.value = 'Campaign saved.' }
+  saving.value = true; error.value = ''
+  try { campaign.value = await productService.saveCampaign(campaign.value); uiStore.showToast('Campaign saved.') }
   catch { error.value = 'Could not save the campaign. Check your details and try again.' }
   finally { saving.value = false }
 }
@@ -44,7 +45,6 @@ onMounted(load)
       <label class="flex min-h-11 items-center gap-3 text-sm text-gray-800 sm:col-span-2"><input v-model="campaign.show_banner" type="checkbox" class="h-4 w-4 accent-rose-700" />Show banner on homepage and shop</label>
       <p class="text-sm text-gray-600 sm:col-span-2">Hiding the banner does not disable the discount. A disabled campaign hides the banner and stops its discount.</p>
       <p v-if="error" role="alert" class="text-sm text-red-700 sm:col-span-2">{{ error }}</p>
-      <p v-if="message" role="status" class="text-sm text-green-700 sm:col-span-2">{{ message }}</p>
       <div class="sm:col-span-2"><BaseButton type="submit" :loading="saving">Save campaign</BaseButton></div>
     </form>
   </section>
