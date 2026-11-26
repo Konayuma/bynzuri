@@ -1,15 +1,19 @@
 <script setup lang="ts">
-import { ref, onMounted, nextTick } from 'vue'
+import { ref, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Check, Mail, ShieldCheck } from '@lucide/vue'
 import { authService } from '@/services/auth.service'
-import { getVerificationEmail, rememberVerificationEmail } from '@/services/verification-context'
+import { clearSignupCredentials, getVerificationEmail, rememberVerificationEmail, takeSignupCredentials } from '@/services/verification-context'
+import { useUserStore } from '@/stores/user'
+import { useCartStore } from '@/stores/cart'
 import { isEmail } from '@/utils/formValidation'
 import BaseButton from '@/components/base/BaseButton.vue'
 import BaseInput from '@/components/base/BaseInput.vue'
 
 const route = useRoute()
 const router = useRouter()
+const userStore = useUserStore()
+const cartStore = useCartStore()
 
 // Resolve email from previous page (router state or session storage) or legacy link.
 const stateEmail = typeof window !== 'undefined' && typeof window.history.state?.email === 'string'
@@ -27,6 +31,7 @@ const resending = ref(false)
 const error = ref('')
 const notice = ref('')
 const success = ref(false)
+const signingIn = ref(false)
 
 function onCodeInput(event: Event) {
   const input = event.target as HTMLInputElement
@@ -47,6 +52,7 @@ onMounted(async () => {
     document.getElementById('verification-code')?.focus()
   }
 })
+onUnmounted(clearSignupCredentials)
 
 async function verify() {
   if (loading.value || resending.value) return
@@ -74,8 +80,30 @@ async function verify() {
       : response.response?.status === 429
         ? 'Too many attempts. Please wait before trying again.'
         : 'We could not verify your email. Check your connection and try again.'
+    return
   } finally {
     loading.value = false
+  }
+
+  const credentials = takeSignupCredentials(email.value)
+  if (!credentials) return
+  signingIn.value = true
+  try {
+    try { await userStore.login(credentials.email, credentials.password) }
+    finally { credentials.password = '' }
+    try {
+      await cartStore.mergeGuestCart()
+      await cartStore.fetchCart()
+    } catch {
+      cartStore.error = 'Signed in, but your cart could not be restored. Please try again.'
+    }
+    const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : ''
+    await router.replace(redirect.startsWith('/') && !redirect.startsWith('//') ? redirect : '/')
+  } catch {
+    // Verification already succeeded; never ask the customer to reuse the code.
+    success.value = true
+  } finally {
+    signingIn.value = false
   }
 }
 
@@ -125,8 +153,11 @@ function signIn(verified: boolean) {
           </div>
           <p class="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-gold">Account ready</p>
           <h1 id="verification-title" class="font-heading text-2xl font-semibold text-dark sm:text-3xl">Email verified</h1>
-          <p class="mt-3 text-base leading-relaxed text-muted">Your account is ready. Sign in to continue.</p>
-          <BaseButton variant="secondary" fullWidth class="mt-7 min-h-12" @click="signIn(true)">Continue to sign in</BaseButton>
+          <p v-if="signingIn" role="status" class="mt-3 text-base leading-relaxed text-muted">Your email is verified. Signing you in…</p>
+          <template v-else>
+            <p class="mt-3 text-base leading-relaxed text-muted">Your email is verified. Sign in to continue.</p>
+            <BaseButton variant="secondary" fullWidth class="mt-7 min-h-12" @click="signIn(true)">Continue to sign in</BaseButton>
+          </template>
         </div>
       </template>
 
@@ -204,7 +235,7 @@ function signIn(verified: boolean) {
               type="button"
               class="min-h-11 text-sm text-muted underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
               :disabled="resending || loading"
-              @click="needsEmail = true; error = ''; notice = ''"
+              @click="clearSignupCredentials(); needsEmail = true; error = ''; notice = ''"
             >
               Change email
             </button>

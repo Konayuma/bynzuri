@@ -35,6 +35,8 @@ describe('registration flow', () => {
     expect(router.currentRoute.value.path).toBe('/auth/verify-email')
     expect(router.currentRoute.value.query).toEqual({ redirect: '/checkout' })
     expect(sessionStorage.getItem('bynzuri_verification_email')).toBe('ada@example.com')
+    expect(JSON.stringify(sessionStorage)).not.toContain('password123')
+    expect(JSON.stringify(localStorage)).not.toContain('password123')
   })
 
   it('accepts another country and sends an international number', async () => {

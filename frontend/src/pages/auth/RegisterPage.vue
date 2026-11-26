@@ -8,7 +8,7 @@ import { useUserStore } from '@/stores/user'
 import BaseButton from '@/components/base/BaseButton.vue'
 import BaseInput from '@/components/base/BaseInput.vue'
 import PhoneInput from '@/components/base/PhoneInput.vue'
-import { rememberVerificationEmail } from '@/services/verification-context'
+import { rememberSignupCredentials, rememberVerificationEmail } from '@/services/verification-context'
 
 const router = useRouter()
 const route = useRoute()
@@ -79,6 +79,9 @@ async function handleRegister() {
   const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : ''
   const registeredEmail = form.value.email.trim()
   rememberVerificationEmail(registeredEmail)
+  rememberSignupCredentials(registeredEmail, form.value.password)
+  form.value.password = ''
+  form.value.confirm_password = ''
   loading.value = false
   await router.push({
     path: '/auth/verify-email',
