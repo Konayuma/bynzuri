@@ -121,6 +121,8 @@ export interface Review {
   product: string
   user: string
   user_name: string
+  staff_reply: string
+  is_approved: boolean
   rating: number
   comment: string
   created_at: string

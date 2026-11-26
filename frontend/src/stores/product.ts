@@ -25,6 +25,8 @@ export const useProductStore = defineStore('product', () => {
   let catalogRequest = 0
   let productRequest = 0
   let reviewRequest = 0
+  const reviewsLoading = ref(false)
+  const reviewsError = ref(false)
   let relatedRequest = 0
 
   async function fetchProducts(params?: {
@@ -113,17 +115,20 @@ export const useProductStore = defineStore('product', () => {
   async function fetchReviews(productSlug: string) {
     const request = ++reviewRequest
     reviews.value = []
+    reviewsLoading.value = true
+    reviewsError.value = false
     try {
       const result = await reviewService.getReviews(productSlug)
       if (request === reviewRequest) reviews.value = result
     } catch {
-      if (request === reviewRequest) reviews.value = []
+      if (request === reviewRequest) reviewsError.value = true
+    } finally {
+      if (request === reviewRequest) reviewsLoading.value = false
     }
   }
 
   async function createReview(data: { product_slug: string; rating: number; comment: string }) {
     const review = await reviewService.createReview(data)
-    reviews.value.unshift(review)
     return review
   }
 
@@ -137,6 +142,8 @@ export const useProductStore = defineStore('product', () => {
     currentProduct,
     relatedProducts,
     reviews,
+    reviewsLoading,
+    reviewsError,
     loading,
     pagination,
     fetchProducts,

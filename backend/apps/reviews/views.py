@@ -21,6 +21,8 @@ class ReviewViewSet(viewsets.ModelViewSet):
         queryset = Review.objects.all() if self.request.user.is_staff else Review.objects.filter(is_approved=True)
         if self.request.user.is_authenticated and not self.request.user.is_staff:
             queryset = Review.objects.filter(Q(is_approved=True) | Q(user=self.request.user))
+        if self.request.query_params.get('mine') == '1':
+            queryset = queryset.filter(user=self.request.user) if self.request.user.is_authenticated else queryset.none()
         product_slug = self.request.query_params.get('product')
         if product_slug:
             queryset = queryset.filter(product__slug=product_slug)
@@ -49,7 +51,7 @@ class ReviewViewSet(viewsets.ModelViewSet):
 
     @transaction.atomic
     def perform_update(self, serializer):
-        serializer.save(is_approved=False)
+        serializer.save(is_approved=False, staff_reply='')
 
     @transaction.atomic
     def perform_destroy(self, instance):

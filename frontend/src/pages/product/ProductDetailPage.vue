@@ -11,7 +11,8 @@ import DescriptionInline from '@/components/product/DescriptionInline.vue'
 import ProductCard from '@/components/product/ProductCard.vue'
 import BaseButton from '@/components/base/BaseButton.vue'
 import { Heart, Minus, Plus, Star, Truck, ShieldCheck, Send, ChevronRight } from '@lucide/vue'
-import type { Product } from '@/types'
+import type { Product, Review } from '@/types'
+import { reviewService } from '@/services/review.service'
 import { signatureImage } from '@/utils/productImage'
 import { formatProductDescription } from '@/utils/productDescription'
 import { isValidReviewComment } from '@/utils/formValidation'
@@ -34,7 +35,46 @@ const reviewRating = ref(5)
 const reviewComment = ref('')
 const reviewSubmitting = ref(false)
 const reviewError = ref('')
-const reviewSuccess = ref(false)
+const ownReview = ref<Review | null>(null)
+const editingReview = ref(false)
+const ownReviewError = ref(false)
+const ownReviewLoading = ref(false)
+let ownRequest = 0
+async function loadOwnReview() {
+  const request = ++ownRequest
+  ownReview.value = null
+  ownReviewError.value = false
+  const slug = route.params.slug
+  if (!userStore.isAuthenticated || typeof slug !== 'string') { ownReviewLoading.value = false; return }
+  ownReviewLoading.value = true
+  try {
+    const result = await reviewService.getMine(slug)
+    if (request === ownRequest) ownReview.value = result
+  } catch {
+    if (request === ownRequest) ownReviewError.value = true
+  } finally {
+    if (request === ownRequest) ownReviewLoading.value = false
+  }
+}
+function startEditing() {
+  if (!ownReview.value) return
+  reviewRating.value = ownReview.value.rating
+  reviewComment.value = ownReview.value.comment
+  reviewError.value = ''
+  editingReview.value = true
+}
+async function deleteOwnReview() {
+  if (!ownReview.value || reviewSubmitting.value || !window.confirm('Delete your review?')) return
+  reviewSubmitting.value = true
+  try {
+    await reviewService.deleteReview(ownReview.value.id)
+    ownReview.value = null
+    editingReview.value = false
+    await productStore.fetchReviews(String(route.params.slug))
+    await productStore.fetchProduct(String(route.params.slug)).catch(() => {})
+  } catch { reviewError.value = 'Could not delete your review. Please try again.' }
+  finally { reviewSubmitting.value = false }
+}
 
 const product = computed(() => productStore.currentProduct)
 const descriptionBlocks = computed(() => formatProductDescription(product.value?.description || ''))
@@ -138,19 +178,17 @@ async function submitReview() {
   }
   reviewSubmitting.value = true
   reviewError.value = ''
-  reviewSuccess.value = false
   try {
-    await productStore.createReview({
-      product_slug: route.params.slug as string,
-      rating: reviewRating.value,
-      comment: trimmed,
-    })
-    reviewSuccess.value = true
+    const data = { rating: reviewRating.value, comment: trimmed }
+    ownReview.value = editingReview.value && ownReview.value
+      ? await reviewService.updateReview(ownReview.value.id, data)
+      : await productStore.createReview({ product_slug: route.params.slug as string, ...data })
+    editingReview.value = false
+    await productStore.fetchReviews(String(route.params.slug))
+    await productStore.fetchProduct(String(route.params.slug)).catch(() => {})
+    uiStore.showToast('Thank you! Your review was submitted for approval.', { duration: 5000 })
     reviewComment.value = ''
     reviewRating.value = 5
-    if (product.value) {
-      product.value.review_count++
-    }
   } catch (e: any) {
     reviewError.value = e.response?.data?.detail || 'Could not submit your review. Please try again.'
   } finally {
@@ -174,7 +212,6 @@ watch(() => route.params.slug, async (slug) => {
   reviewComment.value = ''
   reviewRating.value = 5
   reviewError.value = ''
-  reviewSuccess.value = false
   productStore.fetchReviews(slug)
   try {
     await productStore.fetchProduct(slug)
@@ -182,6 +219,8 @@ watch(() => route.params.slug, async (slug) => {
     if (route.params.slug === slug) productError.value = true
   }
 }, { immediate: true })
+
+watch(() => [route.params.slug, userStore.user?.id], () => { editingReview.value = false; void loadOwnReview() }, { immediate: true })
 
 watch(product, (p) => {
   if (p) {
@@ -363,8 +402,17 @@ watch(product, (p) => {
         <h2 class="font-heading text-xl font-semibold text-dark mb-6">Customer Reviews</h2>
 
         <!-- Review Form -->
-        <div v-if="userStore.isAuthenticated" class="bg-white rounded-[16px] p-5 border border-primary/20 mb-6">
-          <h3 class="text-sm font-medium text-dark mb-3">Write a Review</h3>
+        <p v-if="userStore.isAuthenticated && ownReviewLoading" class="mb-6 text-sm text-muted" role="status">Checking your review…</p>
+        <div v-else-if="userStore.isAuthenticated && ownReviewError" class="mb-6 text-sm text-red-700" role="alert">Could not load your review. <button type="button" class="underline" @click="loadOwnReview">Try again</button></div>
+        <div v-else-if="userStore.isAuthenticated && ownReview && !editingReview" class="bg-white rounded-2xl p-5 border border-primary/20 mb-6">
+          <div class="flex flex-wrap items-center justify-between gap-3"><h3 class="font-medium text-dark">Your review</h3><span class="text-xs font-medium text-muted">{{ ownReview.is_approved ? 'Published' : 'Awaiting approval' }}</span></div>
+          <p class="mt-2 text-gold" :aria-label="`${ownReview.rating} out of 5 stars`">{{ '★'.repeat(ownReview.rating) }}{{ '☆'.repeat(5 - ownReview.rating) }}</p>
+          <p class="mt-2 text-sm text-muted whitespace-pre-line break-words">{{ ownReview.comment }}</p>
+          <p v-if="reviewError" role="alert" class="mt-3 text-sm text-red-700">{{ reviewError }}</p>
+          <div class="mt-4 flex gap-4"><button type="button" class="text-sm font-medium underline underline-offset-4" @click="startEditing">Edit review</button><button type="button" class="text-sm text-muted underline underline-offset-4" :disabled="reviewSubmitting" @click="deleteOwnReview">Delete</button></div>
+        </div>
+        <div v-else-if="userStore.isAuthenticated" class="bg-white rounded-[16px] p-5 border border-primary/20 mb-6">
+          <h3 class="text-sm font-medium text-dark mb-3">{{ editingReview ? 'Edit your review' : 'Write a review' }}</h3>
           <div class="flex items-center gap-1 mb-3" role="group" aria-label="Your rating">
             <button
               v-for="i in 5"
@@ -396,25 +444,30 @@ watch(product, (p) => {
             placeholder="Share your experience with this product..."
             @input="reviewError = ''"
           />
+          <p v-if="editingReview" class="mt-2 text-xs text-muted">Edited reviews are checked again before publication.</p>
+          <button v-if="editingReview" type="button" class="mt-3 text-sm underline" @click="editingReview = false; reviewError = ''">Cancel editing</button>
           <div class="flex items-center justify-between gap-3 mt-3">
             <p v-if="reviewError" id="review-error" role="alert" class="text-sm text-red-700">{{ reviewError }}</p>
-            <p v-else-if="reviewSuccess" role="status" class="text-sm text-success">Thanks! Your review has been submitted.</p>
             <div v-else />
             <BaseButton size="sm" :loading="reviewSubmitting" @click="submitReview">
-              <Send class="w-3.5 h-3.5 mr-1.5" /> Submit
+              <Send class="w-3.5 h-3.5 mr-1.5" /> {{ editingReview ? 'Save changes' : 'Submit review' }}
             </BaseButton>
           </div>
         </div>
         <div v-else class="text-center py-4 mb-6 bg-primary/10 rounded-[14px]">
           <p class="text-sm text-muted">
-            <router-link to="/auth/login" class="text-gold hover:underline">Sign in</router-link> to write a review
+            <router-link :to="{ path: '/auth/login', query: { redirect: route.fullPath } }" class="text-gold hover:underline">Sign in</router-link> to write a review
           </p>
         </div>
 
         <!-- Reviews List -->
-        <div v-if="productStore.reviews.length > 0" class="space-y-4">
+        <p v-if="productStore.reviewsLoading" class="text-sm text-muted py-6" role="status">Loading reviews…</p>
+        <div v-else-if="productStore.reviewsError" class="text-sm text-muted py-6" role="alert">
+          Reviews could not be loaded. <button type="button" class="underline text-dark" @click="productStore.fetchReviews(String(route.params.slug))">Try again</button>
+        </div>
+        <div v-else-if="productStore.reviews.length > 0" class="space-y-4">
           <div
-            v-for="review in productStore.reviews"
+            v-for="review in productStore.reviews.filter(item => item.id !== ownReview?.id)"
             :key="review.id"
             class="bg-white rounded-[14px] p-4 border border-primary/10"
           >
@@ -435,7 +488,11 @@ watch(product, (p) => {
                 :class="i <= review.rating ? 'text-gold fill-gold' : 'text-muted/30'"
               />
             </div>
-            <p class="text-sm text-muted leading-relaxed">{{ review.comment }}</p>
+            <p class="text-sm text-muted leading-relaxed whitespace-pre-line">{{ review.comment }}</p>
+            <div v-if="review.staff_reply" class="mt-4 ml-3 border-l-2 border-primary/40 bg-primary/10 rounded-r-xl px-4 py-3">
+              <p class="text-xs font-semibold uppercase tracking-wide text-dark mb-1">Reply from By Nzuri</p>
+              <p class="text-sm text-muted leading-relaxed whitespace-pre-line">{{ review.staff_reply }}</p>
+            </div>
           </div>
         </div>
         <div v-else class="text-center py-8 text-muted text-sm">

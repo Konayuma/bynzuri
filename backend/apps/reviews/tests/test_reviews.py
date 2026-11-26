@@ -88,3 +88,38 @@ def test_review_changes_require_owner_and_refresh_rating(user, product):
     review.refresh_from_db(); product.refresh_from_db()
     assert not review.is_approved and product.review_count == 0
     assert client.delete(f'/api/reviews/{review.id}/').status_code == 204
+
+@pytest.mark.django_db
+def test_reply_is_public_only_on_approved_reviews_and_cannot_be_set_by_customer(user, product):
+    from rest_framework.test import APIClient
+    client = APIClient()
+    client.force_authenticate(user)
+    response = client.post('/api/reviews/', {
+        'product_slug': product.slug, 'rating': 5, 'comment': 'Lovely product',
+        'staff_reply': 'Forged response',
+    }, format='json')
+    assert response.status_code == 201
+    review = Review.objects.get(pk=response.data['id'])
+    assert review.staff_reply == ''
+    review.staff_reply = 'Thank you for sharing.'
+    review.save()
+    client.force_authenticate(user=None)
+    assert not client.get('/api/reviews/', {'product': product.slug}).data['results']
+    review.is_approved = True
+    review.save()
+    assert client.get('/api/reviews/', {'product': product.slug}).data['results'][0]['staff_reply'] == 'Thank you for sharing.'
+
+@pytest.mark.django_db
+def test_mine_includes_pending_and_edit_clears_reply(user, product):
+    from rest_framework.test import APIClient
+    review = Review.objects.create(product=product, user=user, rating=5, comment='Great product', is_approved=True, staff_reply='Thank you')
+    client = APIClient()
+    client.force_authenticate(user)
+    response = client.patch(f'/api/reviews/{review.pk}/', {'comment': 'Updated review'}, format='json')
+    assert response.status_code == 200
+    assert response.data['is_approved'] is False
+    assert response.data['staff_reply'] == ''
+    mine = client.get('/api/reviews/', {'product': product.slug, 'mine': '1'})
+    assert mine.data['results'][0]['id'] == str(review.pk)
+    client.force_authenticate(user=None)
+    assert client.get('/api/reviews/', {'product': product.slug, 'mine': '1'}).data['results'] == []
