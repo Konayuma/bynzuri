@@ -21,7 +21,7 @@ def provider_result(payment, status='successful', amount=None):
             'amount': str(amount if amount is not None else payment.amount), 'status': status}
 
 
-@override_settings(ORDER_NOTIFICATION_EMAIL='hairskin@bynzuri.com')
+@override_settings(ORDER_NOTIFICATION_EMAIL='hairskincare@bynzuri.com')
 def test_payment_receipt_is_only_queued_after_matching_success_and_once(user, order):
     payment = Payment.objects.create(order=order, user=user, method='mtn_momo',
         amount=order.grand_total, idempotency_key='successful-payment')
@@ -31,12 +31,12 @@ def test_payment_receipt_is_only_queued_after_matching_success_and_once(user, or
     assert apply_provider_result(payment.pk, provider_result(payment))
     assert set(OrderEmail.objects.values_list('event', flat=True)) == {'payment_receipt', 'owner_paid'}
     assert OrderEmail.objects.get(event='payment_receipt').recipient == user.email
-    assert OrderEmail.objects.get(event='owner_paid').recipient == 'hairskin@bynzuri.com'
+    assert OrderEmail.objects.get(event='owner_paid').recipient == 'hairskincare@bynzuri.com'
     order.refresh_from_db()
     assert order.status == 'paid'
 
 
-@override_settings(ORDER_NOTIFICATION_EMAIL='hairskin@bynzuri.com')
+@override_settings(ORDER_NOTIFICATION_EMAIL='hairskincare@bynzuri.com')
 def test_early_confirmation_is_explicitly_unpaid_and_details_are_escaped(user, order):
     order.notes = 'Please call before delivery'
     order.save(update_fields=['notes'])
@@ -85,7 +85,7 @@ def test_emails_show_customer_friendly_payment_method(user, order, method, label
     _, text, html = email_content(OrderEmail.objects.get(event='order_received'))
     assert f'Payment method: {label}' in text
     assert f'Payment method:</strong> {label}' in html
-    assert 'https://bynzuri.com/email-logo.png' in html
+    assert 'cid:bynzuri-logo' in html
 
 
 @pytest.mark.parametrize('event,heading,paid', [
@@ -109,7 +109,7 @@ def test_all_order_notifications_use_branded_template(user, order, event, headin
 
 
 @override_settings(RESEND_API_KEY='test-key', RESEND_FROM_EMAIL='HairSkin <orders@bynzuri.com>',
-                   RESEND_REPLY_TO='hairskin@bynzuri.com', ORDER_NOTIFICATION_EMAIL='hairskin@bynzuri.com')
+                   RESEND_REPLY_TO='hairskincare@bynzuri.com', ORDER_NOTIFICATION_EMAIL='hairskincare@bynzuri.com')
 def test_delivery_retries_rate_limit_with_stable_key_and_records_provider_id(user, order):
     queue_order_created(order)
     row = OrderEmail.objects.get(event='order_received')

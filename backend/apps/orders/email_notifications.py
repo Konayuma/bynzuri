@@ -1,8 +1,11 @@
 """Transactional order email outbox. Never send from payment request handlers."""
+import base64
 import logging
 import uuid
 from datetime import timedelta
 from decimal import Decimal
+from functools import lru_cache
+from pathlib import Path
 
 import requests
 from django.conf import settings
@@ -14,6 +17,20 @@ from django.utils import timezone
 from .models import OrderEmail
 
 logger = logging.getLogger(__name__)
+LOGO_PATH = Path(__file__).resolve().parent / 'assets' / 'email-logo.png'
+
+
+@lru_cache(maxsize=1)
+def email_logo_attachments():
+    if not LOGO_PATH.is_file():
+        return []
+    encoded = base64.b64encode(LOGO_PATH.read_bytes()).decode('ascii')
+    return [{
+        'filename': 'email-logo.png',
+        'content': encoded,
+        'content_id': 'bynzuri-logo',
+        'content_type': 'image/png',
+    }]
 
 
 def enqueue_order_email(order, event, recipient, *, paid=False, payment_reference=''):
@@ -144,6 +161,9 @@ def process_one():
     subject, text, html = email_content(record)
     body = {'from': settings.RESEND_FROM_EMAIL, 'to': [record.recipient],
             'reply_to': settings.RESEND_REPLY_TO, 'subject': subject, 'text': text, 'html': html}
+    attachments = email_logo_attachments()
+    if attachments:
+        body['attachments'] = attachments
     try:
         response = requests.post('https://api.resend.com/emails', json=body, timeout=20,
             headers={'Authorization': f'Bearer {settings.RESEND_API_KEY}',

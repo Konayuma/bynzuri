@@ -34,6 +34,8 @@ def test_registration_sends_code_and_requires_verification_before_login():
         assert process_verification_email()
     assert code in post.call_args.kwargs['json']['text']
     assert post.call_args.kwargs['json']['to'] == [user.email]
+    assert 'cid:bynzuri-logo' in post.call_args.kwargs['json']['html']
+    assert post.call_args.kwargs['json']['attachments'][0]['content_id'] == 'bynzuri-logo'
     assert client.post('/api/auth/verify-email/', {'email': user.email, 'code': code}, format='json').status_code == 200
     assert client.post('/api/auth/verify-email/', {'email': user.email, 'code': code}, format='json').status_code == 400
     assert client.post('/api/auth/token/', login, format='json').status_code == 200

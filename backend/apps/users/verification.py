@@ -57,10 +57,14 @@ def process_verification_email():
         code = code_for(challenge)
         email = challenge.user.email
         name = challenge.user.first_name
+    from apps.orders.email_notifications import email_logo_attachments
     text = f'Your By Nzuri verification code is {code}. It expires 30 minutes after it was requested. If you did not create an account, you can ignore this email. Do not share this code.'
     html = render_to_string('users/verification_email.html', {'code': code, 'name': name})
     body = {'from': settings.RESEND_FROM_EMAIL, 'to': [email], 'reply_to': settings.RESEND_REPLY_TO,
             'subject': 'Your By Nzuri email verification code', 'text': text, 'html': html}
+    attachments = email_logo_attachments()
+    if attachments:
+        body['attachments'] = attachments
     try:
         response = requests.post('https://api.resend.com/emails', json=body, timeout=20,
             headers={'Authorization': f'Bearer {settings.RESEND_API_KEY}', 'Idempotency-Key': f'verify-email/{pk}/{nonce}'})

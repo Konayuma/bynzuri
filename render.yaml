@@ -34,7 +34,7 @@ services:
       - key: R2_PUBLIC_DOMAIN
         sync: false
       - key: ORDER_NOTIFICATION_EMAIL
-        value: hairskin@bynzuri.com
+        value: hairskincare@bynzuri.com
 
   # Run migrations on the web service before enabling this scheduled sender.
   - type: cron
@@ -56,8 +56,8 @@ services:
       - key: RESEND_API_KEY
         sync: false
       - key: RESEND_FROM_EMAIL
-        value: "HairSkin by Nzuri <hairskin@bynzuri.com>"
+        value: "HairSkin by Nzuri <hairskincare@bynzuri.com>"
       - key: RESEND_REPLY_TO
-        value: hairskin@bynzuri.com
+        value: hairskincare@bynzuri.com
       - key: ORDER_NOTIFICATION_EMAIL
-        value: hairskin@bynzuri.com
+        value: hairskincare@bynzuri.com
