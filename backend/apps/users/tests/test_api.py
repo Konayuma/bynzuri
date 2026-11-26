@@ -38,6 +38,13 @@ class TestAuthAPI:
         response = self.client.post(self.register_url, data, format='json')
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
+    def test_register_accepts_international_phone_and_rejects_invalid_format(self):
+        response = self.client.post(self.register_url, {'email': 'international@example.com', 'password': 'strongpass123', 'phone': '+12025550123'}, format='json')
+        assert response.status_code == status.HTTP_201_CREATED
+        assert User.objects.get(email='international@example.com').phone == '+12025550123'
+        response = self.client.post(self.register_url, {'email': 'invalid@example.com', 'password': 'strongpass123', 'phone': '+abc'}, format='json')
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+
     def test_login_success(self):
         User.objects.create_user(username='login@bynzuri.com', email='login@bynzuri.com', password='correctpass')
         response = self.client.post(self.token_url, {

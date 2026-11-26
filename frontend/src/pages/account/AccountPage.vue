@@ -17,6 +17,7 @@ import {
 } from '@lucide/vue'
 import type { Address, Province, Town, Order } from '@/types'
 import { isZambianPhone } from '@/utils/formValidation'
+import { isValidPhoneNumber } from 'libphonenumber-js'
 
 const userStore = useUserStore()
 const cartStore = useCartStore()
@@ -136,8 +137,8 @@ async function saveProfile() {
     profileError.value = 'Enter your first name.'
     return
   }
-  if (phone && !isZambianPhone(phone)) {
-    profileError.value = 'Enter a valid Zambian number, for example 0971234567 or +260971234567.'
+  if (phone && !isZambianPhone(phone) && !isValidPhoneNumber(phone)) {
+    profileError.value = 'Enter a valid phone number with its country code, for example +260 97 123 4567.'
     return
   }
 

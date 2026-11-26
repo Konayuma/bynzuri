@@ -89,7 +89,7 @@ describe('AccountPage', () => {
     await editBtn.trigger('click')
     await wrapper.get('#profile-phone').setValue('12345')
     await wrapper.get('form').trigger('submit')
-    expect(wrapper.get('[role=alert]').text()).toContain('Zambian number')
+    expect(wrapper.get('[role=alert]').text()).toContain('valid phone number')
     expect(updateSpy).not.toHaveBeenCalled()
 
     await wrapper.get('#profile-first-name').setValue('Mona')

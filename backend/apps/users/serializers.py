@@ -6,11 +6,27 @@ from apps.delivery.models import Province, Town
 from .models import User, Address
 
 
+def normalize_account_phone(value):
+    if not value:
+        return ''
+    phone = re.sub(r'[\s()-]', '', value)
+    if re.fullmatch(r'0[0-9]{9}', phone):
+        phone = '+260' + phone[1:]
+    elif re.fullmatch(r'260[0-9]{9}', phone):
+        phone = '+' + phone
+    if not re.fullmatch(r'\+[1-9][0-9]{3,14}', phone):
+        raise serializers.ValidationError('Enter a valid international phone number, including the country code.')
+    return phone
+
+
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['id', 'email', 'first_name', 'last_name', 'phone', 'role', 'is_staff', 'email_verified']
         read_only_fields = ['id', 'role', 'is_staff', 'email_verified']
+
+    def validate_phone(self, value):
+        return normalize_account_phone(value)
 
 
 class RegisterSerializer(serializers.ModelSerializer):
@@ -25,6 +41,9 @@ class RegisterSerializer(serializers.ModelSerializer):
         if User.objects.filter(email__iexact=value).exists():
             raise serializers.ValidationError('An account with this email already exists.')
         return value
+
+    def validate_phone(self, value):
+        return normalize_account_phone(value)
 
     def create(self, validated_data):
         user = User.objects.create_user(

@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import axios from 'axios'
-import { isEmail, isZambianPhone } from '@/utils/formValidation'
+import { isEmail } from '@/utils/formValidation'
+import { parsePhoneNumberFromString, type CountryCode } from 'libphonenumber-js'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import BaseButton from '@/components/base/BaseButton.vue'
 import BaseInput from '@/components/base/BaseInput.vue'
+import PhoneInput from '@/components/base/PhoneInput.vue'
 import { rememberVerificationEmail } from '@/services/verification-context'
 
 const router = useRouter()
@@ -15,13 +17,15 @@ const form = ref({
   first_name: '',
   last_name: '',
   email: '',
-  phone: '260',
+  phone: '',
   password: '',
   confirm_password: ''
 })
 const loading = ref(false)
 const error = ref('')
 const fieldErrors = ref<Record<string, string>>({})
+const phoneCountry = ref<CountryCode>('ZM')
+watch(phoneCountry, () => { delete fieldErrors.value.phone; error.value = '' })
 for (const key of Object.keys(form.value) as Array<keyof typeof form.value>) {
   watch(() => form.value[key], () => {
     delete fieldErrors.value[key]
@@ -36,7 +40,8 @@ async function handleRegister() {
   if (!data.first_name.trim()) errors.first_name = 'Enter your first name.'
   if (!data.last_name.trim()) errors.last_name = 'Enter your last name.'
   if (!isEmail(data.email)) errors.email = 'Enter a valid email address.'
-  if (!isZambianPhone(data.phone)) errors.phone = 'Enter a Zambian number, for example 0971234567 or +260971234567.'
+  const phone = parsePhoneNumberFromString(data.phone.trim(), phoneCountry.value)
+  if (!phone || !phone.isValid() || (phone.country && phone.country !== phoneCountry.value)) errors.phone = 'Enter a valid number for the selected country.'
   if (data.password.length < 8) errors.password = 'Use at least 8 characters.'
   if (data.password !== data.confirm_password) errors.confirm_password = 'Passwords do not match.'
   fieldErrors.value = errors
@@ -51,7 +56,7 @@ async function handleRegister() {
       password: form.value.password,
       first_name: form.value.first_name.trim(),
       last_name: form.value.last_name.trim(),
-      phone: form.value.phone
+      phone: phone!.number
     })
   } catch (cause) {
     error.value = axios.isAxiosError(cause) && cause.response?.status === 400
@@ -104,17 +109,7 @@ async function handleRegister() {
             :error="fieldErrors.email"
             autocomplete="email"
         />
-        <BaseInput
-          v-model="form.phone"
-          label="Phone Number"
-          type="tel"
-          required
-          id="reg-phone"
-            :error="fieldErrors.phone"
-            autocomplete="tel"
-          placeholder="260xxxxxxxxx"
-        />
-        <p class="text-xs text-muted -mt-2">Zambian mobile number for delivery updates</p>
+        <PhoneInput v-model="form.phone" v-model:country="phoneCountry" :error="fieldErrors.phone" :disabled="loading" />
         <BaseInput
           v-model="form.password"
           label="Password"

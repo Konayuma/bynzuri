@@ -588,7 +588,7 @@ onMounted(async () => {
           :error="fieldErrors.phone"
           placeholder="260xxxxxxxxx"
         />
-        <p class="text-xs text-muted -mt-2">We'll send delivery updates via SMS</p>
+        <p class="text-xs text-muted -mt-2">Enter a Zambian number for delivery updates.</p>
       </div>
 
       <!-- Step 2: Delivery Location -->
