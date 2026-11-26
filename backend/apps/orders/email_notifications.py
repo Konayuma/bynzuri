@@ -2,12 +2,13 @@
 import logging
 import uuid
 from datetime import timedelta
-from html import escape
+from decimal import Decimal
 
 import requests
 from django.conf import settings
 from django.db import transaction
 from django.db.models import Q
+from django.template.loader import render_to_string
 from django.utils import timezone
 
 from .models import OrderEmail
@@ -86,7 +87,21 @@ def email_content(record):
         lines.append(f"Payment reference: {p['payment_reference']}")
     lines += ['', 'Questions? Reply to this email.', 'HairSkin by Nzuri']
     text = '\n'.join(lines)
-    html = '<div style="font-family:Arial,sans-serif;line-height:1.6;white-space:pre-wrap">' + escape(text) + '</div>'
+    items = [{**item, 'line_total': f"{Decimal(item['unit_price']) * item['quantity']:.2f}"} for item in p['items']]
+    descriptions = {
+        'order_received': 'Thank you for your order. We will confirm your payment before preparing it.',
+        'owner_order': 'A new order has been placed. Payment is not yet confirmed.',
+        'payment_receipt': 'Thank you for shopping with us. Your payment has been confirmed.',
+        'owner_paid': 'Payment has been confirmed for this order.',
+        'order_dispatched': 'Your order is on its way. Thank you for shopping with us.',
+        'order_delivered': 'Your order has been marked as delivered. Thank you for choosing us.',
+        'order_cancelled': 'Your order has been cancelled. Please contact us if you have any questions.',
+    }
+    html = render_to_string('orders/order_email.html', {
+        'heading': subjects[record.event], 'description': descriptions[record.event],
+        'payload': p, 'items': items, 'is_owner': record.event.startswith('owner_'),
+        'payment_label': 'Confirmed' if p['paid'] else 'Not confirmed',
+    })
     return subject, text, html
 
 

@@ -50,10 +50,45 @@ def test_early_confirmation_is_explicitly_unpaid_and_details_are_escaped(user, o
     assert 'payment pending' in subject
     assert 'Not confirmed' in text and 'ZMW 235.00' in text
     assert '&lt;Oil &amp; cream&gt;' in html and '<Oil & cream>' not in html
+    assert 'Order summary' in html and 'ZMW 200.00' in html
+    assert 'Not confirmed' in html and 'Payment received' not in html
     assert order.street_address not in text
-    _, owner_text, _ = email_content(OrderEmail.objects.get(event='owner_order'))
+    assert order.street_address not in html
+    _, owner_text, owner_html = email_content(OrderEmail.objects.get(event='owner_order'))
     assert order.street_address in owner_text
     assert 'Please call before delivery' in owner_text
+    assert order.street_address in owner_html
+
+
+def test_confirmed_receipt_has_reference_and_paid_status(user, order):
+    payment = Payment.objects.create(order=order, user=user, method='mtn_momo',
+        amount=order.grand_total, idempotency_key='receipt-reference')
+    assert apply_provider_result(payment.pk, provider_result(payment))
+    subject, text, html = email_content(OrderEmail.objects.get(event='payment_receipt'))
+    assert 'Payment received' in subject
+    assert 'Payment: Confirmed' in text
+    assert 'Confirmed' in html and 'receipt-reference' in html
+    assert 'payment pending' not in html.lower()
+
+
+@pytest.mark.parametrize('event,heading,paid', [
+    ('order_received', 'We received your order', False),
+    ('owner_order', 'New order received', False),
+    ('payment_receipt', 'Payment received', True),
+    ('owner_paid', 'Order payment confirmed', True),
+    ('order_dispatched', 'Your order has been dispatched', True),
+    ('order_delivered', 'Your order has been delivered', True),
+    ('order_cancelled', 'Your order has been cancelled', False),
+])
+def test_all_order_notifications_use_branded_template(user, order, event, heading, paid):
+    queue_order_created(order)
+    record = OrderEmail.objects.get(event='order_received')
+    record.event = event
+    record.payload['paid'] = paid
+    subject, text, html = email_content(record)
+    assert heading in subject and heading in text and heading in html
+    assert 'HairSkin by Nzuri' in html and 'Order summary' in html
+    assert ('Confirmed' if paid else 'Not confirmed') in html
 
 
 @override_settings(RESEND_API_KEY='test-key', RESEND_FROM_EMAIL='HairSkin <orders@bynzuri.com>',
