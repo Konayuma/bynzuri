@@ -5,6 +5,7 @@ import { authService } from '@/services/auth.service'
 import { sessionExpired, sessionRestored, sessionUnavailable } from '@/services/session'
 import axios from 'axios'
 import { clearSession, getAccessToken, hasSession, refreshAccessToken, setAccessToken } from '@/services/api'
+import { setLastAuthMethod } from '@/utils/lastAuthMethod'
 
 export const useUserStore = defineStore('user', () => {
   const user = ref<User | null>(null)
@@ -40,6 +41,7 @@ export const useUserStore = defineStore('user', () => {
   async function login(email: string, password: string) {
     const tokens = await authService.login(email, password)
     setAccessToken(tokens.access)
+    setLastAuthMethod('email')
     await fetchProfile()
   }
 
@@ -56,12 +58,14 @@ export const useUserStore = defineStore('user', () => {
   async function completeSignup(setupToken: string, password: string) {
     const tokens = await authService.completeSignup(setupToken, password)
     setAccessToken(tokens.access)
+    setLastAuthMethod('email')
     await fetchProfile()
   }
 
   async function loginWithGoogle(credential: string) {
     const tokens = await authService.googleLogin(credential)
     setAccessToken(tokens.access)
+    setLastAuthMethod('google')
     await fetchProfile()
   }
 

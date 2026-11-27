@@ -6,6 +6,7 @@ import { useUserStore } from '@/stores/user'
 import { useCartStore } from '@/stores/cart'
 import { hasSession } from '@/services/api'
 import { isEmail } from '@/utils/formValidation'
+import { getLastAuthMethod } from '@/utils/lastAuthMethod'
 import BaseButton from '@/components/base/BaseButton.vue'
 import BaseInput from '@/components/base/BaseInput.vue'
 import GoogleSignInButton from '@/components/auth/GoogleSignInButton.vue'
@@ -22,6 +23,7 @@ const password = ref('')
 const loading = ref(false)
 const error = ref('')
 const fieldErrors = ref<Record<string, string>>({})
+const lastAuthMethod = getLastAuthMethod()
 
 function goToForgotPassword() {
   const trimmed = email.value.trim()
@@ -125,6 +127,7 @@ async function handleLogin() {
       <GoogleSignInButton
         mode="signin"
         :disabled="loading"
+        :last-used="lastAuthMethod === 'google'"
         class="mb-4"
         @credential="handleGoogleLogin"
         @error="(msg) => { error = msg }"
@@ -158,9 +161,17 @@ async function handleLogin() {
 
         <p v-if="error" role="alert" class="text-sm text-red-700">{{ error }}</p>
 
-        <BaseButton type="submit" variant="secondary" fullWidth :loading="loading">
-          Sign In
-        </BaseButton>
+        <div class="relative">
+          <span
+            v-if="lastAuthMethod === 'email'"
+            class="pointer-events-none absolute -top-2.5 right-3 z-10 rounded-full border border-gold/30 bg-nzuri-blush px-2.5 py-0.5 text-[11px] font-medium text-dark shadow-xs"
+          >
+            Last used
+          </span>
+          <BaseButton type="submit" variant="secondary" fullWidth :loading="loading">
+            Sign In
+          </BaseButton>
+        </div>
       </form>
 
 

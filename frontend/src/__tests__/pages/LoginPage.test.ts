@@ -16,6 +16,7 @@ const router = createRouter({
 
 describe('LoginPage', () => {
   beforeEach(() => {
+    localStorage.clear()
     setActivePinia(createPinia())
   })
 
@@ -80,5 +81,16 @@ describe('LoginPage', () => {
     await resetButton!.trigger('click')
     await flushPromises()
     expect(router.currentRoute.value.path).toBe('/auth/forgot-password')
+  })
+
+  it('shows a Last used badge on the email sign-in button when email was used previously', () => {
+    localStorage.setItem('bynzuri_last_auth_method', 'email')
+    const wrapper = mount(LoginPage, {
+      global: {
+        plugins: [router],
+        stubs: { BaseButton: { template: '<button><slot /></button>' }, BaseInput: { template: '<input />' } },
+      },
+    })
+    expect(wrapper.text()).toContain('Last used')
   })
 })

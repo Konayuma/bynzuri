@@ -35,9 +35,11 @@ declare global {
 const props = withDefaults(defineProps<{
   mode?: 'signin' | 'signup'
   disabled?: boolean
+  lastUsed?: boolean
 }>(), {
   mode: 'signin',
   disabled: false,
+  lastUsed: false,
 })
 
 const emit = defineEmits<{
@@ -108,11 +110,19 @@ onMounted(async () => {
 
 <template>
   <div v-if="clientId" class="space-y-4">
-    <div
-      ref="buttonContainer"
-      class="flex min-h-[44px] w-full items-center justify-center transition-opacity"
-      :class="disabled ? 'pointer-events-none opacity-60' : ''"
-    />
+    <div class="relative">
+      <span
+        v-if="lastUsed"
+        class="pointer-events-none absolute -top-2.5 right-2 z-10 rounded-full border border-gold/30 bg-nzuri-blush px-2.5 py-0.5 text-[11px] font-medium text-dark shadow-xs"
+      >
+        Last used
+      </span>
+      <div
+        ref="buttonContainer"
+        class="flex min-h-[44px] w-full items-center justify-center transition-opacity"
+        :class="disabled ? 'pointer-events-none opacity-60' : ''"
+      />
+    </div>
     <div class="relative flex items-center" aria-hidden="true">
       <div class="flex-grow border-t border-primary/50" />
       <span class="mx-3 text-xs uppercase tracking-wider text-muted">or</span>
