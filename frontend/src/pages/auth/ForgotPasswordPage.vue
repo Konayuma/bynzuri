@@ -5,7 +5,10 @@ import { isEmail } from '@/utils/formValidation'
 import BaseButton from '@/components/base/BaseButton.vue'
 import BaseInput from '@/components/base/BaseInput.vue'
 
-const email = ref('')
+const stateEmail = typeof window !== 'undefined' && typeof window.history.state?.email === 'string'
+  ? window.history.state.email.trim()
+  : ''
+const email = ref(stateEmail)
 const loading = ref(false)
 const error = ref('')
 const emailError = ref('')

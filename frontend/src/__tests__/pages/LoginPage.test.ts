@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { describe, it, expect, beforeEach } from 'vitest'
+import { flushPromises, mount } from '@vue/test-utils'
 import { createRouter, createMemoryHistory } from 'vue-router'
 import LoginPage from '@/pages/auth/LoginPage.vue'
 import { createPinia, setActivePinia } from 'pinia'
@@ -63,5 +63,22 @@ describe('LoginPage', () => {
     const links = wrapper.findAll('a')
     const forgotLink = links.find((l) => l.text().includes('Forgot password'))
     expect(forgotLink).toBeDefined()
+  })
+
+  it('suggests resetting password when redirected from an existing account signup', async () => {
+    await router.push('/auth/login?reason=exists')
+    await router.isReady()
+    const wrapper = mount(LoginPage, {
+      global: {
+        plugins: [router],
+        stubs: { BaseButton: { template: '<button><slot /></button>' }, BaseInput: { template: '<input />' } },
+      },
+    })
+    expect(wrapper.text()).toContain('already have an account')
+    const resetButton = wrapper.findAll('button').find((b) => b.text().includes('Reset your password'))
+    expect(resetButton).toBeDefined()
+    await resetButton!.trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.path).toBe('/auth/forgot-password')
   })
 })

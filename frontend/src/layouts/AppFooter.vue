@@ -39,9 +39,11 @@
       </div>
 
       <div class="border-t border-white/10 mt-8 pt-8 flex flex-col md:flex-row items-center justify-between gap-4">
-        <p class="text-xs text-muted">
-          &copy; {{ new Date().getFullYear() }} By Nzuri. All rights reserved.
-        </p>
+        <div class="flex flex-wrap items-center justify-center md:justify-start gap-x-4 gap-y-1 text-xs text-muted">
+          <p>&copy; {{ new Date().getFullYear() }} By Nzuri. All rights reserved.</p>
+          <router-link to="/privacy-policy" class="hover:text-background transition-colors">Privacy Policy</router-link>
+          <router-link to="/terms-of-service" class="hover:text-background transition-colors">Terms of Service</router-link>
+        </div>
         <div class="flex gap-4 text-xs text-muted">
           <span class="flex items-center gap-1">
             <span class="w-1.5 h-1.5 rounded-full bg-success inline-block"></span>

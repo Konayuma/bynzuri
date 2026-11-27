@@ -45,12 +45,24 @@ export const useUserStore = defineStore('user', () => {
 
   async function register(data: {
     email: string
-    password: string
+    password?: string
     first_name: string
     last_name: string
     phone: string
   }) {
     await authService.register(data)
+  }
+
+  async function completeSignup(setupToken: string, password: string) {
+    const tokens = await authService.completeSignup(setupToken, password)
+    setAccessToken(tokens.access)
+    await fetchProfile()
+  }
+
+  async function loginWithGoogle(credential: string) {
+    const tokens = await authService.googleLogin(credential)
+    setAccessToken(tokens.access)
+    await fetchProfile()
   }
 
   async function updateProfile(data: Partial<User>) {
@@ -98,7 +110,9 @@ export const useUserStore = defineStore('user', () => {
     isAdmin,
     fetchProfile,
     login,
+    loginWithGoogle,
     register,
+    completeSignup,
     updateProfile,
     logout
   }

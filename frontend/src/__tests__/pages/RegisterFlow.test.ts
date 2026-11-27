@@ -18,7 +18,7 @@ describe('registration flow', () => {
     await router.push('/auth/register?redirect=/checkout')
     await router.isReady()
     const wrapper = mount(RegisterPage, { global: { plugins: [router] } })
-    for (const [id, value] of Object.entries({ 'reg-first': 'Ada', 'reg-last': 'Test', 'reg-email': 'ada@example.com', 'reg-phone': '0971234567', 'reg-password': 'password123', 'reg-confirm': 'password123' })) {
+    for (const [id, value] of Object.entries({ 'reg-first': 'Ada', 'reg-last': 'Test', 'reg-email': 'ada@example.com', 'reg-phone': '0971234567' })) {
       await wrapper.get(`#${id}`).setValue(value)
     }
     return { wrapper, router, user: useUserStore() }
@@ -97,5 +97,36 @@ describe('registration flow', () => {
     await wrapper.get('form').trigger('submit')
     await flushPromises()
     expect(register).toHaveBeenCalledWith(expect.objectContaining({ phone: '+12025550123' }))
+  })
+
+  it('routes verified duplicate accounts to sign in with forgot-password prompt', async () => {
+    const { wrapper, router, user } = await setup()
+    const axiosError = Object.assign(new Error('Request failed'), {
+      isAxiosError: true,
+      response: { status: 400, data: { code: 'account_exists' } },
+    })
+    vi.spyOn(user, 'register').mockRejectedValue(axiosError)
+
+    await wrapper.get('form').trigger('submit')
+    await flushPromises()
+
+    expect(router.currentRoute.value.path).toBe('/auth/login')
+    expect(router.currentRoute.value.query).toEqual({ redirect: '/checkout', reason: 'exists' })
+  })
+
+  it('routes existing unverified accounts with different password to email verification', async () => {
+    const { wrapper, router, user } = await setup()
+    const axiosError = Object.assign(new Error('Request failed'), {
+      isAxiosError: true,
+      response: { status: 400, data: { code: 'unverified_account_exists' } },
+    })
+    vi.spyOn(user, 'register').mockRejectedValue(axiosError)
+
+    await wrapper.get('form').trigger('submit')
+    await flushPromises()
+
+    expect(router.currentRoute.value.path).toBe('/auth/verify-email')
+    expect(router.currentRoute.value.query).toEqual({ redirect: '/checkout' })
+    expect(sessionStorage.getItem('bynzuri_verification_email')).toBe('ada@example.com')
   })
 })

@@ -226,6 +226,7 @@ LENCO_RELAY_SECRET = os.environ.get('LENCO_RELAY_SECRET', '')
 
 # Transactional email: configure only on the backend/worker, never in the browser.
 RESEND_API_KEY = os.environ.get('RESEND_API_KEY', '').strip()
+GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID', '').strip()
 PUBLIC_SITE_URL = os.environ.get('PUBLIC_SITE_URL', 'https://www.bynzuri.com').strip().rstrip('/')
 RESEND_FROM_EMAIL = os.environ.get('RESEND_FROM_EMAIL', 'HairSkin by Nzuri <hairskincare@bynzuri.com>').strip()
 RESEND_REPLY_TO = os.environ.get('RESEND_REPLY_TO', 'hairskincare@bynzuri.com').strip()

@@ -1,38 +1,66 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import axios from 'axios'
-import { isEmail, isValidName, validatePassword } from '@/utils/formValidation'
+import { isEmail, isValidName } from '@/utils/formValidation'
 import { getCountryCallingCode, parsePhoneNumberFromString, type CountryCode } from 'libphonenumber-js'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
+import { useCartStore } from '@/stores/cart'
 import BaseButton from '@/components/base/BaseButton.vue'
 import BaseInput from '@/components/base/BaseInput.vue'
 import PhoneInput from '@/components/base/PhoneInput.vue'
-import { rememberSignupCredentials, rememberVerificationEmail } from '@/services/verification-context'
+import GoogleSignInButton from '@/components/auth/GoogleSignInButton.vue'
+import { rememberVerificationEmail } from '@/services/verification-context'
 
 const router = useRouter()
 const route = useRoute()
 const userStore = useUserStore()
+const cartStore = useCartStore()
 const form = ref({
   first_name: '',
   last_name: '',
   email: '',
   phone: '',
-  password: '',
-  confirm_password: ''
 })
 const loading = ref(false)
 const error = ref('')
 const offerVerification = ref(false)
 const fieldErrors = ref<Record<string, string>>({})
 const phoneCountry = ref<CountryCode>('ZM')
-const passwordCheck = computed(() => validatePassword(form.value.password))
+const safeRedirectQuery = computed(() => {
+  const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : ''
+  return redirect.startsWith('/') && !redirect.startsWith('//') ? { redirect } : {}
+})
 watch(phoneCountry, () => { delete fieldErrors.value.phone; error.value = '' })
 for (const key of Object.keys(form.value) as Array<keyof typeof form.value>) {
   watch(() => form.value[key], () => {
     delete fieldErrors.value[key]
     error.value = ''
   })
+}
+
+async function handleGoogleAuth(credential: string) {
+  if (loading.value) return
+  loading.value = true
+  error.value = ''
+  try {
+    await userStore.loginWithGoogle(credential)
+  } catch (cause) {
+    error.value = axios.isAxiosError(cause) && typeof cause.response?.data?.detail === 'string'
+      ? cause.response.data.detail
+      : 'We could not sign you up with Google. Please try again.'
+    loading.value = false
+    return
+  }
+  try {
+    await cartStore.mergeGuestCart()
+    await cartStore.fetchCart()
+  } catch {
+    cartStore.error = 'Signed in, but your cart could not be restored. Please try again.'
+  } finally {
+    loading.value = false
+  }
+  await router.push(safeRedirectQuery.value.redirect || '/')
 }
 
 async function handleRegister() {
@@ -52,9 +80,6 @@ async function handleRegister() {
     phone = parsePhoneNumberFromString(`+${compactDigits}`, phoneCountry.value)
   }
   if (!phone || !phone.isValid() || (phone.country && phone.country !== phoneCountry.value)) errors.phone = 'Enter a valid number for the selected country.'
-  const pw = validatePassword(data.password)
-  if (!pw.valid) errors.password = pw.message
-  if (data.password !== data.confirm_password) errors.confirm_password = 'Passwords do not match.'
   fieldErrors.value = errors
   if (Object.keys(errors).length) return
 
@@ -65,12 +90,34 @@ async function handleRegister() {
   try {
     await userStore.register({
       email: form.value.email.trim(),
-      password: form.value.password,
       first_name: form.value.first_name.trim(),
       last_name: form.value.last_name.trim(),
       phone: phone!.number
     })
   } catch (cause) {
+    const errorCode = axios.isAxiosError(cause) && typeof cause.response?.data?.code === 'string'
+      ? cause.response.data.code
+      : ''
+    const enteredEmail = form.value.email.trim()
+    if (errorCode === 'account_exists') {
+      loading.value = false
+      await router.push({
+        path: '/auth/login',
+        state: { email: enteredEmail },
+        query: { ...safeRedirectQuery.value, reason: 'exists' }
+      })
+      return
+    }
+    if (errorCode === 'unverified_account_exists') {
+      rememberVerificationEmail(enteredEmail)
+      loading.value = false
+      await router.push({
+        path: '/auth/verify-email',
+        state: { email: enteredEmail },
+        query: safeRedirectQuery.value
+      })
+      return
+    }
     error.value = axios.isAxiosError(cause) && cause.response?.status === 400
       ? 'Check your details. If you already have an account, sign in or verify your email.'
       : 'We could not create your account. Check your connection and try again.'
@@ -79,17 +126,13 @@ async function handleRegister() {
     return
   }
 
-  const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : ''
   const registeredEmail = form.value.email.trim()
   rememberVerificationEmail(registeredEmail)
-  rememberSignupCredentials(registeredEmail, form.value.password)
-  form.value.password = ''
-  form.value.confirm_password = ''
   loading.value = false
   await router.push({
     path: '/auth/verify-email',
     state: { email: registeredEmail },
-    query: { ...(redirect.startsWith('/') && !redirect.startsWith('//') ? { redirect } : {}) }
+    query: safeRedirectQuery.value
   })
 }
 function continueVerification() {
@@ -99,9 +142,7 @@ function continueVerification() {
     return
   }
   rememberVerificationEmail(email)
-  const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : ''
-  void router.push({ path: '/auth/verify-email', state: { email },
-    query: { ...(redirect.startsWith('/') && !redirect.startsWith('//') ? { redirect } : {}) } })
+  void router.push({ path: '/auth/verify-email', state: { email }, query: safeRedirectQuery.value })
 }
 </script>
 
@@ -112,6 +153,14 @@ function continueVerification() {
         <h1 class="font-heading text-2xl sm:text-3xl font-semibold text-dark">Create Account</h1>
         <p class="text-sm text-muted mt-1.5">Track your orders, save addresses, and shop faster next time</p>
       </div>
+
+      <GoogleSignInButton
+        mode="signup"
+        :disabled="loading"
+        class="mb-4"
+        @credential="handleGoogleAuth"
+        @error="(msg) => { error = msg }"
+      />
 
       <form novalidate @submit.prevent="handleRegister" class="space-y-4">
         <div class="grid grid-cols-2 gap-3">
@@ -138,36 +187,10 @@ function continueVerification() {
           type="email"
           required
           id="reg-email"
-            :error="fieldErrors.email"
-            autocomplete="email"
+          :error="fieldErrors.email"
+          autocomplete="email"
         />
         <PhoneInput v-model="form.phone" v-model:country="phoneCountry" :error="fieldErrors.phone" :disabled="loading" />
-        <BaseInput
-          v-model="form.password"
-          label="Password"
-          type="password"
-          required
-          id="reg-password"
-            :error="fieldErrors.password"
-            autocomplete="new-password"
-        />
-        <ul class="text-xs space-y-1 -mt-2 text-muted" aria-label="Password requirements">
-          <li :class="passwordCheck.checks.minLength ? 'text-success font-medium' : ''">
-            {{ passwordCheck.checks.minLength ? '✓' : '•' }} At least 8 characters
-          </li>
-          <li :class="passwordCheck.checks.hasLetter && passwordCheck.checks.hasNumber ? 'text-success font-medium' : ''">
-            {{ passwordCheck.checks.hasLetter && passwordCheck.checks.hasNumber ? '✓' : '•' }} Includes a letter and a number
-          </li>
-        </ul>
-        <BaseInput
-          v-model="form.confirm_password"
-          label="Confirm Password"
-          type="password"
-          required
-          id="reg-confirm"
-            :error="fieldErrors.confirm_password"
-            autocomplete="new-password"
-        />
 
         <p v-if="error" role="alert" class="text-sm text-red-700">{{ error }}</p>
 
@@ -177,13 +200,13 @@ function continueVerification() {
         </div>
 
         <BaseButton type="submit" variant="secondary" fullWidth :loading="loading">
-          Create Account
+          Continue
         </BaseButton>
       </form>
 
       <p class="text-sm text-center text-muted mt-6">
         Already have an account?
-        <router-link :to="{ path: '/auth/login', query: route.query.redirect ? { redirect: route.query.redirect } : {} }" class="text-dark font-medium hover:underline">
+        <router-link :to="{ path: '/auth/login', query: safeRedirectQuery }" class="text-dark font-medium hover:underline">
           Sign in
         </router-link>
       </p>

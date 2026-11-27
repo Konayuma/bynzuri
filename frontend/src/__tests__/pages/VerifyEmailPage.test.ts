@@ -147,4 +147,31 @@ describe('VerifyEmailPage', () => {
     expect(router.currentRoute.value.query.verified).toBeUndefined()
     verify.mockRestore()
   })
+
+  it('prompts for a password after OTP verification when required and signs the customer in', async () => {
+    const { wrapper, router } = await setup()
+    const verify = vi.spyOn(authService, 'verifyEmail').mockResolvedValue({
+      requires_password: true,
+      setup_token: 'signed-setup-token',
+    })
+    const complete = vi.spyOn(useUserStore(), 'completeSignup').mockResolvedValue()
+    const merge = vi.spyOn(useCartStore(), 'mergeGuestCart').mockResolvedValue()
+    const cart = vi.spyOn(useCartStore(), 'fetchCart').mockResolvedValue()
+
+    await wrapper.get('#verification-code').setValue('123456')
+    await wrapper.get('form').trigger('submit')
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('Create your password')
+    await wrapper.get('#setup-password').setValue('password123')
+    await wrapper.get('#setup-confirm-password').setValue('password123')
+    await wrapper.get('form').trigger('submit')
+    await flushPromises()
+
+    expect(complete).toHaveBeenCalledWith('signed-setup-token', 'password123')
+    expect(merge).toHaveBeenCalledOnce()
+    expect(cart).toHaveBeenCalledOnce()
+    expect(router.currentRoute.value.path).toBe('/checkout')
+    verify.mockRestore(); complete.mockRestore(); merge.mockRestore(); cart.mockRestore()
+  })
 })

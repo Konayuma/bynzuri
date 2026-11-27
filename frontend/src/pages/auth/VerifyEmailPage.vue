@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, nextTick } from 'vue'
+import { computed, ref, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Check, Mail, ShieldCheck } from '@lucide/vue'
+import { Check, Lock, Mail, ShieldCheck } from '@lucide/vue'
 import { authService } from '@/services/auth.service'
 import { clearSignupCredentials, getVerificationEmail, rememberVerificationEmail, takeSignupCredentials } from '@/services/verification-context'
 import { useUserStore } from '@/stores/user'
 import { useCartStore } from '@/stores/cart'
-import { isEmail } from '@/utils/formValidation'
+import { isEmail, validatePassword } from '@/utils/formValidation'
 import BaseButton from '@/components/base/BaseButton.vue'
 import BaseInput from '@/components/base/BaseInput.vue'
 
@@ -32,6 +32,18 @@ const error = ref('')
 const notice = ref('')
 const success = ref(false)
 const signingIn = ref(false)
+
+// Post-verification password setup state
+const setupToken = ref('')
+const password = ref('')
+const confirmPassword = ref('')
+const passwordError = ref('')
+const confirmError = ref('')
+const settingPassword = ref(false)
+const passwordCheck = computed(() => validatePassword(password.value))
+
+watch(password, () => { passwordError.value = ''; error.value = '' })
+watch(confirmPassword, () => { confirmError.value = ''; error.value = '' })
 
 function onCodeInput(event: Event) {
   const input = event.target as HTMLInputElement
@@ -70,8 +82,14 @@ async function verify() {
   rememberVerificationEmail(email.value)
   loading.value = true
   try {
-    await authService.verifyEmail(email.value.trim(), code.value.trim())
+    const result = await authService.verifyEmail(email.value.trim(), code.value.trim())
     rememberVerificationEmail('')
+    if (result && result.requires_password && result.setup_token) {
+      setupToken.value = result.setup_token
+      await nextTick()
+      document.getElementById('setup-password')?.focus()
+      return
+    }
     success.value = true
   } catch (cause: unknown) {
     const response = cause as { response?: { status?: number } }
@@ -131,6 +149,44 @@ async function resend() {
   }
 }
 
+async function finishSignup() {
+  if (settingPassword.value || !setupToken.value) return
+  error.value = ''
+  passwordError.value = ''
+  confirmError.value = ''
+
+  const pw = validatePassword(password.value)
+  if (!pw.valid) passwordError.value = pw.message
+  if (password.value !== confirmPassword.value) confirmError.value = 'Passwords do not match.'
+  if (passwordError.value || confirmError.value) return
+
+  settingPassword.value = true
+  try {
+    await userStore.completeSignup(setupToken.value, password.value)
+    password.value = ''
+    confirmPassword.value = ''
+    setupToken.value = ''
+  } catch (cause: unknown) {
+    const response = cause as { response?: { status?: number; data?: { detail?: string } } }
+    error.value = typeof response.response?.data?.detail === 'string'
+      ? response.response.data.detail
+      : 'We could not save your password. Check your connection and try again.'
+    settingPassword.value = false
+    return
+  }
+
+  try {
+    await cartStore.mergeGuestCart()
+    await cartStore.fetchCart()
+  } catch {
+    cartStore.error = 'Signed in, but your cart could not be restored. Please try again.'
+  } finally {
+    settingPassword.value = false
+  }
+  const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : ''
+  await router.replace(redirect.startsWith('/') && !redirect.startsWith('//') ? redirect : '/')
+}
+
 function signIn(verified: boolean) {
   const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : ''
   router.push({
@@ -159,6 +215,55 @@ function signIn(verified: boolean) {
             <BaseButton variant="secondary" fullWidth class="mt-7 min-h-12" @click="signIn(true)">Continue to sign in</BaseButton>
           </template>
         </div>
+      </template>
+
+      <template v-else-if="setupToken">
+        <div class="text-center">
+          <div class="mx-auto mb-6 flex h-14 w-14 items-center justify-center rounded-full bg-primary/35 text-dark">
+            <Lock class="h-6 w-6" aria-hidden="true" />
+          </div>
+          <p class="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-gold">Email verified</p>
+          <h1 id="verification-title" class="font-heading text-2xl font-semibold text-dark sm:text-3xl">Create your password</h1>
+          <p class="mt-3 text-sm sm:text-base leading-relaxed text-muted">
+            Set a password for <strong class="font-semibold text-dark break-all">{{ email }}</strong> to finish creating your account.
+          </p>
+        </div>
+
+        <form class="mt-7 space-y-4" novalidate @submit.prevent="finishSignup">
+          <input type="email" autocomplete="username" :value="email" readonly tabindex="-1" aria-hidden="true" class="sr-only" />
+          <BaseInput
+            id="setup-password"
+            v-model="password"
+            label="Password"
+            type="password"
+            required
+            autocomplete="new-password"
+            :error="passwordError"
+          />
+          <ul class="text-xs space-y-1 -mt-2 text-muted" aria-label="Password requirements">
+            <li :class="passwordCheck.checks.minLength ? 'text-success font-medium' : ''">
+              {{ passwordCheck.checks.minLength ? '✓' : '•' }} At least 8 characters
+            </li>
+            <li :class="passwordCheck.checks.hasLetter && passwordCheck.checks.hasNumber ? 'text-success font-medium' : ''">
+              {{ passwordCheck.checks.hasLetter && passwordCheck.checks.hasNumber ? '✓' : '•' }} Includes a letter and a number
+            </li>
+          </ul>
+          <BaseInput
+            id="setup-confirm-password"
+            v-model="confirmPassword"
+            label="Confirm Password"
+            type="password"
+            required
+            autocomplete="new-password"
+            :error="confirmError"
+          />
+
+          <p v-if="error" role="alert" class="rounded-xl bg-red-50 px-4 py-3 text-sm leading-relaxed text-red-800">{{ error }}</p>
+
+          <BaseButton type="submit" variant="secondary" fullWidth class="min-h-12" :loading="settingPassword">
+            Create Account
+          </BaseButton>
+        </form>
       </template>
 
       <template v-else>

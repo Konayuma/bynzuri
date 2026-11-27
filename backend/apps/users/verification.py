@@ -44,7 +44,12 @@ def process_verification_email():
                     Q(status='sending', lease_until__lt=now)).order_by('sent_requested_at').first())
         if not challenge:
             return False
-        if challenge.expires_at <= now or challenge.user.email_verified or challenge.attempts >= MAX_ATTEMPTS:
+        if (
+            challenge.expires_at <= now
+            or challenge.user.is_active
+            or (challenge.user.email_verified and challenge.user.has_usable_password())
+            or challenge.attempts >= MAX_ATTEMPTS
+        ):
             challenge.status = 'expired'
             challenge.save(update_fields=['status'])
             return True

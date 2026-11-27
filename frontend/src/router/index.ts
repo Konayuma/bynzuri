@@ -101,6 +101,18 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/pages/HelpPage.vue')
   },
   {
+    path: '/privacy-policy',
+    alias: '/privacy',
+    name: 'privacy-policy',
+    component: () => import('@/pages/PrivacyPolicyPage.vue')
+  },
+  {
+    path: '/terms-of-service',
+    alias: '/terms',
+    name: 'terms-of-service',
+    component: () => import('@/pages/TermsOfServicePage.vue')
+  },
+  {
     path: '/:pathMatch(.*)*',
     name: 'not-found',
     component: () => import('@/pages/NotFoundPage.vue')

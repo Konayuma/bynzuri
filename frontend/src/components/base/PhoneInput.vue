@@ -63,15 +63,25 @@ function handleInput(event: Event) {
     <label for="reg-phone" class="block text-sm font-semibold text-dark">Phone number <span class="text-gold" aria-hidden="true">*</span></label>
     <div class="flex gap-2">
       <div class="relative w-28 shrink-0">
-        <span aria-hidden="true" class="pointer-events-none absolute inset-y-0 left-3 z-10 flex items-center gap-1.5 text-sm text-dark"><span class="text-lg">{{ selected?.flag }}</span> +{{ selected?.dial }}</span>
         <select
-          :value="country" aria-label="Phone country code" :disabled="disabled"
-          class="h-12 w-full appearance-none rounded-[14px] border border-[#b9a8a8] bg-white px-3 text-sm text-transparent shadow-sm focus:outline-none focus:border-gold focus:ring-2 focus:ring-gold/25 disabled:opacity-60"
+          :value="country"
+          aria-label="Phone country code"
+          :disabled="disabled"
+          class="peer absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0 disabled:cursor-not-allowed"
           @change="emit('update:country', ($event.target as HTMLSelectElement).value as CountryCode)"
         >
           <option v-for="item in countries" :key="item.code" :value="item.code" class="text-dark">{{ item.flag }} {{ item.name }} (+{{ item.dial }})</option>
         </select>
-        <span aria-hidden="true" class="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-muted">⌄</span>
+        <div
+          aria-hidden="true"
+          class="pointer-events-none flex h-12 w-full items-center justify-between rounded-[14px] border border-[#b9a8a8] bg-white pl-3 pr-2 text-sm text-dark shadow-sm peer-focus:border-gold peer-focus:ring-2 peer-focus:ring-gold/25 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-1 peer-focus-visible:outline-gold peer-disabled:opacity-60"
+        >
+          <span class="flex items-center gap-1.5">
+            <span class="text-lg">{{ selected?.flag }}</span>
+            <span>+{{ selected?.dial }}</span>
+          </span>
+          <span class="text-muted">⌄</span>
+        </div>
       </div>
       <input id="reg-phone" :value="modelValue" type="tel" inputmode="tel" autocomplete="tel-national" required maxlength="30" :disabled="disabled"
         :aria-invalid="error ? 'true' : undefined" :aria-describedby="error ? 'reg-phone-error' : 'reg-phone-hint'"

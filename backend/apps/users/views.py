@@ -1,3 +1,4 @@
+from django.core.signing import BadSignature, SignatureExpired, TimestampSigner
 from django.utils.http import urlsafe_base64_decode
 from django.utils.encoding import force_str
 from django.db import transaction
@@ -24,6 +25,10 @@ class SupportInquiryThrottle(AnonRateThrottle):
     scope = 'support_inquiry'
 
 
+SIGNUP_PASSWORD_SALT = 'bynzuri-signup-password'
+SIGNUP_PASSWORD_MAX_AGE = 30 * 60
+
+
 class RegisterView(generics.CreateAPIView):
     serializer_class = RegisterSerializer
     permission_classes = [permissions.AllowAny]
@@ -31,9 +36,45 @@ class RegisterView(generics.CreateAPIView):
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        validated = serializer.validated_data
+        email = validated['email']
+        submitted_password = validated.get('password') or ''
+
         with transaction.atomic():
-            user = serializer.save()
-            issue_code(user)
+            existing = User.objects.select_for_update().filter(email__iexact=email).first()
+            if existing is not None:
+                if existing.is_active or (existing.email_verified and existing.has_usable_password()):
+                    return Response(
+                        {
+                            'code': 'account_exists',
+                            'detail': 'An account with this email already exists. Sign in or reset your password.',
+                        },
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+                if existing.has_usable_password() and (not submitted_password or not existing.check_password(submitted_password)):
+                    return Response(
+                        {
+                            'code': 'unverified_account_exists',
+                            'detail': 'An account with this email is awaiting verification.',
+                        },
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+                updated_fields = []
+                for field in ('first_name', 'last_name', 'phone'):
+                    new_value = validated.get(field, '')
+                    if new_value and getattr(existing, field) != new_value:
+                        setattr(existing, field, new_value)
+                        updated_fields.append(field)
+                if updated_fields:
+                    existing.save(update_fields=updated_fields)
+                challenge = EmailVerification.objects.select_for_update().filter(user=existing).first()
+                now = timezone.now()
+                if not challenge or challenge.status == 'verified' or challenge.expires_at <= now or now >= challenge.sent_requested_at + RESEND_DELAY:
+                    issue_code(existing)
+                user = existing
+            else:
+                user = serializer.save()
+                issue_code(user)
 
         return Response(
             UserSerializer(user).data,
@@ -182,19 +223,39 @@ class VerifyEmailView(generics.GenericAPIView):
         with transaction.atomic():
             user = User.objects.select_for_update().filter(email__iexact=email).first()
             challenge = EmailVerification.objects.select_for_update().filter(user=user).first() if user else None
-            if not challenge or challenge.user.email_verified or challenge.user.is_active or challenge.expires_at <= timezone.now() or challenge.attempts >= MAX_ATTEMPTS:
+            if (
+                not challenge
+                or challenge.status == 'verified'
+                or challenge.user.is_active
+                or (challenge.user.email_verified and challenge.user.has_usable_password())
+                or challenge.expires_at <= timezone.now()
+                or challenge.attempts >= MAX_ATTEMPTS
+            ):
                 return Response({'detail': message}, status=status.HTTP_400_BAD_REQUEST)
             challenge.attempts += 1
             if not constant_time_compare(code_for(challenge), code):
                 challenge.save(update_fields=['attempts'])
                 return Response({'detail': message}, status=status.HTTP_400_BAD_REQUEST)
             user.email_verified = True
-            user.is_active = True
             user.email_verification_token = ''
+            requires_password = not user.has_usable_password()
+            if not requires_password:
+                user.is_active = True
             user.save(update_fields=['email_verified', 'is_active', 'email_verification_token'])
             challenge.status = 'verified'
             challenge.save(update_fields=['status', 'attempts'])
-        return Response({'detail': 'Email verified. You can now sign in.'})
+            setup_token = (
+                TimestampSigner(salt=SIGNUP_PASSWORD_SALT).sign(f'{user.pk}:{challenge.nonce}')
+                if requires_password
+                else ''
+            )
+        if requires_password:
+            return Response({
+                'detail': 'Email verified. Set your password to finish creating your account.',
+                'requires_password': True,
+                'setup_token': setup_token,
+            })
+        return Response({'detail': 'Email verified. You can now sign in.', 'requires_password': False})
 
     def get(self, request):
         token = request.query_params.get('token', '')
@@ -243,6 +304,13 @@ class ResendVerificationEmailView(generics.GenericAPIView):
         with transaction.atomic():
             user = User.objects.select_for_update().filter(email__iexact=email).first()
             challenge = EmailVerification.objects.select_for_update().filter(user=user).first() if user else None
-            if user and challenge and not user.email_verified and not user.is_active and timezone.now() >= challenge.sent_requested_at + RESEND_DELAY:
+            eligible = (
+                user
+                and challenge
+                and not user.is_active
+                and (not user.email_verified or not user.has_usable_password())
+                and timezone.now() >= challenge.sent_requested_at + RESEND_DELAY
+            )
+            if eligible:
                 issue_code(user)
         return Response({'detail': 'If this account is eligible, a new code will be emailed. Please wait at least one minute between requests.'})

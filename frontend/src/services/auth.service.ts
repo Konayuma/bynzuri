@@ -15,13 +15,35 @@ export const authService = {
 
   async register(data: {
     email: string
-    password: string
+    password?: string
     first_name: string
     last_name: string
     phone: string
   }): Promise<User> {
     const response = await publicApi.post('/auth/register/', data)
     return response.data
+  },
+
+  async completeSignup(setupToken: string, password: string): Promise<AuthTokens> {
+    return withSessionLock(async () => {
+      const response = await sessionApi.post(
+        '/auth/complete-signup/',
+        { setup_token: setupToken, password },
+        { headers: await csrfHeaders() }
+      )
+      return response.data
+    })
+  },
+
+  async googleLogin(credential: string): Promise<AuthTokens> {
+    return withSessionLock(async () => {
+      const response = await sessionApi.post(
+        '/auth/google/',
+        { credential },
+        { headers: await csrfHeaders() }
+      )
+      return response.data
+    })
   },
 
   async getProfile(): Promise<User> {
@@ -42,8 +64,9 @@ export const authService = {
     await publicApi.post('/auth/reset-password/', { uid, token, new_password: newPassword })
   },
 
-  async verifyEmail(email: string, code: string): Promise<void> {
-    await publicApi.post('/auth/verify-email/', { email, code })
+  async verifyEmail(email: string, code: string): Promise<{ detail?: string; requires_password?: boolean; setup_token?: string } | void> {
+    const response = await publicApi.post('/auth/verify-email/', { email, code })
+    return response.data
   },
 
   async resendVerificationEmail(email: string): Promise<void> {
