@@ -92,6 +92,28 @@ def test_forgot_password_queues_and_sends_working_reset_link_via_resend():
     assert client.post('/api/auth/token/', {'email': user.email, 'password': 'newpassword456'}, format='json').status_code == 200
 
 
+def test_google_user_can_set_a_separate_password_via_reset():
+    user = User.objects.create_user(username='google@example.com', email='google@example.com', password=None, is_active=True)
+    client = APIClient()
+    response = client.post('/api/auth/forgot-password/', {'email': user.email}, format='json')
+    assert response.status_code == 200
+    reset = PasswordResetRequest.objects.get(user=user)
+    from apps.users.password_reset import token_generator
+    from django.utils.encoding import force_bytes
+    from django.utils.http import urlsafe_base64_encode
+
+    response = client.post('/api/auth/reset-password/', {
+        'uid': urlsafe_base64_encode(force_bytes(user.pk)),
+        'token': token_generator.make_token(user),
+        'new_password': 'newpassword456',
+    }, format='json')
+    assert response.status_code == 200
+    user.refresh_from_db()
+    reset.refresh_from_db()
+    assert user.check_password('newpassword456')
+    assert reset.status == 'expired'
+
+
 def test_forgot_password_ignores_unknown_or_inactive_user_and_enforces_cooldown():
     client = APIClient()
 
